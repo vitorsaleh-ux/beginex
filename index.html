@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -966,6 +965,43 @@ function renderCompose() {
     const isReady = state.isCampaignNameSet && state.isAudienceSet;
     const readOnlyAttr = state.isReadOnly ? 'disabled' : '';
 
+    let audienceChipHtml = '';
+
+    if (isAudienceLocked) {
+        // Scenario 3: Locked
+        audienceChipHtml = `
+            <span class="chip-base flex items-center" style="background-color: #FFE6E9; color: #FF3D57;">
+                <i data-lucide="users" class="w-3 h-3 mr-1"></i>Audience: ${state.compose.audience}
+                <i data-lucide="lock" class="w-3 h-3 ml-2 text-red-500"></i>
+            </span>`;
+    } else if (state.isReadOnly) {
+        // Scenario 4: ReadOnly
+        audienceChipHtml = `
+            <span class="chip-base flex items-center" style="background-color: #F3F4F6; color: #374151;">
+                <i data-lucide="users" class="w-3 h-3 mr-1"></i>Audience: ${state.compose.audience}
+            </span>`;
+    } else if (!state.isAudienceSet) {
+        // Scenario 1: Not Set, Not ReadOnly, Not Locked - This is the one to highlight
+        audienceChipHtml = `
+            <button 
+                onclick="mockSetAudience('New Segment (1,500)')" 
+                class="flex items-center text-lg font-medium p-2 rounded-lg transition-colors" 
+                style="background-color: #EAF4FF; color: #0085FF; padding-top: 6px; padding-bottom: 6px;"
+                onmouseover="this.style.backgroundColor='#D6E9FF'"
+                onmouseout="this.style.backgroundColor='#EAF4FF'">
+                <i data-lucide="users-plus" class="w-4 h-4 mr-2"></i>
+                <span class="font-medium" style="font-size: 1.05rem;">Audience: ${state.compose.audience}</span>
+                <span class="ml-2 text-sm font-bold hover:underline">(Click to Select)</span>
+            </button>`;
+    } else {
+        // Scenario 2: Set, Not ReadOnly, Not Locked
+        audienceChipHtml = `
+            <span class="chip-base flex items-center" style="background-color: #F3F4F6; color: #374151;">
+                <i data-lucide="users" class="w-3 h-3 mr-1"></i>Audience: ${state.compose.audience}
+                <button onclick="mockSetAudience('New Segment (1,500)')" class="ml-2 text-primary hover:text-primary-hover font-medium">Change</button>
+            </span>`;
+    }
+
     const contentEditor = (type) => {
         if (type === MESSAGES.EMAIL) {
             return `<div class="p-6 space-y-4">
@@ -1082,14 +1118,7 @@ ${[MESSAGES.EMAIL, MESSAGES.SMS, MESSAGES.SOCIAL].map(type => {
 <span class="chip-base bg-gray-100 text-gray-700 flex items-center">
 <i data-lucide="user" class="w-3 h-3 mr-1"></i>From: hello@provider.com
 </span>
-<span 
-    class="chip-base flex items-center" 
-    style="${isAudienceLocked ? 
-        'background-color: #FFE6E9; color: #FF3D57;' : // Red-100 / Red-700
-        'background-color: #F3F4F6; color: #374151;'}">
-<i data-lucide="users" class="w-3 h-3 mr-1"></i>Audience: ${state.compose.audience}
-${!isAudienceLocked && !state.isReadOnly ? `<button onclick="mockSetAudience('New Segment (1,500)')" class="ml-2 text-primary hover:text-primary-hover font-medium">Change</button>` : isAudienceLocked ? `<i data-lucide="lock" class="w-3 h-3 ml-2 text-red-500"></i>` : ''}
-</span>
+${audienceChipHtml}
 ${state.isAudienceSet && state.compose.audience.includes('Non-Clickers') ? `<span class="chip-base chip-alert flex items-center"><i data-lucide="shield-off" class="w-3 h-3 mr-1"></i>Auto-Stop: On Reply</span>` : ''}
 </div>
 
