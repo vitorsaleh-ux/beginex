@@ -1,370 +1,205 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BeAKampaign - Campaign Prototyper</title>
-    <!-- Load Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Load Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-        /* Define Monday.com inspired colors and structure */
-        :root {
-            --color-primary: #0085FF;
-            --color-primary-hover: #0B74DA;
-            --color-success: #00C875;
-            --color-warning: #FFCB00;
-            --color-danger: #FF3D57;
-            --color-text-strong: #232A31;
-            --color-text-muted: #5B6B7C;
-            --color-bg: #F7F9FC;
-            --color-surface: #FFFFFF;
-            --color-divider: #E6EDF5;
-            --color-link: #0574FF;
-            --radius-xl: 12px;
-            --spacing-unit: 8px;
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>BeAKampaign – Campaign Prototyper</title>
 
-            /* Flowchart Colors for annotation */
-            --flow-start: #00C875; /* Green Circle */
-            --flow-decision: #FFCB00; /* Yellow Diamond */
-            --flow-action: #0085FF; /* Blue Rect */
+  <!-- Tailwind config -->
+  <script>
+    window.tailwind = window.tailwind || {};
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: "#0052CC",
+            "primary-hover": "#003E99",
+            success: "#118D57",
+            warning: "#B54708",
+            danger: "#B42318",
+            ink: "#1F2937",
+            muted: "#4B5563",
+            bg: "#F7F9FC",
+            surface: "#FFFFFF",
+            divider: "#E6EDF5",
+          },
+          borderRadius: { xl: "12px" }
         }
+      }
+    };
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--color-bg);
-            color: var(--color-text-strong);
-        }
+  <style>
+    :root { --r-xl: 12px }
+    body { font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, Apple Color Emoji, Segoe UI Emoji; }
 
-        /* Custom Tailwind Configuration */
-        .primary-btn {
-            background-color: var(--color-primary);
-            color: white;
-            padding: var(--spacing-unit) calc(var(--spacing-unit) * 2);
-            border-radius: var(--radius-xl);
-            font-weight: 600;
-            transition: background-color 150ms;
-        }
-        .primary-btn:hover {
-            background-color: var(--color-primary-hover);
-        }
-        .primary-btn:focus {
-            outline: 2px solid var(--color-primary);
-            outline-offset: 2px;
-        }
-        .primary-btn:disabled {
-            background-color: var(--color-divider);
-            color: var(--color-text-muted);
-            cursor: not-allowed;
-        }
+    /* High-contrast primary */
+    .btn-primary { background:#0052CC; color:#fff; border:2px solid #003E99; }
+    .btn-primary:hover { background:#003E99; }
+    .btn-primary:focus-visible { outline:none; box-shadow:0 0 0 3px rgba(59,130,246,.5); }
 
-        .secondary-btn {
-            background-color: transparent;
-            color: var(--color-text-strong);
-            padding: var(--spacing-unit) calc(var(--spacing-unit) * 2);
-            border-radius: var(--radius-xl);
-            font-weight: 500;
-            border: 1px solid var(--color-divider);
-            transition: background-color 150ms;
-        }
-        .secondary-btn:hover {
-            background-color: #F0F4F9;
-        }
-        .secondary-btn:focus {
-            outline: 2px solid var(--color-primary);
-            outline-offset: 2px;
-        }
+    /* Secondary outline */
+    .btn-outline { border:2px solid #374151; background:#fff; color:#111827; font-weight:700; }
+    .btn-outline:hover { background:#F3F4F6; }
+    .btn-outline:focus-visible { outline:none; box-shadow:0 0 0 3px rgba(59,130,246,.35); }
 
-        .input-style {
-            padding: var(--spacing-unit);
-            border: 1px solid var(--color-divider);
-            border-radius: var(--radius-xl);
-            background-color: var(--color-surface);
-            transition: border-color 150ms;
-        }
-        .input-style:focus {
-            border-color: var(--color-primary);
-            outline: none;
-            box-shadow: 0 0 0 3px #9FD0FF; /* Focus ring */
-        }
-        .input-style[disabled] {
-            background-color: #F0F4F9;
-            color: var(--color-text-muted);
-        }
+    /* Segmented control for Delivery Channel */
+    .seg { border:2px solid #374151; color:#111827; font-weight:700; }
+    .seg.active { background:#0052CC; color:#fff; border-color:#003E99; }
+    .seg:focus-visible { outline:none; box-shadow:0 0 0 3px rgba(59,130,246,.5); }
 
-        .card {
-            background-color: var(--color-surface);
-            border-radius: var(--radius-xl);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.03); /* Subtle shadow */
-        }
-        
-        /* Chips styling */
-        .chip-base { padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 500; }
-        .chip-scheduled { background-color: #EAF4FF; color: var(--color-primary); }
-        .chip-draft { background-color: #FFF6D9; color: #FFCB00; }
-        .chip-sent { background-color: #E6FBF1; color: var(--color-success); }
-        .chip-danger { background-color: #FFE6E9; color: var(--color-danger); }
-        .chip-sequence { background-color: var(--color-divider); color: var(--color-text-strong); }
-        .chip-alert { background-color: #FFE6E9; color: var(--color-danger); }
-        .chip-alert-active { background-color: #EAF4FF; color: var(--color-primary); }
-        .chip-alert-completed { background-color: #E6FBF1; color: var(--color-success); }
+    /* Text-style links (underline; not for CTAs) */
+    .as-link {
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      text-decoration-thickness: 2px;
+    }
+    .as-link:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(59,130,246,.5);
+    }
 
-        /* Drawer Transition */
-        .drawer-container {
-            transition: transform 300ms ease-in-out;
-            transform: translateX(100%);
-            z-index: 50;
-        }
-        .drawer-container.open {
-            transform: translateX(0);
-        }
+    /* Chips */
+    .chip { background:#E5E7EB; color:#111827; }
 
-        /* Sheet/Modal inside drawer and main app container */
-        .sheet-overlay {
-            background-color: rgba(247, 249, 252, 0.8); /* BG color with opacity */
-            backdrop-filter: blur(2px);
-            z-index: 60;
-            transition: opacity 200ms ease;
-        }
-        .sheet-container {
-            position: fixed; /* For modal behavior over main content */
-            inset: 0;
-            z-index: 70;
-            background-color: rgba(0,0,0,0.1);
-            backdrop-filter: blur(2px);
-            display: none;
-        }
-        .sheet-content {
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
-        }
-    </style>
-    
-    <!-- Firebase SDK Imports (Mandatory boilerplate) -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, setDoc, doc, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    /* Overflow menu panel */
+    .menu-panel {
+      min-width: 180px;
+      background:#fff;
+      border: 1px solid #E5E7EB;
+      border-radius: 12px;
+      box-shadow: 0 10px 24px rgba(0,0,0,.12);
+      z-index: 40;
+    }
+    .menu-item {
+      display:flex; align-items:center; gap:.5rem;
+      width:100%; text-align:left; padding:.5rem .75rem;
+      font-weight:700; color:#1F2937;
+    }
+    .menu-item:hover { background:#F3F4F6; }
+    .menu-item:focus-visible { outline:none; box-shadow:0 0 0 3px rgba(59,130,246,.35); border-radius: 10px; }
 
-        // Global variables must be used as provided by the environment
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+    /* Toggle pills for "When to send?" (very high contrast) */
+    .toggle-pill {
+      border:2px solid #111827; color:#111827; background:#FFFFFF; font-weight:800;
+    }
+    .toggle-pill[aria-pressed="true"] {
+      background:#0052CC; color:#FFFFFF; border-color:#003E99;
+    }
+    .toggle-pill:hover { background:#F3F4F6; }
+    .toggle-pill[aria-pressed="true"]:hover { background:#003E99; }
 
-        if (firebaseConfig) {
-            const app = initializeApp(firebaseConfig);
-            const db = getFirestore(app);
-            const auth = getAuth(app);
-
-            async function authenticate() {
-                try {
-                    if (initialAuthToken) {
-                        await signInWithCustomToken(auth, initialAuthToken);
-                    } else {
-                        await signInAnonymously(auth);
-                    }
-                    console.log("Firebase authenticated successfully.");
-
-                    // Example usage of global userId and appId (Private data path)
-                    const userId = auth.currentUser?.uid || 'anonymous';
-                    const privateDocRef = doc(db, `/artifacts/${appId}/users/${userId}/config/metadata`);
-                    await setDoc(privateDocRef, { initialized: new Date().toISOString() }, { merge: true });
-
-                } catch (error) {
-                    console.error("Firebase authentication failed:", error);
-                }
-            }
-
-            authenticate();
-        } else {
-            console.warn("Firebase config not available. Running in local demo mode.");
-        }
-    </script>
+    /* Simple tooltip */
+    .tooltip-group { position: relative; display: inline-flex; align-items: center; }
+    .tooltip-bubble {
+      position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+      white-space: nowrap; background: #111827; color:#fff; font-size:12px; font-weight:700;
+      padding:6px 8px; border-radius:8px; box-shadow:0 6px 16px rgba(0,0,0,.2); opacity:0; pointer-events:none; transition:opacity .15s ease;
+    }
+    .tooltip-arrow {
+      position:absolute; top:100%; left:50%; transform: translateX(-50%);
+      width:0; height:0; border-left:6px solid transparent; border-right:6px solid transparent; border-top:6px solid #111827;
+    }
+    .tooltip-group:hover .tooltip-bubble,
+    .tooltip-group:focus-within .tooltip-bubble { opacity:1; }
+  </style>
 </head>
-<body class="min-h-screen">
 
-<!-- Fiori/Web Shell Structure -->
-<div class="flex h-screen overflow-hidden">
+<body class="min-h-screen bg-bg text-ink">
+  <div class="flex h-screen overflow-hidden">
+    <!-- Left rail -->
+    <nav class="w-16 bg-white flex flex-col items-center py-6 shadow-sm border-r border-divider">
+      <span class="text-xl font-bold mb-8">B</span>
+      <div class="flex flex-col gap-3">
+        <button onclick="changePage('alerts')" class="relative p-2 rounded-lg text-muted hover:bg-gray-100" title="Dashboard/Alerts" aria-label="Alerts">
+          <i data-lucide="bell" class="w-6 h-6"></i>
+          <span class="absolute -top-0.5 -right-0.5 text-[10px] text-white bg-red-600 rounded-full h-4 w-4 grid place-items-center font-bold">2</span>
+        </button>
+        <button class="p-2 rounded-lg text-muted hover:bg-gray-100" title="Classes"><i data-lucide="graduation-cap" class="w-6 h-6"></i></button>
+        <button class="p-2 rounded-lg text-muted hover:bg-gray-100" title="Payments"><i data-lucide="wallet" class="w-6 h-6"></i></button>
 
-    <!-- 1.0 Left Navigation (Fiori/Web Shell) -->
-    <nav class="w-16 bg-white flex flex-col items-center py-6 shadow-md border-r border-gray-200">
-        <span class="text-xl font-bold text-gray-800 mb-8">B</span>
-        <div class="flex flex-col space-y-4">
-            <button onclick="changePage('alert-list')" class="p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors relative" title="Dashboard/Alerts">
-                <i data-lucide="bell" class="w-6 h-6"></i>
-                <span class="absolute top-2 right-2 text-xs text-white bg-red-500 rounded-full h-4 w-4 flex items-center justify-center font-bold">2</span>
-            </button>
-            <button class="p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors" title="Classes">
-                <i data-lucide="graduation-cap" class="w-6 h-6"></i>
-            </button>
-            <button class="p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors" title="Payments">
-                <i data-lucide="wallet" class="w-6 h-6"></i>
-            </button>
-            <!-- Active Link: BeAKampaign -->
-            <button onclick="changePage('list')" class="p-2 rounded-lg bg-blue-100 text-blue-600 shadow-inner" title="BeAKampaign">
-                <i data-lucide="send" class="w-6 h-6"></i>
-            </button>
-            <button class="p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors" title="Settings">
-                <i data-lucide="settings" class="w-6 h-6"></i>
-            </button>
-        </div>
+        <button onclick="changePage('list')" class="p-2 rounded-lg bg-blue-100 text-primary shadow-inner" title="BeAKampaign">
+          <i data-lucide="send" class="w-6 h-6"></i>
+        </button>
+
+        <button class="p-2 rounded-lg text-muted hover:bg-gray-100" title="Settings"><i data-lucide="settings" class="w-6 h-6"></i></button>
+      </div>
     </nav>
 
-    <!-- Main Content Area -->
+    <!-- Main -->
     <main class="flex-1 overflow-y-auto p-8 relative">
-        <header class="mb-8">
-            <h1 id="main-header" class="text-3xl font-extrabold text-var(--color-text-strong)">BeAKampaign</h1>
-        </header>
+      <header class="mb-6 flex items-center justify-between">
+        <h1 id="main-header" class="text-3xl font-extrabold">BeAKampaign</h1>
+        <!-- Top CTA (list page only) -->
+        <div id="top-cta"></div>
+      </header>
 
-        <!-- Main Application Content (List, Compose, or Follow-up List) -->
-        <div id="app-container">
-            <!-- Content will be rendered here by JS -->
+      <div id="app-container"></div>
+
+      <!-- Global sheet -->
+      <div id="global-sheet" class="fixed inset-0 hidden z-50" aria-hidden="true">
+        <div class="absolute inset-0 bg-black/20" onclick="closeSheet()"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-3xl bg-white rounded-xl shadow-xl p-6">
+          <!-- injected -->
         </div>
+      </div>
 
-        <!-- Global Sheets (One-Click, Template/Reuse Selection) -->
-        <div id="global-sheet-container" class="sheet-container transition-opacity" style="display:none;">
-            <!-- Sheets are rendered here -->
-        </div>
-
-        <!-- Toast / Inline Notification Area -->
-        <div id="toast-container" class="fixed top-4 left-1/2 -translate-x-1/2 w-full max-w-sm z-50">
-            <!-- Toasts will appear here -->
-        </div>
-
+      <!-- Toasts -->
+      <div id="toast" class="fixed top-4 left-1/2 -translate-x-1/2 w-full max-w-sm z-50"></div>
     </main>
 
-    <!-- 4.0 Schedule Drawer (Right Side) -->
-    <div id="schedule-drawer" class="drawer-container fixed top-0 right-0 h-full w-[450px] bg-white shadow-2xl flex flex-col">
-        <!-- The drawer content is rendered by JS when the state changes -->
-    </div>
+    <!-- Right drawer (shared for Schedule & Audience Picker) -->
+    <aside id="drawer" class="fixed top-0 right-0 h-full w-[460px] bg-white shadow-2xl translate-x-full transition-transform duration-300 z-40" role="dialog" aria-modal="true">
+      <!-- injected -->
+    </aside>
+    <div id="drawer-overlay" class="fixed inset-0 bg-black/20 opacity-0 pointer-events-none transition-opacity z-30" onclick="closeDrawer()"></div>
+  </div>
 
-    <!-- Drawer Overlay -->
-    <div id="drawer-overlay" class="fixed inset-0 bg-black/20 z-40 hidden transition-opacity opacity-0" onclick="closeDrawer()"></div>
-</div>
+  <script>
+    // ---------- Icons
+    function paintIcons() { if (window.lucide?.createIcons) lucide.createIcons(); }
 
+    // ---------- State
+    const MESSAGES = { EMAIL: "Email", SMS: "SMS", SOCIAL: "Social Post" };
+    const CAMPAIGN_STATUS = { SENT: "Sent", SCHEDULED: "Scheduled", DRAFT: "Drafts", PAUSED: "Paused", ACTIVE: "Active" };
+    const FOLLOWUP_STATUS = { ALERT: "Alert", COMPLETED: "Completed", SKIPPED: "Skipped" };
 
-<script>
-// --- Core Application State & Constants ---
-const MESSAGES = {
-    EMAIL: 'Email',
-    SMS: 'SMS',
-    SOCIAL: 'Social Post'
-};
+    const state = {
+      page: "list",
+      readOnly: false,
+      drawerOpen: false,
+      drawerMode: "schedule", // 'schedule' | 'audience'
+      drawerStep: "schedule",
+      messageType: MESSAGES.EMAIL,
+      scheduleType: "now",
+      scheduleTime: "",
+      sequenceSteps: [],
+      currentCampaign: null,
+      isCampaignNameSet: true,
+      isAudienceSet: true,
+      currentComposeMode: 'scratch',
+      openMenuFor: null, // which row's overflow menu is open
 
-const CAMPAIGN_STATUS = {
-    SENT: 'Sent',
-    SCHEDULED: 'Scheduled',
-    DRAFT: 'Drafts',
-    PAUSED: 'Paused',
-    ACTIVE: 'Active'
-};
-
-const FOLLOWUP_STATUS = {
-    ALERT: 'Alert',
-    COMPLETED: 'Completed',
-    SKIPPED: 'Skipped'
-};
-
-let state = {
-    currentPage: 'list', // 'list', 'compose', 'followup-list', or 'campaign-detail' (read-only compose)
-    currentComposeMode: 'scratch', // 'template', 'scratch', or 'reuse'
-    isDrawerOpen: false,
-    drawerStep: 'schedule', // 'schedule' or 'preflight'
-    currentCampaign: null, // The campaign object being edited/viewed
-    messageType: MESSAGES.EMAIL,
-    scheduleType: 'now', // 'now' or 'later'
-    scheduleTime: '',
-    sequenceSteps: [],
-    isReadOnly: false, // New state for Campaign Detail view
-    // Required for scheduling
-    isCampaignNameSet: true, 
-    isAudienceSet: true,
-
-    campaigns: [
-        {
-            id: 1,
-            subject: "Your Weekly Class Update: New Features Inside",
-            name: "Weekly Update 10/25",
-            type: MESSAGES.EMAIL,
-            audience: "Parents (1,742)",
-            status: CAMPAIGN_STATUS.SENT,
-            sendTime: "Oct 25, 10:00 AM",
-            opens: 54,
-            clicks: 12,
-            sequences: [],
-            isEditable: false
-        },
-        {
-            id: 2,
-            subject: "Don't Miss Out! Registration Closes Tomorrow",
-            name: "Registration Reminder P1",
-            type: MESSAGES.EMAIL,
-            audience: "Parents (1,742)",
-            status: CAMPAIGN_STATUS.SCHEDULED,
-            sendTime: "Nov 10, 3:00 PM",
-            opens: '-',
-            clicks: '-',
-            sequences: [
-                { delay: '3d', condition: 'Non-openers', messageType: MESSAGES.SMS },
-                { delay: '7d', condition: 'Everyone', messageType: MESSAGES.EMAIL }
-            ],
-            isEditable: true
-        },
-        {
-            id: 3,
-            subject: "Summer Camp Early Bird Discount",
-            name: "Summer Camp P1",
-            type: MESSAGES.EMAIL,
-            audience: "Leads (3,200)",
-            status: CAMPAIGN_STATUS.ACTIVE,
-            sendTime: "Sent 2 days ago",
-            opens: 600,
-            clicks: 80,
-            sequences: [],
-            isEditable: true
-        }
-    ],
-    templates: [
+      campaigns: [
+        { id: 1, subject: "Your Weekly Class Update: New Features Inside", name: "Weekly Update 10/25", type: MESSAGES.EMAIL, audience: "Parents (1,742)", status: CAMPAIGN_STATUS.SENT, sendTime: "Oct 25, 10:00 AM", opens: 54, clicks: 12, sequences: [], isEditable: false },
+        { id: 2, subject: "Don't Miss Out! Registration Closes Tomorrow", name: "Registration Reminder P1", type: MESSAGES.EMAIL, audience: "Parents (1,742)", status: CAMPAIGN_STATUS.SCHEDULED, sendTime: "Nov 10, 3:00 PM", opens: "-", clicks: "-", sequences: [{ delay: "3d", condition: "Non-openers", messageType: MESSAGES.SMS }, { delay: "7d", condition: "Everyone", messageType: MESSAGES.EMAIL }], isEditable: true },
+        { id: 3, subject: "Summer Camp Early Bird Discount", name: "Summer Camp P1", type: MESSAGES.EMAIL, audience: "Leads (3,200)", status: CAMPAIGN_STATUS.ACTIVE, sendTime: "Sent 2 days ago", opens: 600, clicks: 80, sequences: [], isEditable: true },
+        { id: 4, subject: "Paused Mid-Campaign Test", name: "Mid-Campaign Test", type: MESSAGES.EMAIL, audience: "Leads (1,010)", status: CAMPAIGN_STATUS.PAUSED, sendTime: "Paused • Nov 1", opens: 100, clicks: 11, sequences: [{ delay: "3d", condition: "Non-openers", messageType: MESSAGES.EMAIL }], isEditable: true }
+      ],
+      templates: [
         { id: 201, name: "Seasonal Promo (Email)", type: MESSAGES.EMAIL, subject: "BIG Savings Inside!", body: "Use this template for major promotions. It includes a high-contrast CTA button ready for personalization." },
         { id: 202, name: "Enrollment Reminder (SMS)", type: MESSAGES.SMS, smsText: "Last chance to enroll! Don't miss out. [Link]" }
-    ],
-    followupAlerts: [
-        {
-            id: 101,
-            campaignId: 3,
-            campaignName: "Summer Camp P1",
-            segment: "Non-Clickers (1,120)",
-            description: "High-value prospects haven't clicked the camp link.",
-            recommendedAction: "SMS follow-up using Template X",
-            autoStopRule: "Reply to any message",
-            status: FOLLOWUP_STATUS.ALERT
-        },
-        {
-            id: 102,
-            campaignId: 2,
-            campaignName: "Registration Reminder P1",
-            segment: "Non-Openers (380)",
-            description: "Segment hasn't opened the final registration reminder.",
-            recommendedAction: "Send Email with new subject line.",
-            autoStopRule: "Class-full status",
-            status: FOLLOWUP_STATUS.ALERT
-        },
-        {
-            id: 103,
-            campaignId: 1,
-            campaignName: "Weekly Update 10/25",
-            segment: "Low-Engagement (52)",
-            description: "Completed last week with low open rate in this segment.",
-            recommendedAction: "Send an SMS survey.",
-            autoStopRule: "Payment received",
-            status: FOLLOWUP_STATUS.COMPLETED
-        }
-    ],
-
-    // Variables for the composing campaign (used for new or existing edits)
-    compose: {
+      ],
+      followups: [
+        { id: 101, campaignId: 3, campaignName: "Summer Camp P1", segment: "Non-Clickers (1,120)", description: "High-value prospects haven't clicked the camp link.", recommendedAction: "SMS follow-up using Template X", autoStopRule: "Reply to any message", status: FOLLOWUP_STATUS.ALERT },
+        { id: 102, campaignId: 2, campaignName: "Registration Reminder P1", segment: "Non-Openers (380)", description: "Segment hasn't opened the final registration reminder.", recommendedAction: "Send Email with new subject line.", autoStopRule: "Class-full status", status: FOLLOWUP_STATUS.ALERT },
+        { id: 103, campaignId: 1, campaignName: "Weekly Update 10/25", segment: "Low-Engagement (52)", description: "Completed last week with low open rate in this segment.", recommendedAction: "Send an SMS survey.", autoStopRule: "Payment received", status: FOLLOWUP_STATUS.COMPLETED }
+      ],
+      compose: {
         subject: "New Campaign Draft",
-        name: "New Campaign Draft", // Campaign name is now required
+        name: "New Campaign Draft",
         audience: "None Selected",
         audienceId: null,
         previewText: "",
@@ -374,1002 +209,974 @@ let state = {
         mediaUrl: "https://placehold.co/400x200/4c7ff5/ffffff?text=Media+Placeholder",
         isUnlayerOpen: false,
         isSending: false
+      }
+    };
+
+    // ---------- Shorthands + caret helpers
+    const $ = (id) => document.getElementById(id);
+
+    function saveCaret() {
+      const el = document.activeElement;
+      if (!el || !el.id) return null;
+      const data = { id: el.id };
+      try { if ('selectionStart' in el) { data.start = el.selectionStart; data.end = el.selectionEnd; } } catch(e){}
+      return data;
     }
-};
-
-// --- DOM Elements ---
-const appContainer = document.getElementById('app-container');
-const drawerContainer = document.getElementById('schedule-drawer');
-const drawerOverlay = document.getElementById('drawer-overlay');
-const toastContainer = document.getElementById('toast-container');
-const mainHeader = document.getElementById('main-header');
-const globalSheetContainer = document.getElementById('global-sheet-container');
-
-// --- Utility Functions ---
-
-/** Renders Lucide icons */
-function renderIcons() {
-    if (typeof lucide !== 'undefined') {
-        lucide.createIcons();
-    }
-}
-
-/** Shows a temporary toast notification */
-function showToast(message, type = 'success', duration = 4000) {
-    const colorClass = {
-        success: 'bg-green-100 text-green-700 border-green-300',
-        danger: 'bg-red-100 text-red-700 border-red-300',
-        info: 'bg-blue-100 text-blue-700 border-blue-300'
-    }[type];
-
-    const icon = {
-        success: 'check-circle',
-        danger: 'alert-triangle',
-        info: 'info'
-    }[type];
-
-    const toast = document.createElement('div');
-    toast.className = `p-4 mb-2 rounded-xl border-l-4 shadow-md ${colorClass} transition-all duration-300 opacity-0 transform translate-y-2`;
-    toast.innerHTML = `<div class="flex items-center"><i data-lucide="${icon}" class="w-5 h-5 mr-3"></i><span>${message}</span></div>`;
-
-    toastContainer.appendChild(toast);
-    renderIcons();
-
-    // Animate in
-    setTimeout(() => {
-        toast.classList.remove('opacity-0', 'translate-y-2');
-        toast.classList.add('opacity-100', 'translate-y-0');
-    }, 50);
-
-    // Animate out and remove
-    setTimeout(() => {
-        toast.classList.remove('opacity-100', 'translate-y-0');
-        toast.classList.add('opacity-0', 'translate-y-2');
-        setTimeout(() => toast.remove(), 300);
-    }, duration);
-}
-
-// --- Page Navigation and State Mutators ---
-
-function changePage(page, options = {}) {
-    state.currentPage = page;
-    state.isDrawerOpen = false; // Always close drawer on page change
-    state.isReadOnly = options.readOnly || false;
-    closeDrawer();
-    closeGlobalSheet(); // Close any open sheet
-    render();
-
-    if (page === 'alert-list') {
-        mainHeader.textContent = "Follow-up Alerts";
-    } else if (page === 'campaign-detail') {
-        mainHeader.textContent = `Campaign Detail: ${state.currentCampaign?.name || 'Loading...'}`;
-    } else {
-        mainHeader.textContent = "BeAKampaign";
-    }
-}
-
-function newCampaign() {
-    state.currentCampaign = null;
-    state.messageType = MESSAGES.EMAIL;
-    state.currentComposeMode = 'scratch';
-    state.isCampaignNameSet = false; // Reset required fields
-    state.isAudienceSet = false;
-    // Default compose state
-    state.compose.subject = "New Campaign Draft";
-    state.compose.name = "New Campaign Draft";
-    state.compose.audience = "None Selected";
-    state.compose.audienceId = null;
-    state.compose.previewText = "";
-    state.compose.body = "Start with a clean slate for your rich HTML content.";
-    state.compose.smsText = "Start typing your SMS here. [Link]";
-    state.compose.socialCaption = "Write a new social post caption.";
-    state.compose.isUnlayerOpen = false;
-    state.sequenceSteps = [];
-    changePage('compose');
-}
-
-function viewCampaignDetails(campaignId) {
-    const campaign = state.campaigns.find(c => c.id === campaignId);
-    if (!campaign) return showToast("Campaign not found.", 'danger');
-
-    state.currentCampaign = campaign;
-    state.messageType = campaign.type;
-    state.currentComposeMode = 'reuse'; 
-    state.compose.subject = campaign.subject;
-    state.compose.name = campaign.name;
-    state.compose.audience = campaign.audience;
-    state.isCampaignNameSet = true;
-    state.isAudienceSet = true;
-    state.compose.previewText = campaign.previewText || '';
-    state.compose.body = "This is the final sent content (read-only view)."; // Mock read-only content
-    state.compose.isUnlayerOpen = false;
-    state.sequenceSteps = JSON.parse(JSON.stringify(campaign.sequences)); 
-    // Set page to read-only detail view
-    changePage('compose', { readOnly: true }); 
-}
-
-function editCampaign(campaignId) {
-    const campaign = state.campaigns.find(c => c.id === campaignId);
-    if (!campaign || !campaign.isEditable) return showToast("This campaign is read-only (Sent).", 'info');
-
-    state.currentCampaign = campaign;
-    state.messageType = campaign.type;
-    state.currentComposeMode = 'reuse'; 
-    state.isReadOnly = false; // Ensure it's editable
-    state.compose.subject = campaign.subject;
-    state.compose.name = campaign.name;
-    state.compose.audience = campaign.audience;
-    state.isCampaignNameSet = true;
-    state.isAudienceSet = true;
-
-    state.compose.previewText = campaign.previewText || '';
-    state.compose.body = "Restoring content from prior campaign..."; // Mock retrieval
-    state.compose.isUnlayerOpen = false;
-    state.sequenceSteps = JSON.parse(JSON.stringify(campaign.sequences)); 
-
-    changePage('compose', { readOnly: false });
-}
-
-function updateCompose(field, value) {
-    if (state.isReadOnly) return;
-    state.compose[field] = value;
-
-    if (field === 'subject' && state.compose.name === "New Campaign Draft") {
-        state.compose.name = value;
-    }
-    
-    // Check if required fields are set (mocked)
-    state.isCampaignNameSet = state.compose.name.trim().length > 0;
-    if (field === 'name') state.isCampaignNameSet = value.trim().length > 0;
-    
-    renderCompose();
-}
-
-function handleModeChange(mode) {
-    if (mode === 'scratch') {
-        changeComposeMode('scratch');
-    } else {
-        renderGlobalSheet('source-selection', mode);
-    }
-}
-
-function changeComposeMode(mode, selectedSource = null) {
-    state.currentComposeMode = mode;
-    state.messageType = MESSAGES.EMAIL; // Reset to default when changing mode
-    state.compose.isUnlayerOpen = false;
-
-    if (mode === 'template' && selectedSource) {
-        state.compose.subject = selectedSource.subject;
-        state.compose.body = selectedSource.body;
-        state.messageType = selectedSource.type;
-
-    } else if (mode === 'reuse' && selectedSource) {
-        state.compose.subject = `Reusing: ${selectedSource.name}`;
-        state.compose.body = `Content loaded from campaign: ${selectedSource.name}.`;
-        state.messageType = selectedSource.type;
-    } else if (mode === 'scratch') {
-        state.compose.subject = "New Campaign Draft";
-        state.compose.body = "Start with a clean slate for your rich HTML content.";
-    }
-    renderCompose();
-}
-
-function mockSetAudience(segment) {
-    if (state.isReadOnly) return;
-    state.compose.audience = segment;
-    state.compose.audienceId = 'mock-id-123'; // Mock ID
-    state.isAudienceSet = true;
-    showToast(`Audience set to: ${segment}`, 'info');
-    renderCompose();
-}
-
-function changeMessageType(newType) {
-    if (state.isReadOnly) return;
-    state.messageType = newType;
-    state.compose.isUnlayerOpen = false; // Close Unlayer if editor changes
-    renderCompose();
-}
-
-function toggleUnlayer() {
-    if (state.isReadOnly) return;
-    state.compose.isUnlayerOpen = !state.compose.isUnlayerOpen;
-    renderCompose();
-}
-
-// --- Drawer Logic ---
-
-function openDrawer() {
-    if (state.isReadOnly) return showToast("Cannot schedule, viewing in read-only mode.", 'info');
-
-    const isReady = state.isCampaignNameSet && state.isAudienceSet;
-    if (!isReady) {
-        showToast("Campaign Name and Audience are required before scheduling.", 'danger');
-        return;
-    }
-
-    state.isDrawerOpen = true;
-    state.drawerStep = 'schedule';
-    drawerContainer.classList.add('open');
-    drawerOverlay.classList.remove('hidden');
-    setTimeout(() => drawerOverlay.classList.remove('opacity-0'), 10); // Animate overlay
-    renderDrawer();
-
-    // Focus trap (Basic)
-    const focusableElements = drawerContainer.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-    if (focusableElements.length > 0) {
-        focusableElements[0].focus();
-    }
-}
-
-function closeDrawer() {
-    state.isDrawerOpen = false;
-    drawerContainer.classList.remove('open');
-    drawerOverlay.classList.add('opacity-0');
-    setTimeout(() => drawerOverlay.classList.add('hidden'), 300);
-    render();
-}
-
-// --- Global Sheet Logic (Template/Reuse Selection, One-Click Confirm) ---
-
-function renderGlobalSheet(mode, context) {
-    let content;
-    let title;
-    const sheet = globalSheetContainer;
-
-    if (mode === 'details' || mode === 'confirm') {
-        // FOLLOW-UP ALERT SHEETS (reusing previous logic)
-        const alert = state.followupAlerts.find(a => a.id === (mode === 'details' ? context.id : context));
-        if (!alert) return;
-
-        if (mode === 'details') {
-            title = `Follow-up Details: ${alert.campaignName}`;
-            content = `<div class="space-y-4">
-<div class="p-3 bg-gray-50 rounded-xl"><h4 class="text-sm font-semibold text-gray-700">Segment</h4><p class="font-medium text-lg text-danger">${alert.segment}</p><p class="text-xs text-gray-500">${alert.description}</p></div>
-<div class="p-3 bg-blue-50 rounded-xl"><h4 class="text-sm font-semibold text-gray-700">Recommended Action</h4><p class="font-medium text-lg text-primary">${alert.recommendedAction}</p></div>
-<div class="p-3 bg-yellow-50 rounded-xl"><h4 class="text-sm font-semibold text-gray-700">Auto-Stop Rule</h4><p class="text-sm text-yellow-700">${alert.autoStopRule}</p></div>
-</div>
-<div class="mt-8 flex justify-between space-x-4">
-<button onclick="renderGlobalSheet('confirm', ${alert.id})" class="primary-btn flex-1 flex items-center justify-center"><i data-lucide="check-circle" class="w-5 h-5 mr-2"></i>One-Click Send</button>
-<button onclick="startManualFollowUp(${alert.id})" class="secondary-btn flex-1 flex items-center justify-center"><i data-lucide="edit" class="w-5 h-5 mr-2"></i>Manual Compose</button>
-</div>`;
-        } else if (mode === 'confirm') {
-            title = `Confirm One-Click Follow-Up`;
-            content = `<div class="space-y-6 text-center">
-<i data-lucide="zap" class="w-12 h-12 mx-auto text-primary"></i>
-<h4 class="text-xl font-bold">Are you sure you want to send this follow-up?</h4>
-<p class="text-gray-600">You are sending the **recommended template** to the **${alert.segment}** segment immediately.<br>*Auto-Stop Rule: ${alert.autoStopRule}*</p>
-</div>
-<div class="mt-8 flex justify-end space-x-3">
-<button onclick="closeGlobalSheet()" class="secondary-btn">Cancel</button>
-<button onclick="confirmOneClickSend(${alert.id})" class="primary-btn bg-success hover:bg-green-700"><i data-lucide="send" class="w-5 h-5 mr-2"></i>Confirm & Send Now</button>
-</div>`;
+    function restoreCaret(saved) {
+      if (!saved) return;
+      const el = document.getElementById(saved.id);
+      if (!el) return;
+      el.focus({ preventScroll: true });
+      try {
+        if (typeof saved.start === 'number' && typeof saved.end === 'number' && 'setSelectionRange' in el) {
+          el.setSelectionRange(saved.start, saved.end);
         }
+      } catch(e){}
+    }
 
-    } else if (mode === 'source-selection') {
-        // TEMPLATE/REUSE SELECTION SHEET
+    function toast(msg, type = "info", ms = 3000) {
+      const m = {
+        info: "bg-blue-100 text-blue-800 border-blue-300",
+        success: "bg-green-100 text-green-800 border-green-300",
+        danger: "bg-red-100 text-red-800 border-red-300",
+      }[type];
+      const icon = { info: "info", success: "check-circle", danger: "alert-triangle" }[type];
+      const el = document.createElement("div");
+      el.className = `p-3 mb-2 rounded-xl border shadow ${m} opacity-0 translate-y-2 transition-all`;
+      el.innerHTML = `<div class="flex items-center gap-2"><i data-lucide="${icon}" class="w-5 h-5"></i><span>${msg}</span></div>`;
+      $("toast").appendChild(el);
+      paintIcons();
+      requestAnimationFrame(() => {
+        el.classList.remove("opacity-0", "translate-y-2");
+        el.classList.add("opacity-100", "translate-y-0");
+      });
+      setTimeout(() => {
+        el.classList.add("opacity-0", "translate-y-2");
+        setTimeout(() => el.remove(), 200);
+      }, ms);
+    }
+
+    // ---------- Page nav
+    function changePage(page, opts = {}) {
+      state.page = page;
+      state.readOnly = !!opts.readOnly;
+      closeDrawer();
+      closeSheet();
+      state.openMenuFor = null; // close any open overflow menus
+      render();
+      const mh = $("main-header");
+      if (mh) {
+        mh.textContent =
+          page === "alerts" ? "Follow-up Alerts" :
+          page === "compose" ? (opts.readOnly ? `Campaign Detail: ${state.currentCampaign?.name || ""}` : "Compose Campaign") :
+          "BeAKampaign";
+      }
+    }
+
+    function newCampaign() {
+      state.currentCampaign = null;
+      state.messageType = MESSAGES.EMAIL;
+      Object.assign(state.compose, {
+        subject: "New Campaign Draft",
+        name: "New Campaign Draft",
+        audience: "None Selected",
+        audienceId: null,
+        previewText: "",
+        body: "Start with a clean slate for your rich HTML content.",
+        smsText: "Start typing your SMS here. [Link]",
+        socialCaption: "Write a new social post caption.",
+        isUnlayerOpen: false
+      });
+      state.sequenceSteps = [];
+      state.isCampaignNameSet = false;
+      state.isAudienceSet = false;
+      changePage("compose");
+    }
+
+    function viewCampaignDetails(id) {
+      const c = state.campaigns.find(x => x.id === id);
+      if (!c) return toast("Campaign not found", "danger");
+      state.currentCampaign = c;
+      state.messageType = c.type;
+      state.readOnly = true;
+      Object.assign(state.compose, {
+        subject: c.subject,
+        name: c.name,
+        audience: c.audience,
+        previewText: c.previewText || "",
+        body: "This is the final sent content (read-only view).",
+        isUnlayerOpen: false
+      });
+      state.isCampaignNameSet = true;
+      state.isAudienceSet = true;
+      state.sequenceSteps = JSON.parse(JSON.stringify(c.sequences));
+      changePage("compose", { readOnly: true });
+    }
+
+    function editCampaign(id) {
+      const c = state.campaigns.find(x => x.id === id);
+      if (!c || !c.isEditable) return toast("This campaign is read-only (Sent).", "info");
+      state.currentCampaign = c;
+      state.messageType = c.type;
+      state.readOnly = false;
+      Object.assign(state.compose, {
+        subject: c.subject,
+        name: c.name,
+        audience: c.audience,
+        previewText: c.previewText || "",
+        body: "Restoring content from prior campaign...",
+        isUnlayerOpen: false
+      });
+      state.isCampaignNameSet = true;
+      state.isAudienceSet = true;
+      state.sequenceSteps = JSON.parse(JSON.stringify(c.sequences));
+      changePage("compose", { readOnly: false });
+    }
+
+    // ---------- Compose handlers (caret preserve)
+    function updateCompose(field, value) {
+      if (state.readOnly) return;
+      state.compose[field] = value;
+      if (field === "subject" && state.compose.name === "New Campaign Draft") {
+        state.compose.name = value;
+      }
+      if (field === "name") {
+        state.isCampaignNameSet = value.trim().length > 0;
+      } else {
+        state.isCampaignNameSet = state.compose.name.trim().length > 0;
+      }
+      const saved = saveCaret();
+      renderCompose();
+      restoreCaret(saved);
+    }
+
+    function handleModeChange(mode) {
+      if (mode === 'scratch') changeComposeMode('scratch');
+      else renderSheet('source-selection', mode);
+    }
+
+    function changeComposeMode(mode, source = null) {
+      state.currentComposeMode = mode;
+      state.messageType = MESSAGES.EMAIL;
+      state.compose.isUnlayerOpen = false;
+
+      if (mode === 'template' && source) {
+        Object.assign(state.compose, { subject: source.subject, body: source.body, smsText: source.smsText || "Start typing... [Link]" });
+        state.messageType = source.type;
+      } else if (mode === 'reuse' && source) {
+        Object.assign(state.compose, { subject: `Reusing: ${source.name}`, body: `Content loaded from campaign: ${source.name}.` });
+        state.messageType = source.type;
+      } else if (mode === 'scratch') {
+        Object.assign(state.compose, { subject: "New Campaign Draft", body: "Start with a clean slate for your rich HTML content.", smsText: "Start typing... [Link]" });
+      }
+      const saved = saveCaret();
+      renderCompose();
+      restoreCaret(saved);
+    }
+
+    // ---------- Audience picker
+    function openAudienceDrawer() {
+      if (state.readOnly) return;
+      state.drawerOpen = true;
+      state.drawerMode = 'audience';
+      $("drawer").classList.remove("translate-x-full");
+      $("drawer-overlay").classList.remove("opacity-0", "pointer-events-none");
+      renderDrawer();
+      const focusable = $("drawer").querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      if (focusable.length > 0) focusable[0].focus();
+    }
+
+    function selectBeAKidAudience() {
+      state.compose.audience = "New Segment (1,500)";
+      state.compose.audienceId = "mock-beakid-001";
+      state.isAudienceSet = true;
+      toast("Audience set: New Segment (1,500)", "success");
+      closeDrawer();
+      renderCompose();
+    }
+
+    function selectAudienceSource(source) { toast(`${source} connection coming soon`, "info"); }
+
+    function mockSetAudience(segment) {
+      if (state.readOnly) return;
+      state.compose.audience = segment;
+      state.compose.audienceId = 'mock-id-123';
+      state.isAudienceSet = true;
+      toast(`Audience set to: ${segment}`, 'info');
+      renderCompose();
+    }
+
+    function changeMessageType(newType) {
+      if (state.readOnly) return;
+      state.messageType = newType;
+      state.compose.isUnlayerOpen = false;
+      const saved = saveCaret();
+      renderCompose();
+      restoreCaret(saved);
+    }
+
+    function toggleUnlayer() {
+      if (state.readOnly) return;
+      state.compose.isUnlayerOpen = !state.compose.isUnlayerOpen;
+      const saved = saveCaret();
+      renderCompose();
+      restoreCaret(saved);
+    }
+
+    // ---------- Drawer (Schedule & Audience)
+    function openDrawer() {
+      if (state.readOnly) return toast("Cannot schedule, viewing in read-only mode.", "info");
+      if (!state.isCampaignNameSet || !state.isAudienceSet) {
+        return toast("Campaign Name and Audience are required before scheduling.", "danger");
+      }
+      state.drawerOpen = true;
+      state.drawerMode = 'schedule';
+      state.drawerStep = 'schedule';
+      $("drawer").classList.remove("translate-x-full");
+      $("drawer-overlay").classList.remove("opacity-0", "pointer-events-none");
+      renderDrawer();
+      const focusable = $("drawer").querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      if (focusable.length > 0) focusable[0].focus();
+    }
+    function closeDrawer() {
+      state.drawerOpen = false;
+      $("drawer").classList.add("translate-x-full");
+      $("drawer-overlay").classList.add("opacity-0", "pointer-events-none");
+    }
+
+    function renderDrawer() {
+      if (!state.drawerOpen) { $("drawer").innerHTML = ''; return; }
+
+      if (state.drawerMode === 'audience') {
+        $("drawer").setAttribute("aria-label", "Select Audience");
+        $("drawer").innerHTML = `
+          <div class="p-6 border-b border-divider flex justify-between items-center">
+            <h2 class="text-xl font-extrabold">Select Audience</h2>
+            <button onclick="closeDrawer()" class="text-muted hover:text-ink p-2 rounded-full" aria-label="Close audience picker"><i data-lucide="x" class="w-6 h-6"></i></button>
+          </div>
+          <div class="flex-1 overflow-y-auto p-6 space-y-4">
+            <div class="grid gap-3">
+              <button onclick="selectBeAKidAudience()" class="w-full p-4 rounded-xl btn-primary flex items-center justify-between">
+                <span class="font-extrabold">Your BeAKid Audiences</span>
+                <i data-lucide="check-circle" class="w-5 h-5"></i>
+              </button>
+              <button onclick="selectAudienceSource('Excel upload')" class="w-full p-4 rounded-xl btn-outline flex items-center justify-between">
+                <span class="font-extrabold">Excel</span>
+                <i data-lucide="file-spreadsheet" class="w-5 h-5"></i>
+              </button>
+              <button onclick="selectAudienceSource('Google Sheets')" class="w-full p-4 rounded-xl btn-outline flex items-center justify-between">
+                <span class="font-extrabold">Google Sheets</span>
+                <i data-lucide="sheet" class="w-5 h-5"></i>
+              </button>
+              <button onclick="selectAudienceSource('Manual entry')" class="w-full p-4 rounded-xl btn-outline flex items-center justify-between">
+                <span class="font-extrabold">Manual</span>
+                <i data-lucide="keyboard" class="w-5 h-5"></i>
+              </button>
+            </div>
+            <p class="text-sm text-muted mt-4">Tip: You can refine segments later with filters (tags, activity, enrollments).</p>
+          </div>
+        `;
+        paintIcons();
+        return;
+      }
+
+      // Schedule drawer
+      const isPreflight = state.drawerStep === 'preflight';
+      const sequences = state.sequenceSteps.map((step, i) => `
+        <div class="p-3 bg-gray-50 rounded-xl border border-divider flex items-center gap-3 mb-2">
+          <span class="font-bold text-lg text-primary">S${i + 2}</span>
+          <div class="flex-1 grid grid-cols-3 gap-2">
+            <select onchange="updateSequenceStep(${i}, 'delay', this.value)" class="w-full p-2 border-2 border-gray-800 rounded-lg text-sm bg-white">
+                <option value="1d" ${step.delay === '1d' ? 'selected' : ''}>Delay: 1d</option>
+                <option value="3d" ${step.delay === '3d' ? 'selected' : ''}>Delay: 3d</option>
+                <option value="7d" ${step.delay === '7d' ? 'selected' : ''}>Delay: 7d</option>
+            </select>
+            <select onchange="updateSequenceStep(${i}, 'condition', this.value)" class="w-full p-2 border-2 border-gray-800 rounded-lg text-sm bg-white">
+                <option value="Non-openers" ${step.condition === 'Non-openers' ? 'selected' : ''}>Non-openers</option>
+                <option value="Non-clickers" ${step.condition === 'Non-clickers' ? 'selected' : ''}>Non-clickers</option>
+                <option value="Everyone" ${step.condition === 'Everyone' ? 'selected' : ''}>Everyone</option>
+            </select>
+            <select onchange="updateSequenceStep(${i}, 'messageType', this.value)" class="w-full p-2 border-2 border-gray-800 rounded-lg text-sm bg-white">
+                ${[MESSAGES.EMAIL, MESSAGES.SMS, MESSAGES.SOCIAL].map(t => `<option value="${t}" ${step.messageType === t ? 'selected' : ''}>${t}</option>`).join('')}
+            </select>
+          </div>
+          <button onclick="removeSequenceStep(${i})" class="text-gray-700 hover:text-danger p-1" aria-label="Remove step"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>`).join('');
+
+      const preflightSheet = `
+        <div class="absolute inset-0 bg-white/85 backdrop-blur-sm transition-opacity ${isPreflight ? 'opacity-100' : 'opacity-0 invisible'} z-10">
+          <div class="absolute inset-0 p-6 flex flex-col bg-white border-l border-divider">
+            <div class="flex justify-between items-center pb-4 border-b border-divider">
+              <h3 class="text-xl font-extrabold flex items-center gap-2"><i data-lucide="shield-check" class="w-6 h-6 text-primary"></i>Pre-flight Check</h3>
+              <button onclick="togglePreflightSheet()" class="text-muted hover:text-ink p-1" aria-label="Close pre-flight"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+            <div class="py-4 space-y-3 flex-1 overflow-y-auto">
+              <div class="p-3 bg-green-50 rounded-lg border border-green-300 text-sm font-semibold"><strong>PASSED:</strong> Subject Line</div>
+              <div class="p-3 bg-yellow-50 rounded-lg border border-yellow-300 text-sm font-semibold"><strong>WARNING:</strong> 1/3 Links Unsecure</div>
+              <div class="p-3 bg-green-50 rounded-lg border border-green-300 text-sm font-semibold"><strong>PASSED:</strong> Audience Valid</div>
+              <div class="p-3 bg-green-50 rounded-lg border border-green-300 text-sm font-semibold"><strong>PASSED:</strong> Sequence logic OK</div>
+            </div>
+            <button onclick="togglePreflightSheet()" class="py-2 px-4 w-full rounded-xl btn-primary font-extrabold">Return</button>
+          </div>
+        </div>`;
+
+      $("drawer").setAttribute("aria-label", "Schedule Campaign");
+      $("drawer").innerHTML = `
+        <div class="p-6 border-b border-divider flex justify-between items-center">
+          <h2 class="text-xl font-extrabold">Schedule Campaign</h2>
+          <button onclick="closeDrawer()" class="text-muted hover:text-ink p-2 rounded-full" aria-label="Close drawer"><i data-lucide="x" class="w-6 h-6"></i></button>
+        </div>
+        <div class="flex-1 overflow-y-auto p-6 space-y-8">
+          <div>
+            <h3 class="font-extrabold text-ink mb-2">Recipients</h3>
+            <div class="p-3 bg-gray-50 rounded-lg text-sm text-ink flex items-center gap-2 border border-gray-200"><i data-lucide="users" class="w-4 h-4"></i>${state.compose.audience}</div>
+          </div>
+          <div>
+            <h3 class="font-extrabold text-ink mb-3">When to send?</h3>
+            <div class="flex gap-4 mb-4">
+              <button
+                onclick="state.scheduleType='now'; renderDrawer();"
+                class="flex-1 py-3 rounded-xl toggle-pill"
+                aria-pressed="${state.scheduleType === 'now' ? 'true' : 'false'}"
+              >
+                Send now
+              </button>
+              <button
+                onclick="state.scheduleType='later'; renderDrawer();"
+                class="flex-1 py-3 rounded-xl toggle-pill"
+                aria-pressed="${state.scheduleType === 'later' ? 'true' : 'false'}"
+              >
+                Send later
+              </button>
+            </div>
+            ${state.scheduleType === 'later' ? `
+              <div class="space-y-3 p-3 bg-gray-50 rounded-lg border border-gray-300">
+                <label class="block text-sm font-bold">Date &amp; Time</label>
+                <input type="datetime-local" onchange="state.scheduleTime=this.value" class="w-full p-2 border-2 border-gray-800 rounded-lg bg-white">
+                <div class="tooltip-group mt-1">
+                  <button onclick="toast('AI time applied!', 'info')" class="text-sm font-extrabold text-primary as-link inline-flex items-center gap-1" aria-describedby="ai-tip">
+                    <i data-lucide="zap" class="w-4 h-4"></i>
+                    AI recommend time
+                  </button>
+                  <div id="ai-tip" role="tooltip" class="tooltip-bubble">
+                    AI-recommended launch time based on open/click data
+                    <span class="tooltip-arrow"></span>
+                  </div>
+                </div>
+              </div>` : ''}
+          </div>
+          <div>
+            <h3 class="font-extrabold text-ink mb-3">Add Follow-ups (Sequences)</h3>
+            <div class="space-y-3">${sequences || '<p class="text-sm text-muted p-2">No follow-ups added.</p>'}</div>
+            <button onclick="addSequenceStep()" class="mt-3 w-full py-2 px-4 rounded-xl border-2 border-gray-800 font-extrabold hover:bg-gray-100 flex items-center justify-center gap-2"><i data-lucide="plus" class="w-5 h-5"></i>+ Add step</button>
+          </div>
+          <div class="pt-4 border-t border-divider">
+            <button onclick="togglePreflightSheet()" class="w-full py-2 px-4 rounded-xl border-2 border-gray-800 font-extrabold hover:bg-gray-100 flex items-center justify-center gap-2"><i data-lucide="shield-check" class="w-5 h-5"></i>Run Pre-flight check</button>
+          </div>
+        </div>
+        <div class="p-6 border-t border-divider flex justify-end gap-3">
+          <button onclick="closeDrawer()" class="py-2 px-4 rounded-xl border-2 border-gray-800 font-extrabold hover:bg-gray-100">Cancel</button>
+          <button onclick="handleSubmit()" class="py-2 px-4 rounded-xl btn-primary font-extrabold flex items-center gap-2 ${state.compose.isSending ? 'opacity-70' : ''}" ${state.compose.isSending ? 'disabled' : ''}>
+            ${state.compose.isSending
+              ? '<i data-lucide="loader-circle" class="w-5 h-5 animate-spin"></i>Processing...'
+              : `<i data-lucide="send" class="w-5 h-5"></i>${state.scheduleType === 'now' ? 'Launch' : 'Schedule'}`}
+          </button>
+        </div>
+        ${preflightSheet}
+      `;
+      paintIcons();
+    }
+
+    // ---------- Sheet (source selection + preview)
+    function renderSheet(mode, context) {
+      let content, title;
+      const sheet = $("global-sheet").querySelector("div:last-child");
+
+      if (mode === 'details' || mode === 'confirm') {
+        const alert = state.followups.find(a => a.id === (mode === 'details' ? context.id : context));
+        if (!alert) return;
+        if (mode === 'details') {
+          title = `Follow-up Details: ${alert.campaignName}`;
+          content = `<div class="space-y-4">
+            <div class="p-3 bg-gray-50 rounded-lg"><h4 class="text-sm font-semibold text-muted">Segment</h4><p class="font-medium text-lg text-danger">${alert.segment}</p><p class="text-xs text-muted">${alert.description}</p></div>
+            <div class="p-3 bg-blue-50 rounded-lg"><h4 class="text-sm font-semibold text-muted">Recommended Action</h4><p class="font-medium text-lg text-primary">${alert.recommendedAction}</p></div>
+            <div class="p-3 bg-yellow-50 rounded-lg"><h4 class="text-sm font-semibold text-muted">Auto-Stop Rule</h4><p class="text-sm text-yellow-700">${alert.autoStopRule}</p></div>
+          </div>
+          <div class="mt-8 flex justify-between gap-4">
+            <button onclick="renderSheet('confirm', ${alert.id})" class="flex-1 py-2 px-4 rounded-xl btn-primary font-semibold flex items-center justify-center gap-2"><i data-lucide="check-circle" class="w-5 h-5"></i>One-Click Send</button>
+            <button onclick="startManualFollowUp(${alert.id})" class="flex-1 py-2 px-4 rounded-xl border-2 border-gray-400 font-semibold hover:bg-gray-100 flex items-center justify-center gap-2"><i data-lucide="edit" class="w-5 h-5"></i>Manual Compose</button>
+          </div>`;
+        } else {
+          title = `Confirm One-Click Follow-Up`;
+          content = `<div class="space-y-6 text-center">
+            <i data-lucide="zap" class="w-12 h-12 mx-auto text-primary"></i>
+            <h4 class="text-xl font-bold">Are you sure?</h4>
+            <p class="text-muted">Send <strong>${alert.recommendedAction}</strong> to <strong>${alert.segment}</strong> immediately?<br/>Auto-Stop Rule: ${alert.autoStopRule}</p>
+          </div>
+          <div class="mt-8 flex justify-end gap-3">
+            <button onclick="closeSheet()" class="py-2 px-4 rounded-xl border-2 border-gray-400 font-semibold hover:bg-gray-100">Cancel</button>
+            <button onclick="confirmOneClickSend(${alert.id})" class="py-2 px-4 rounded-xl bg-green-700 text-white font-semibold hover:bg-green-800 flex items-center gap-2"><i data-lucide="send" class="w-5 h-5"></i>Confirm & Send</button>
+          </div>`;
+        }
+      } else if (mode === 'source-selection') {
         const isTemplate = context === 'template';
         const sourceData = isTemplate ? state.templates : state.campaigns.filter(c => c.status !== CAMPAIGN_STATUS.DRAFT);
-        title = isTemplate ? "Select Template to Use" : "Select Prior Campaign to Reuse";
-        
-        const listItems = sourceData.map(item => 
-            `<li class="p-3 border-b border-divider flex justify-between items-center hover:bg-gray-50 cursor-pointer transition-colors"
-                 onclick="selectSourceAndClose('${isTemplate ? 'template' : 'reuse'}', ${item.id})">
-                <div>
-                    <p class="font-medium">${item.name}</p>
-                    <p class="text-xs text-gray-500">${item.subject || item.type}</p>
-                </div>
-                <i data-lucide="arrow-right" class="w-4 h-4 text-primary"></i>
-            </li>`
-        ).join('');
+        title = isTemplate ? "Select Template" : "Reuse Prior Campaign";
+        const listItems = sourceData.map(item => `
+          <li class="p-3 border-b border-divider hover:bg-gray-50 cursor-pointer" onclick="selectSourceAndClose('${isTemplate ? 'template' : 'reuse'}', ${item.id})" role="link" tabindex="0">
+            <div>
+              <p class="font-medium as-link">${item.name}</p>
+              <p class="text-xs text-muted">${item.subject || item.type}</p>
+            </div>
+            <i data-lucide="arrow-right" class="w-4 h-4 text-primary"></i>
+          </li>`).join('');
+        content = `<p class="text-sm text-muted mb-4">Choose a source to pre-fill your new campaign.</p>
+          <ul class="border border-divider rounded-lg max-h-96 overflow-y-auto bg-white">${listItems || "<li class='p-3 text-sm text-muted'>No sources found.</li>"}</ul>
+          <div class="mt-6 flex justify-end"><button onclick="closeSheet()" class="py-2 px-4 rounded-xl border-2 border-gray-400 font-semibold hover:bg-gray-100">Cancel</button></div>`;
+      } else if (mode === 'preview') {
+        // Build a live preview based on current compose state + channel
+        const isEmail = state.messageType === MESSAGES.EMAIL;
+        const isSMS = state.messageType === MESSAGES.SMS;
+        const isSocial = state.messageType === MESSAGES.SOCIAL;
 
-        content = `<p class="text-sm text-gray-600 mb-4">Choose a source to pre-fill your new campaign draft.</p>
-<ul class="border border-divider rounded-xl max-h-96 overflow-y-auto bg-white">${listItems}</ul>
-<div class="mt-6 flex justify-end">
-<button onclick="closeGlobalSheet()" class="secondary-btn">Cancel</button>
-</div>`;
+        title = `Preview: ${state.compose.name || 'Untitled Campaign'}`;
+
+        const emailPreview = `
+          <div class="max-w-[680px] mx-auto border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+            <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+              <p class="text-sm text-muted"><strong>From:</strong> hello@provider.com</p>
+              <p class="text-sm text-muted"><strong>To:</strong> ${state.compose.audience || '—'}</p>
+            </div>
+            <div class="px-6 py-5">
+              <h3 class="text-xl font-extrabold mb-1">${state.compose.subject || '(no subject)'}</h3>
+              <p class="text-sm text-muted mb-4">${state.compose.previewText || 'No preview text'}...</p>
+              <div class="prose max-w-none">
+                <pre class="text-sm whitespace-pre-wrap leading-relaxed">${state.compose.body || ''}</pre>
+              </div>
+            </div>
+          </div>`;
+
+        const smsPreview = `
+          <div class="max-w-sm mx-auto border-2 border-gray-800 rounded-[36px] p-4 bg-white">
+            <div class="h-6 w-24 bg-gray-200 rounded-full mx-auto mb-4"></div>
+            <div class="space-y-3">
+              <div class="bg-gray-100 rounded-2xl p-3 text-sm text-ink">${state.compose.smsText || ''}</div>
+            </div>
+            <div class="mt-4 text-center text-xs text-muted">SMS preview</div>
+          </div>`;
+
+        const socialPreview = `
+          <div class="max-w-md mx-auto border border-gray-200 rounded-xl overflow-hidden bg-white">
+            <div class="p-3 flex items-center gap-3">
+              <div class="w-8 h-8 rounded-full bg-gray-200"></div>
+              <div>
+                <p class="text-sm font-extrabold">Your Brand</p>
+                <p class="text-xs text-muted">Just now</p>
+              </div>
+            </div>
+            <div class="px-3 pb-3">
+              <p class="text-sm text-ink mb-2">${state.compose.socialCaption || ''}</p>
+              <img src="${state.compose.mediaUrl}" alt="Post media" class="w-full h-56 object-cover rounded-md border">
+            </div>
+          </div>`;
+
+        content = `
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-bold text-muted">Channel:</span>
+                <span class="text-sm font-extrabold">${state.messageType}</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-bold text-muted">Audience:</span>
+                <span class="text-sm font-extrabold">${state.compose.audience || '—'}</span>
+              </div>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-divider">
+              ${isEmail ? emailPreview : isSMS ? smsPreview : socialPreview}
+            </div>
+            <div class="mt-6 flex justify-end gap-3">
+              <button onclick="closeSheet()" class="py-2 px-4 rounded-xl border-2 border-gray-400 font-semibold hover:bg-gray-100">Back to edit</button>
+              <button onclick="toast('Test sent to hello@provider.com', 'info')" class="py-2 px-4 rounded-xl btn-primary font-semibold flex items-center gap-2">
+                <i data-lucide="mail-check" class="w-5 h-5"></i>Send test
+              </button>
+            </div>
+          </div>`;
+      }
+
+      sheet.innerHTML = `<div class="flex justify-between items-center pb-4 border-b border-divider mb-4">
+          <h3 class="text-xl font-bold">${title || ''}</h3>
+          <button onclick="closeSheet()" class="text-muted hover:text-ink p-1 rounded-full" aria-label="Close dialog"><i data-lucide="x" class="w-6 h-6"></i></button>
+        </div>${content || ''}`;
+      $("global-sheet").classList.remove("hidden");
+      $("global-sheet").setAttribute("aria-hidden", "false");
+      paintIcons();
     }
 
-    sheet.innerHTML = `<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg card p-6 sheet-content">
-<div class="flex justify-between items-center pb-4 border-b border-divider mb-4">
-<h3 class="text-xl font-bold">${title}</h3>
-<button onclick="closeGlobalSheet()" class="text-gray-500 hover:text-gray-800 p-1 rounded-full transition-colors" title="Close Sheet" aria-label="Close Sheet"><i data-lucide="x" class="w-6 h-6"></i></button>
-</div>
-${content}
-</div>`;
-    sheet.style.display = 'block';
-    renderIcons();
-}
-
-function closeGlobalSheet() {
-    globalSheetContainer.style.display = 'none';
-    render(); // Rerender to clear any temporary state effects
-}
-
-function selectSourceAndClose(mode, sourceId) {
-    let source = null;
-    if (mode === 'template') {
-        source = state.templates.find(t => t.id === sourceId);
-    } else if (mode === 'reuse') {
-        source = state.campaigns.find(c => c.id === sourceId);
+    function closeSheet() {
+      $("global-sheet").classList.add("hidden");
+      $("global-sheet").setAttribute("aria-hidden", "true");
     }
 
-    if (source) {
+    function selectSourceAndClose(mode, sourceId) {
+      const source = (mode === 'template') ? state.templates.find(t => t.id === sourceId) : state.campaigns.find(c => c.id === sourceId);
+      if (source) {
         changeComposeMode(mode, source);
-        closeGlobalSheet();
-        showToast(`Content loaded from ${source.name}.`, 'info');
-    }
-}
-// --- Sequence Logic (inside Drawer) --- (No changes here, kept for completeness)
-
-function addSequenceStep() {
-    const newStep = {
-        delay: '3d', // 3 days default
-        condition: 'Non-openers', // Default
-        messageType: state.messageType // Inherit from Compose
-    };
-    state.sequenceSteps.push(newStep);
-    renderDrawer();
-}
-
-function removeSequenceStep(index) {
-    state.sequenceSteps.splice(index, 1);
-    renderDrawer();
-}
-
-function updateSequenceStep(index, field, value) {
-    state.sequenceSteps[index][field] = value;
-    renderDrawer();
-}
-
-function togglePreflightSheet() {
-    state.drawerStep = state.drawerStep === 'schedule' ? 'preflight' : 'schedule';
-    renderDrawer();
-}
-
-// --- Follow-up Logic ---
-function viewFollowUpDetails(alertId) {
-    const alert = state.followupAlerts.find(a => a.id === alertId);
-    if (!alert) return;
-
-    renderGlobalSheet('details', alert);
-}
-
-function confirmOneClickSend(alertId) {
-    const alertIndex = state.followupAlerts.findIndex(a => a.id === alertId);
-    if (alertIndex !== -1) {
-        state.followupAlerts[alertIndex].status = FOLLOWUP_STATUS.COMPLETED;
-        closeGlobalSheet();
-        showToast(`Follow-up sent successfully to ${state.followupAlerts[alertIndex].segment}!`, 'success');
-    }
-}
-
-function startManualFollowUp(alertId) {
-    const alert = state.followupAlerts.find(a => a.id === alertId);
-    if (!alert) return;
-
-    state.currentCampaign = null;
-    state.messageType = MESSAGES.EMAIL; // Default to email for manual
-    state.currentComposeMode = 'scratch';
-    // Prefill and lock audience
-    state.compose.subject = `Follow-up: ${alert.description}`;
-    state.compose.name = `Follow-up: ${alert.segment}`;
-    state.compose.audience = alert.segment + " (Locked)";
-    state.compose.audienceId = 'locked-' + alert.segment;
-    state.isCampaignNameSet = true;
-    state.isAudienceSet = true; // Locked
-    state.isReadOnly = false; // Ensure it's editable
-    // Contextual body
-    state.compose.body = `[MANUAL FOLLOW-UP] We are targeting the segment that has been identified as ${alert.segment}. This message will automatically stop if the condition: "${alert.autoStopRule}" is met.`;
-
-    closeGlobalSheet();
-    changePage('compose'); // Opens the compose view
-}
-
-// --- Final Action ---
-
-function handleSubmit() {
-    if (!state.isCampaignNameSet || !state.isAudienceSet || state.isReadOnly) {
-        return; // Should be disabled, but safeguard
+        closeSheet();
+        toast(`Content loaded from ${source.name}.`, 'info');
+      }
     }
 
-    // Mock sending process
-    state.compose.isSending = true;
-    renderDrawer();
+    // ---------- Sequence Logic
+    function addSequenceStep() { state.sequenceSteps.push({ delay: '3d', condition: 'Non-openers', messageType: state.messageType }); renderDrawer(); }
+    function removeSequenceStep(index) { state.sequenceSteps.splice(index, 1); renderDrawer(); }
+    function updateSequenceStep(index, field, value) { state.sequenceSteps[index][field] = value; renderDrawer(); }
+    function togglePreflightSheet() { state.drawerStep = state.drawerStep === 'schedule' ? 'preflight' : 'schedule'; renderDrawer(); }
 
-    setTimeout(() => {
-        // Update the state with the new campaign (mock persistence)
-        const newId = state.campaigns.length + 1;
+    // ---------- Follow-up Logic
+    function viewFollowUpDetails(id) { const alert = state.followups.find(a => a.id === id); if (alert) renderSheet('details', alert); }
+    function confirmOneClickSend(id) {
+      const index = state.followups.findIndex(a => a.id === id);
+      if (index !== -1) {
+        state.followups[index].status = FOLLOWUP_STATUS.COMPLETED;
+        closeSheet();
+        toast(`Follow-up sent to ${state.followups[index].segment}!`, 'success');
+        render();
+      }
+    }
+    function startManualFollowUp(id) {
+      const alert = state.followups.find(a => a.id === id);
+      if (!alert) return;
+      state.currentCampaign = null;
+      state.messageType = MESSAGES.EMAIL;
+      state.currentComposeMode = 'scratch';
+      Object.assign(state.compose, {
+        subject: `Follow-up: ${alert.description}`,
+        name: `Follow-up: ${alert.segment}`,
+        audience: `${alert.segment} (Locked)`,
+        audienceId: `locked-${alert.segment}`,
+        body: `[MANUAL FOLLOW-UP] Targeting ${alert.segment}. Auto-stop rule: "${alert.autoStopRule}".`
+      });
+      state.isCampaignNameSet = true;
+      state.isAudienceSet = true;
+      state.isReadOnly = false;
+      closeSheet();
+      changePage('compose');
+    }
+
+    // ---------- Overflow menu actions
+    function toggleRowMenu(id, ev) { ev?.stopPropagation(); state.openMenuFor = (state.openMenuFor === id) ? null : id; renderList(); }
+    function closeRowMenu() { if (state.openMenuFor !== null) { state.openMenuFor = null; renderList(); } }
+    function pauseCampaign(id) {
+      const i = state.campaigns.findIndex(c => c.id === id);
+      if (i === -1) return;
+      const c = state.campaigns[i];
+      if (c.status === CAMPAIGN_STATUS.ACTIVE || c.status === CAMPAIGN_STATUS.SCHEDULED) {
+        c.status = CAMPAIGN_STATUS.PAUSED;
+        c.isEditable = true;
+        toast(`Campaign '${c.name}' paused.`, 'success');
+      } else {
+        toast(`Only Active or Scheduled campaigns can be paused.`, 'info');
+      }
+      closeRowMenu();
+    }
+    function resumeCampaign(id) {
+      const i = state.campaigns.findIndex(c => c.id === id);
+      if (i === -1) return;
+      const c = state.campaigns[i];
+      if (c.status === CAMPAIGN_STATUS.PAUSED) {
+        c.status = CAMPAIGN_STATUS.ACTIVE;
+        c.isEditable = true;
+        toast(`Campaign '${c.name}' resumed.`, 'success');
+      } else {
+        toast(`Only Paused campaigns can be resumed.`, 'info');
+      }
+      closeRowMenu();
+    }
+    function deleteCampaign(id) {
+      const c = state.campaigns.find(c => c.id === id);
+      if (!c) return;
+      if (!confirm(`Delete campaign '${c.name}'? This cannot be undone.`)) return;
+      state.campaigns = state.campaigns.filter(c => c.id !== id);
+      toast(`Campaign deleted.`, 'success');
+      closeRowMenu();
+      renderList();
+    }
+    function duplicateCampaign(id) {
+      const c = state.campaigns.find(c => c.id === id);
+      if (!c) return;
+      const copy = {
+        ...c,
+        id: Date.now(),
+        name: `${c.name} (Copy)`,
+        status: CAMPAIGN_STATUS.DRAFT,
+        sendTime: '—',
+        opens: '-',
+        clicks: '-',
+        isEditable: true,
+        sequences: JSON.parse(JSON.stringify(c.sequences || []))
+      };
+      state.campaigns.unshift(copy);
+      toast(`Duplicated '${c.name}' as draft.`, 'success');
+      closeRowMenu();
+      renderList();
+    }
+
+    // ---------- Final Action
+    function handleSubmit() {
+      if (state.compose.isSending || !state.isCampaignNameSet || !state.isAudienceSet || state.readOnly) return;
+      state.compose.isSending = true;
+      renderDrawer();
+
+      setTimeout(() => {
+        const newId = Date.now();
         const status = state.scheduleType === 'now' ? CAMPAIGN_STATUS.SENT : CAMPAIGN_STATUS.SCHEDULED;
         const sendTime = state.scheduleType === 'now' ? 'Sent Just Now' : state.scheduleTime || 'Unspecified Time';
-
-        const newCampaignData = {
-            id: state.currentCampaign ? state.currentCampaign.id : newId,
-            subject: state.compose.subject,
-            name: state.compose.name,
-            type: state.messageType,
-            audience: state.compose.audience,
-            status: status,
-            sendTime: sendTime,
-            opens: status === CAMPAIGN_STATUS.SENT ? 0 : '-',
-            clicks: status === CAMPAIGN_STATUS.SENT ? 0 : '-',
-            sequences: JSON.parse(JSON.stringify(state.sequenceSteps)),
-            isEditable: status !== CAMPAIGN_STATUS.SENT
+        
+        const campaignData = {
+          id: state.currentCampaign ? state.currentCampaign.id : newId,
+          subject: state.compose.subject,
+          name: state.compose.name,
+          type: state.messageType,
+          audience: state.compose.audience,
+          status: status,
+          sendTime: sendTime,
+          opens: status === CAMPAIGN_STATUS.SENT ? 0 : '-',
+          clicks: status === CAMPAIGN_STATUS.SENT ? 0 : '-',
+          sequences: JSON.parse(JSON.stringify(state.sequenceSteps)),
+          isEditable: status !== CAMPAIGN_STATUS.SENT
         };
 
-        if (state.currentCampaign && state.currentCampaign.id < 100) {
-            // Update existing core campaign
-            const index = state.campaigns.findIndex(c => c.id === state.currentCampaign.id);
-            state.campaigns[index] = newCampaignData;
+        if (state.currentCampaign) {
+          const index = state.campaigns.findIndex(c => c.id === state.currentCampaign.id);
+          if (index !== -1) state.campaigns[index] = campaignData;
         } else {
-            // Add new campaign
-            state.campaigns.push(newCampaignData);
+          state.campaigns.unshift(campaignData);
         }
 
         closeDrawer();
         state.compose.isSending = false;
-        state.currentPage = 'list';
-        render();
-
-        const action = status === CAMPAIGN_STATUS.SENT ? 'sent' : 'scheduled';
-        showToast(`Campaign '${newCampaignData.name}' successfully ${action}.`, 'success', 10000); // 10s undo snackbar simulation
-    }, 1000); // Simulate API call delay
-}
-
-
-// --- Rendering Functions ---
-
-function renderAlertList() {
-    const alertRows = state.followupAlerts.map(a => {
-        const statusChip = (status) => {
-            let className = 'chip-base ';
-            if (status === FOLLOWUP_STATUS.ALERT) className += 'chip-alert';
-            else if (status === FOLLOWUP_STATUS.COMPLETED) className += 'chip-alert-completed';
-            else className += 'bg-gray-200 text-gray-700';
-            return `<span class="${className}">${status}</span>`;
-        };
-        
-        // Link the campaign name to view details
-        const campaignLink = `<button onclick="viewCampaignDetails(${a.campaignId})" class="text-primary hover:text-primary-hover font-medium text-left">${a.campaignName}</button>`;
-
-        const actionCell = a.status === FOLLOWUP_STATUS.ALERT ?
-            `<button onclick="viewFollowUpDetails(${a.id})" class="text-primary hover:text-primary-hover font-medium">View Details</button>` :
-            `<span class="text-gray-500">Action Taken</span>`;
-
-        return `<tr class="border-b border-divider hover:bg-gray-50/50 transition-colors">
-<td class="p-4">${statusChip(a.status)}</td>
-<td class="p-4 font-medium text-gray-700">${a.segment}</td>
-<td class="p-4 text-sm text-gray-500">${a.description}</td>
-<td class="p-4">${campaignLink}</td>
-<td class="p-4 text-sm text-gray-500">${a.autoStopRule}</td>
-<td class="p-4">${actionCell}</td>
-</tr>`;
-    }).join('');
-
-    const html = `
-<!-- One-Click Follow-Up List View -->
-<div class="space-y-6">
-<div class="card p-6 border-l-4 border-danger">
-<h2 class="text-xl font-bold text-danger flex items-center mb-2"><i data-lucide="bell-ring" class="w-5 h-5 mr-2"></i> Actionable Follow-Up Alerts</h2>
-<p class="text-gray-600">These segments require attention based on their engagement with recent campaigns. Click to review options.</p>
-</div>
-
-<!-- Table Container -->
-<div class="card overflow-hidden">
-<table class="min-w-full divide-y divide-divider">
-<thead class="bg-gray-50/50">
-<tr>
-<th class="p-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-<th class="p-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Segment</th>
-<th class="p-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Alert Reason</th>
-<th class="p-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Source Campaign</th>
-<th class="p-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Auto-Stop Rule</th>
-<th class="p-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
-</tr>
-</thead>
-<tbody class="bg-white divide-y divide-divider">
-${alertRows}
-</tbody>
-</table>
-</div>
-</div>
-`;
-    appContainer.innerHTML = html;
-    renderIcons();
-}
-
-function renderList() {
-    const currentTab = 'All'; // Simplified tab logic for prototype
-
-    const campaignRows = state.campaigns.map(c => {
-        const statusChip = (status) => {
-            let className = 'chip-base ';
-            if (status === CAMPAIGN_STATUS.SCHEDULED) className += 'chip-scheduled';
-            else if (status === CAMPAIGN_STATUS.SENT) className += 'chip-sent';
-            else if (status === CAMPAIGN_STATUS.DRAFT) className += 'chip-draft';
-            else if (status === CAMPAIGN_STATUS.ACTIVE) className += 'chip-alert-active';
-            else className += 'bg-gray-200 text-gray-700';
-            return `<span class="${className}">${status}</span>`;
-        };
-
-        const sequenceChips = c.sequences.map((s, i) => {
-            const conditionDisplay = s.condition === 'Non-openers' ? 'non-openers' : s.condition === 'Non-clickers' ? 'non-clickers' : 'everyone';
-            return `<span class="chip-base chip-sequence">${'S' + (i + 2)} in ${s.delay} &middot; ${conditionDisplay}</span>`;
-        }).join('');
-
-        const subjectLink = c.isEditable ?
-            `<button onclick="editCampaign(${c.id})" class="font-medium text-blue-600 hover:text-blue-800 text-left">${c.subject}</button>` :
-            `<button onclick="viewCampaignDetails(${c.id})" class="font-medium text-blue-600 hover:text-blue-800 text-left">${c.subject}</button>`;
-        
-        // Add a mock entry point for active campaigns
-        const actions = c.status === CAMPAIGN_STATUS.ACTIVE ?
-            `<button onclick="changePage('alert-list')" class="text-red-500 hover:text-red-700 font-medium text-sm">Follow-up Alert</button>` :
-            `<button class="text-gray-500 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100 transition-colors" title="Actions"><i data-lucide="more-horizontal" class="w-5 h-5"></i></button>`;
-
-        return `<tr class="border-b border-divider hover:bg-gray-50/50 transition-colors">
-<td class="p-4">${subjectLink}</td>
-<td class="p-4 text-sm text-gray-500">${c.audience}</td>
-<td class="p-4">${statusChip(c.status)}</td>
-<td class="p-4 text-sm text-gray-500">${c.sendTime}</td>
-<td class="p-4 text-sm text-gray-500">${c.opens} / ${c.clicks}</td>
-<td class="p-4 space-x-2">${sequenceChips}</td>
-<td class="p-4">${actions}</td>
-</tr>`;
-    }).join('');
-
-    const html = `
-<!-- 2.0 BeAKampaign List View -->
-<div class="space-y-6">
-<!-- Top Action Bar -->
-<div class="flex justify-between items-center">
-<!-- Filter Tabs -->
-<div class="flex space-x-2 p-1 bg-white card shadow-sm">
-${['All', 'Scheduled', 'Sent', 'Drafts', 'Active'].map(tab => 
-    `<button class="py-2 px-4 rounded-lg text-sm font-medium ${tab === currentTab ? 'bg-gray-100 text-gray-900' : 'text-gray-500 hover:bg-gray-50'} transition-colors">${tab}</button>`
-).join('')}
-</div>
-<button onclick="newCampaign()" class="primary-btn">
-<i data-lucide="plus" class="w-5 h-5 mr-2 inline-block"></i>New campaign
-</button>
-</div>
-
-<!-- Table Container -->
-<div class="card overflow-hidden">
-<table class="min-w-full divide-y divide-divider">
-<thead class="bg-gray-50/50">
-<tr>
-<th class="p-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Subject</th>
-<th class="p-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Audience</th>
-<th class="p-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-<th class="p-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Send Time</th>
-<th class="p-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Opens/Clicks</th>
-<th class="p-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Sequences</th>
-<th class="p-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
-</tr>
-</thead>
-<tbody class="bg-white divide-y divide-divider">
-${campaignRows}
-</tbody>
-</table>
-</div>
-</div>
-`;
-    appContainer.innerHTML = html;
-    renderIcons();
-}
-
-function renderCompose() {
-    const isEmail = state.messageType === MESSAGES.EMAIL;
-    const isSMS = state.messageType === MESSAGES.SMS;
-    const isSocial = state.messageType === MESSAGES.SOCIAL;
-    const isAudienceLocked = state.compose.audienceId && state.compose.audienceId.startsWith('locked');
-    const isReady = state.isCampaignNameSet && state.isAudienceSet;
-    const readOnlyAttr = state.isReadOnly ? 'disabled' : '';
-
-    let audienceChipHtml = '';
-
-    if (isAudienceLocked) {
-        // Scenario 3: Locked
-        audienceChipHtml = `
-            <span class="chip-base flex items-center" style="background-color: #FFE6E9; color: #FF3D57;">
-                <i data-lucide="users" class="w-3 h-3 mr-1"></i>Audience: ${state.compose.audience}
-                <i data-lucide="lock" class="w-3 h-3 ml-2 text-red-500"></i>
-            </span>`;
-    } else if (state.isReadOnly) {
-        // Scenario 4: ReadOnly
-        audienceChipHtml = `
-            <span class="chip-base flex items-center" style="background-color: #F3F4F6; color: #374151;">
-                <i data-lucide="users" class="w-3 h-3 mr-1"></i>Audience: ${state.compose.audience}
-            </span>`;
-    } else if (!state.isAudienceSet) {
-        // Scenario 1: Not Set, Not ReadOnly, Not Locked - This is the one to highlight
-        audienceChipHtml = `
-            <button 
-                onclick="mockSetAudience('New Segment (1,500)')" 
-                class="flex items-center text-lg font-medium p-2 rounded-lg transition-colors" 
-                style="background-color: #EAF4FF; color: #0085FF; padding-top: 6px; padding-bottom: 6px;"
-                onmouseover="this.style.backgroundColor='#D6E9FF'"
-                onmouseout="this.style.backgroundColor='#EAF4FF'">
-                <i data-lucide="users-plus" class="w-4 h-4 mr-2"></i>
-                <span class="font-medium" style="font-size: 1.05rem;">Audience: ${state.compose.audience}</span>
-                <span class="ml-2 text-sm font-bold hover:underline">(Click to Select)</span>
-            </button>`;
-    } else {
-        // Scenario 2: Set, Not ReadOnly, Not Locked
-        audienceChipHtml = `
-            <span class="chip-base flex items-center" style="background-color: #F3F4F6; color: #374151;">
-                <i data-lucide="users" class="w-3 h-3 mr-1"></i>Audience: ${state.compose.audience}
-                <button onclick="mockSetAudience('New Segment (1,500)')" class="ml-2 text-primary hover:text-primary-hover font-medium">Change</button>
-            </span>`;
+        changePage('list');
+        toast(`Campaign '${campaignData.name}' ${status === CAMPAIGN_STATUS.SENT ? 'sent' : 'scheduled'}.`, 'success');
+      }, 700);
     }
 
-    const contentEditor = (type) => {
-        if (type === MESSAGES.EMAIL) {
-            return `<div class="p-6 space-y-4">
-<h3 class="text-lg font-semibold text-gray-800">${state.isReadOnly ? 'Final Email Content' : 'Email Body Editor'}</h3>
-${!state.isReadOnly ? 
-`<div class="flex justify-end">
-<button onclick="toggleUnlayer()" class="secondary-btn flex items-center text-sm" ${isSMS || isSocial ? 'disabled' : ''}>
-<i data-lucide="${state.compose.isUnlayerOpen ? 'maximize' : 'columns'}" class="w-4 h-4 mr-2"></i>
-${state.compose.isUnlayerOpen ? 'Close Unlayer Editor' : 'Open in Unlayer (Swap Inline)'}
-</button>
-</div>` : ''}
-<!-- Editor Area (Swaps between Quick Compose and Mock Unlayer) -->
-<div id="email-editor-area" class="min-h-[300px] border border-divider rounded-xl overflow-hidden">
-${state.compose.isUnlayerOpen && !state.isReadOnly ?
-`<div class="p-4 bg-gray-50/50 h-full flex items-center justify-center">
-<div class="text-center text-gray-500">
-<i data-lucide="brush" class="w-8 h-8 mx-auto mb-2 text-primary"></i>
-<p class="font-medium">Unlayer Drag-and-Drop Editor Placeholder</p>
-<p class="text-sm">This area swaps inline for the advanced visual editor.</p>
-</div>
-</div>` :
-`<textarea oninput="updateCompose('body', this.value)" rows="8" class="w-full p-4 h-full input-style resize-none border-none focus:ring-0"
-placeholder="${state.isReadOnly ? 'Content loaded from sent campaign...' : 'Enter your quick compose content...'}" ${readOnlyAttr}>${state.compose.body}</textarea>`
-}
-</div>
-</div>`;
-        } else if (type === MESSAGES.SMS) {
-            const charCount = state.compose.smsText.length;
-            const charLimit = 160;
-            return `<div class="p-6 space-y-4">
-<h3 class="text-lg font-semibold text-gray-800">${state.isReadOnly ? 'Final SMS Text' : 'SMS Text Editor'}</h3>
-<textarea oninput="updateCompose('smsText', this.value)" rows="5" maxlength="${charLimit}" class="w-full input-style resize-none"
-placeholder="Enter your SMS message..." ${readOnlyAttr}>${state.compose.smsText}</textarea>
-<div class="flex justify-between text-sm">
-<span class="text-gray-500 flex items-center"><i data-lucide="link" class="w-4 h-4 mr-1"></i>Auto link-shortening applied to all URLs.</span>
-<span class="${charCount > charLimit - 20 ? 'text-red-600 font-medium' : 'text-gray-500'}">${charCount} / ${charLimit}</span>
-</div>
-</div>`;
-        } else if (type === MESSAGES.SOCIAL) {
-            return `<div class="p-6 grid grid-cols-2 gap-6">
-<!-- Caption -->
-<div class="space-y-4">
-<h3 class="text-lg font-semibold text-gray-800">${state.isReadOnly ? 'Final Post Caption' : 'Post Caption'}</h3>
-<textarea oninput="updateCompose('socialCaption', this.value)" rows="6" class="w-full input-style resize-none"
-placeholder="Write your social media caption here..." ${readOnlyAttr}>${state.compose.socialCaption}</textarea>
-<span class="text-xs text-gray-500">Use this caption across all selected social channels.</span>
-</div>
-<!-- Media -->
-<div class="space-y-4">
-<h3 class="text-lg font-semibold text-gray-800">Media/Image</h3>
-<div class="w-full h-48 bg-gray-100 rounded-xl flex flex-col items-center justify-center border-2 border-dashed border-divider p-4">
-<i data-lucide="image" class="w-6 h-6 text-gray-400 mb-2"></i>
-<p class="text-sm text-gray-500">Single Media Placeholder</p>
-${!state.isReadOnly ? '<button class="text-xs font-medium text-primary hover:underline mt-1">Upload Image/Video</button>' : ''}
-</div>
-</div>
-</div>`;
-        }
+    // ---------- Render helpers
+    const chip = (label, color = "gray") => {
+      const m = {
+        gray: "chip py-0.5 px-2 rounded-full text-xs font-semibold",
+        scheduled: "py-0.5 px-2 rounded-full text-xs font-semibold bg-blue-100 text-blue-800",
+        draft: "py-0.5 px-2 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800",
+        sent: "py-0.5 px-2 rounded-full text-xs font-semibold bg-green-100 text-green-800",
+        active: "py-0.5 px-2 rounded-full text-xs font-semibold bg-blue-100 text-blue-800",
+        alert: "py-0.5 px-2 rounded-full text-xs font-semibold bg-red-100 text-red-800",
+        completed: "py-0.5 px-2 rounded-full text-xs font-semibold bg-green-100 text-green-800",
+        paused: "py-0.5 px-2 rounded-full text-xs font-semibold bg-gray-200 text-gray-800"
+      }[color] || "chip py-0.5 px-2 rounded-full text-xs font-semibold";
+      return `<span class="${m}">${label}</span>`;
     };
 
-    const html = `
-<!-- 3.0 Compose View -->
-<div class="space-y-6">
-<div class="flex justify-between items-start card p-4 mb-6">
-${!state.isReadOnly ? `
-<!-- Mode Selector (Template/Scratch/Reuse) -->
-<div>
-<label class="text-sm font-medium text-gray-500 block mb-2">Compose Mode:</label>
-<div class="flex space-x-2">
-${['template', 'scratch', 'reuse'].map(mode => {
-    const isSelected = state.currentComposeMode === mode;
-    const composeModeSelectedStyle = `background-color: #0085FF; color: #FFFFFF; border-color: #0085FF;`; // var(--color-primary), white, var(--color-primary)
-    const composeModeUnselectedStyle = `background-color: #F3F4F6; color: #374151; border-color: #E5E7EB;`; // bg-gray-100, text-gray-700, border-gray-200
-    const composeModeStyle = isSelected ? composeModeSelectedStyle : composeModeUnselectedStyle;
+    function renderAlerts() {
+      const rows = state.followups.map(a => {
+        const status = chip(a.status, a.status === FOLLOWUP_STATUS.ALERT ? 'alert' : 'completed');
+        const campaignLink = `<button onclick="viewCampaignDetails(${a.campaignId})" class="text-primary as-link font-semibold" role="link">${a.campaignName}</button>`;
+        const actionCell = a.status === FOLLOWUP_STATUS.ALERT
+          ? `<button onclick="viewFollowUpDetails(${a.id})" class="text-primary as-link font-semibold" role="link">View Details</button>`
+          : `<span class="text-muted">Action Taken</span>`;
+        return `<tr class="border-b border-divider hover:bg-gray-50">
+          <td class="p-4">${status}</td>
+          <td class="p-4 font-semibold text-ink">${a.segment}</td>
+          <td class="p-4 text-sm text-muted">${a.description}</td>
+          <td class="p-4">${campaignLink}</td>
+          <td class="p-4 text-sm text-muted">${a.autoStopRule}</td>
+          <td class="p-4">${actionCell}</td>
+        </tr>`;
+      }).join('');
 
-    return `<button 
-                onclick="handleModeChange('${mode}')" 
-                class="py-2 px-4 rounded-full text-sm font-medium transition-colors border" 
-                style="${composeModeStyle}">
-                ${mode.charAt(0).toUpperCase() + mode.slice(1)}
-            </button>`
-}).join('')}
-</div>
-</div>` : ''}
-
-<!-- Message Type Selector (Read-Only shows selected type) -->
-<div>
-<label class="text-sm font-medium text-gray-500 block mb-2">Delivery Channel:</label>
-<div class="flex space-x-2">
-${[MESSAGES.EMAIL, MESSAGES.SMS, MESSAGES.SOCIAL].map(type => {
-    const isSelected = state.messageType === type;
-    const deliverySelectedStyle = `background-color: #0085FF; color: #FFFFFF; border-color: #0085FF;`;
-    const deliveryUnselectedStyle = `background-color: #F3F4F6; color: #374151; border-color: #E5E7EB;`;
-    const deliveryStyle = isSelected ? deliverySelectedStyle : deliveryUnselectedStyle;
-    
-    return `<button 
-                onclick="changeMessageType('${type}')" 
-                class="py-2 px-4 rounded-full text-sm font-medium transition-colors border" 
-                style="${deliveryStyle}" ${state.isReadOnly ? 'disabled' : ''}>
-                ${type}
-            </button>`
-}).join('')}
-</div>
-</div>
-<button onclick="closeDrawer(); changePage('list');" class="text-gray-500 hover:text-gray-800 p-2 rounded-full hover:bg-gray-100 transition-colors" title="Close">
-<i data-lucide="x" class="w-6 h-6"></i>
-</button>
-</div>
-
-<!-- Core Campaign Fields (Always Visible) -->
-<div class="card p-6 space-y-6">
-<!-- Chips -->
-<div class="flex space-x-3 items-center">
-<span class="chip-base bg-gray-100 text-gray-700 flex items-center">
-<i data-lucide="user" class="w-3 h-3 mr-1"></i>From: hello@provider.com
-</span>
-${audienceChipHtml}
-${state.isAudienceSet && state.compose.audience.includes('Non-Clickers') ? `<span class="chip-base chip-alert flex items-center"><i data-lucide="shield-off" class="w-3 h-3 mr-1"></i>Auto-Stop: On Reply</span>` : ''}
-</div>
-
-<div class="space-y-4">
-<div>
-<label for="campaignName" class="block text-sm font-medium mb-1">Campaign Name (Internal, Required)</label>
-<input type="text" id="campaignName" oninput="updateCompose('name', this.value)" value="${state.compose.name}" class="w-full input-style" placeholder="Internal name (e.g., Q4 Prospecting)" ${readOnlyAttr}>
-${!state.isCampaignNameSet && !state.isReadOnly ? `<p class="text-xs text-danger mt-1">Campaign Name is required.</p>` : ''}
-</div>
-
-${(isEmail || isSocial) ? `
-<div>
-<label for="subject" class="block text-sm font-medium mb-1">Subject / Post Title (Required)</label>
-<input type="text" id="subject" oninput="updateCompose('subject', this.value)" value="${state.compose.subject}" class="w-full input-style" placeholder="${isEmail ? 'Enter email subject' : 'Enter social post title/summary'}" ${readOnlyAttr}>
-</div>` : ''}
-
-${isEmail ? `
-<div>
-<label for="previewText" class="block text-sm font-medium mb-1">Preview Text (Optional)</label>
-<input type="text" id="previewText" oninput="updateCompose('previewText', this.value)" value="${state.compose.previewText}" class="w-full input-style" placeholder="Optional text snippet shown next to the subject line in the inbox." ${readOnlyAttr}>
-</div>` : ''}
-</div>
-</div>
-
-<!-- 3.0 Preview Area (Inline above editor) -->
-<div id="preview-area" class="card p-6 border-l-4 border-primary">
-    <h2 class="text-xl font-bold mb-4 flex items-center text-primary-hover"><i data-lucide="eye" class="w-5 h-5 mr-2"></i>Inline Preview (${state.messageType})</h2>
-    <div class="bg-gray-50 p-4 rounded-lg border border-divider">
-        <p class="font-bold text-gray-800">${state.compose.subject}</p>
-        ${isEmail ? `<p class="text-sm text-gray-600 mt-1">${state.compose.previewText} <span class="text-gray-400">&middot;&middot;&middot;</span></p>` : ''}
-        ${isSMS ? `<p class="text-sm text-gray-600 mt-1">${state.compose.smsText}</p>` : ''}
-        ${isSocial ? `<div class="mt-3"><img src="${state.compose.mediaUrl}" class="w-24 h-12 object-cover rounded-md mb-2"><p class="text-sm text-gray-600">${state.compose.socialCaption.substring(0, 100)}...</p></div>` : ''}
-    </div>
-</div>
-
-<!-- Editor Section -->
-<div class="card">
-${contentEditor(state.messageType)}
-</div>
-
-<!-- Footer Actions Row -->
-${!state.isReadOnly ? `
-<div class="flex justify-between items-center py-4">
-<div>
-<button onclick="showToast('Test sent!', 'info')" class="secondary-btn flex items-center text-sm">
-<i data-lucide="mail-check" class="w-4 h-4 mr-2"></i>Send test
-</button>
-</div>
-<button onclick="openDrawer()" class="primary-btn flex items-center" ${isReady ? '' : 'disabled'}>
-<i data-lucide="calendar" class="w-5 h-5 mr-2"></i>Schedule
-</button>
-</div>` : 
-`<div class="flex justify-start py-4">
-<span class="text-sm font-medium text-gray-500 flex items-center"><i data-lucide="info" class="w-4 h-4 mr-2"></i>Viewing campaign history (Read-Only)</span>
-</div>`
-}
-</div>
-`;
-    appContainer.innerHTML = html;
-    renderIcons();
-}
-
-function renderDrawer() {
-    if (!state.isDrawerOpen) {
-        drawerContainer.innerHTML = '';
-        return;
+      $("app-container").innerHTML = `
+        <div class="space-y-6">
+          <div class="bg-surface rounded-xl p-6 border-l-4 border-danger shadow-sm">
+            <h2 class="text-xl font-extrabold text-danger flex items-center gap-2 mb-2"><i data-lucide="bell-ring" class="w-5 h-5"></i>Actionable Follow-Up Alerts</h2>
+            <p class="text-muted">These segments require attention. Click to review options.</p>
+          </div>
+          <div class="bg-surface rounded-xl overflow-visible shadow-sm border border-divider">
+            <table class="min-w-full"><thead class="bg-gray-50">
+              <tr>
+                <th class="p-4 text-left text-xs font-bold text-muted uppercase tracking-wider">Status</th>
+                <th class="p-4 text-left text-xs font-bold text-muted uppercase tracking-wider">Segment</th>
+                <th class="p-4 text-left text-xs font-bold text-muted uppercase tracking-wider">Alert Reason</th>
+                <th class="p-4 text-left text-xs font-bold text-muted uppercase tracking-wider">Source Campaign</th>
+                <th class="p-4 text-left text-xs font-bold text-muted uppercase tracking-wider">Auto-Stop Rule</th>
+                <th class="p-4 text-left text-xs font-bold text-muted uppercase tracking-wider">Actions</th>
+              </tr></thead>
+              <tbody class="divide-y divide-divider">${rows}</tbody>
+            </table>
+          </div>
+        </div>`;
+      paintIcons();
+      if ($("top-cta")) $("top-cta").innerHTML = "";
     }
 
-    const isPreflight = state.drawerStep === 'preflight';
+    function renderList() {
+      const rows = state.campaigns.map(c => {
+        const statusKey = (c.status === CAMPAIGN_STATUS.PAUSED) ? 'paused' : c.status.toLowerCase();
+        const status = chip(c.status, statusKey);
+        const sequences = c.sequences.map((s, i) => chip(`S${i + 2}: ${s.delay}`, "gray")).join(' ');
+        const nameLink = `<button onclick="${c.isEditable ? 'editCampaign' : 'viewCampaignDetails'}(${c.id})" class="font-semibold text-primary as-link text-left" role="link">${c.name}</button>`;
+        const subjectText = `<span class="text-ink">${c.subject}</span>`;
 
-    const sequenceList = state.sequenceSteps.map((step, index) => {
-        const stepNumber = index + 2;
-        return `<div class="p-4 bg-gray-50 rounded-xl border border-divider flex items-center space-x-3 mb-2">
-<span class="font-bold text-lg text-primary">S${stepNumber}</span>
-<div class="flex-1 grid grid-cols-3 gap-3">
-<!-- Delay -->
-<select onchange="updateSequenceStep(${index}, 'delay', this.value)" class="input-style text-sm">
-<option value="3d" ${step.delay === '3d' ? 'selected' : ''}>Delay: 3 days</option>
-<option value="1d" ${step.delay === '1d' ? 'selected' : ''}>Delay: 1 day</option>
-<option value="5h" ${step.delay === '5h' ? 'selected' : ''}>Delay: 5 hours</option>
-</select>
-<!-- Condition -->
-<select onchange="updateSequenceStep(${index}, 'condition', this.value)" class="input-style text-sm">
-<option value="Non-openers" ${step.condition === 'Non-openers' ? 'selected' : ''}>Condition: Non-openers</option>
-<option value="Non-clickers" ${step.condition === 'Non-clickers' ? 'selected' : ''}>Condition: Non-clickers</option>
-<option value="Everyone" ${step.condition === 'Everyone' ? 'selected' : ''}>Condition: Everyone</option>
-</select>
-<!-- Message Type -->
-<select onchange="updateSequenceStep(${index}, 'messageType', this.value)" class="input-style text-sm">
-${[MESSAGES.EMAIL, MESSAGES.SMS, MESSAGES.SOCIAL].map(type => 
-    `<option value="${type}" ${step.messageType === type ? 'selected' : ''}>Type: ${type}</option>`
-).join('')}
-</select>
-</div>
-<button onclick="removeSequenceStep(${index})" class="text-gray-400 hover:text-danger p-1 rounded-full transition-colors" title="Remove step">
-<i data-lucide="x" class="w-5 h-5"></i>
-</button>
-</div>`;
-    }).join('');
+        const showPause = (c.status === CAMPAIGN_STATUS.ACTIVE || c.status === CAMPAIGN_STATUS.SCHEDULED);
+        const showResume = (c.status === CAMPAIGN_STATUS.PAUSED);
 
-    const drawerHtml = `
-<!-- Header -->
-<div class="p-6 border-b border-divider flex justify-between items-center">
-<h2 class="text-xl font-bold">Schedule Campaign</h2>
-<button onclick="closeDrawer()" class="text-gray-500 hover:text-gray-800 p-2 rounded-full hover:bg-gray-100 transition-colors" title="Close Drawer" aria-label="Close Schedule Drawer">
-<i data-lucide="x" class="w-6 h-6"></i>
-</button>
-</div>
+        const overflow = `
+          <div class="relative" data-menu-root>
+            <button
+              class="text-muted hover:text-ink p-1 rounded-full"
+              aria-haspopup="menu"
+              aria-expanded="${state.openMenuFor === c.id ? 'true' : 'false'}"
+              aria-controls="menu-${c.id}"
+              data-menu-toggle
+              onclick="toggleRowMenu(${c.id}, event)"
+              title="More actions"
+            >
+              <i data-lucide="more-horizontal" class="w-5 h-5"></i>
+            </button>
+            ${state.openMenuFor === c.id ? `
+              <div id="menu-${c.id}" role="menu" class="menu-panel absolute right-0 mt-2">
+                ${showPause ? `<button class="menu-item" role="menuitem" onclick="pauseCampaign(${c.id})"><i data-lucide="pause" class="w-4 h-4"></i> Pause</button>` : ``}
+                ${showResume ? `<button class="menu-item" role="menuitem" onclick="resumeCampaign(${c.id})"><i data-lucide="play" class="w-4 h-4"></i> Resume</button>` : ``}
+                <button class="menu-item" role="menuitem" onclick="duplicateCampaign(${c.id})"><i data-lucide="copy" class="w-4 h-4"></i> Duplicate</button>
+                <div class="h-px bg-gray-200 my-1"></div>
+                <button class="menu-item text-red-700" role="menuitem" onclick="deleteCampaign(${c.id})"><i data-lucide="trash-2" class="w-4 h-4"></i> Delete</button>
+              </div>` : ``}
+          </div>`;
 
-<!-- Body (Scrollable) -->
-<div class="flex-1 overflow-y-auto p-6 space-y-8">
-<!-- Recipients (Read-only) -->
-<div>
-<h3 class="font-bold text-gray-700 mb-2">Recipients</h3>
-<div class="p-3 bg-gray-50/50 rounded-lg text-sm text-gray-600 flex items-center">
-<i data-lucide="users" class="w-4 h-4 mr-2"></i>Audience: ${state.compose.audience}
-${state.compose.audience.includes('Locked') ? `<span class="text-danger ml-2 font-medium">(Locked for Follow-up)</span>` : ''}
-</div>
-</div>
+        const actionsCell = `
+          <div class="flex items-center gap-3">
+            ${c.status === CAMPAIGN_STATUS.ACTIVE
+              ? `<button onclick="changePage('alerts')" class="text-danger as-link font-semibold text-sm" role="link" title="Open Follow-up Alerts">Follow-up Alert</button>`
+              : ``}
+            ${overflow}
+          </div>`;
 
-<!-- When: Send now / Schedule later -->
-<div>
-<h3 class="font-bold text-gray-700 mb-3">When to Send?</h3>
-<div class="flex space-x-4 mb-4">
-<button onclick="state.scheduleType='now'; renderDrawer();" class="flex-1 py-3 border rounded-xl text-center font-medium transition-all ${state.scheduleType === 'now' ? 'bg-primary text-white border-primary' : 'bg-white text-gray-700 border-divider hover:bg-gray-50'}">Send now</button>
-<button onclick="state.scheduleType='later'; renderDrawer();" class="flex-1 py-3 border rounded-xl text-center font-medium transition-all ${state.scheduleType === 'later' ? 'bg-primary text-white border-primary' : 'bg-white text-gray-700 border-divider hover:bg-gray-50'}">Schedule later</button>
-</div>
+        return `<tr class="border-b border-divider hover:bg-gray-50 align-top">
+          <td class="p-4">${nameLink}</td>
+          <td class="p-4 text-sm">${subjectText}</td>
+          <td class="p-4 text-sm text-muted">${c.audience}</td>
+          <td class="p-4">${status}</td>
+          <td class="p-4 text-sm text-muted">${c.opens} / ${c.clicks}</td>
+          <td class="p-4 text-sm text-muted">${c.sendTime}</td>
+          <td class="p-4 space-x-2">${sequences || '<span class="text-sm text-muted">—</span>'}</td>
+          <td class="p-4">${actionsCell}</td>
+        </tr>`;
+      }).join('');
 
-${state.scheduleType === 'later' ? `
-<div class="space-y-3 p-3 bg-gray-50/50 rounded-lg">
-<label class="block text-sm font-medium">Date & Time</label>
-<input type="datetime-local" onchange="state.scheduleTime=this.value; renderDrawer();" class="input-style w-full">
-<span class="block text-xs text-gray-500">Current Timezone: America/New_York (GMT-5)</span>
-<button onclick="showToast('AI time recommendation applied: Nov 10, 3:00 PM', 'info')" class="text-sm font-medium text-primary hover:underline flex items-center">
-<i data-lucide="zap" class="w-4 h-4 mr-1"></i>AI recommend time
-</button>
-</div>` : ''}
-</div>
+      // Top CTA (visible on list only)
+      $("top-cta").innerHTML = `
+        <button onclick="newCampaign()" class="py-2 px-4 rounded-xl btn-primary font-semibold flex items-center gap-2">
+          <i data-lucide="plus" class="w-5 h-5"></i>
+          New campaign
+        </button>`;
 
-<!-- 4.0 Sequences: Add follow-ups -->
-<div>
-<h3 class="font-bold text-gray-700 mb-3">Add Follow-ups (Sequences)</h3>
-<div id="sequence-list" class="space-y-3">
-${state.sequenceSteps.length > 0 ? sequenceList : '<p class="text-sm text-gray-500 p-2">No follow-up steps added yet.</p>'}
-</div>
-<button onclick="addSequenceStep()" class="secondary-btn w-full mt-3 flex items-center justify-center">
-<i data-lucide="plus" class="w-5 h-5 mr-2"></i>+ Add step
-</button>
-</div>
+      $("app-container").innerHTML = `
+        <div class="space-y-6">
+          <div class="flex justify-between items-center">
+            <div class="flex gap-2 p-1 bg-surface rounded-xl shadow-sm border border-divider">
+              ${['All', 'Scheduled', 'Sent', 'Drafts', 'Active', 'Paused'].map(tab => `
+                <button class="py-2 px-4 rounded-lg text-sm font-semibold ${tab === 'All' ? 'bg-gray-200 text-ink border-2 border-gray-800' : 'text-ink hover:bg-gray-100 border-2 border-gray-400'}">${tab}</button>
+              `).join('')}
+            </div>
+          </div>
 
-<!-- Pre-flight Check Button -->
-<div class="pt-4 border-t border-divider">
-<button onclick="togglePreflightSheet()" class="secondary-btn w-full flex items-center justify-center">
-<i data-lucide="shield-check" class="w-5 h-5 mr-2"></i>Run Pre-flight check
-</button>
-</div>
-</div>
+          <div class="bg-surface rounded-xl overflow-visible shadow-sm border border-divider">
+            <table class="min-w-full table-fixed">
+              <colgroup>
+                <col class="w-[18%]">
+                <col class="w-[24%]">
+                <col class="w-[16%]">
+                <col class="w-[10%]">
+                <col class="w-[12%]">
+                <col class="w-[12%]">
+                <col class="w-[6%]">
+                <col class="w-[8%]">
+              </colgroup>
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="p-4 text-left text-xs font-bold text-muted uppercase tracking-wider">Campaign Name</th>
+                  <th class="p-4 text-left text-xs font-bold text-muted uppercase tracking-wider">Subject</th>
+                  <th class="p-4 text-left text-xs font-bold text-muted uppercase tracking-wider">Audience</th>
+                  <th class="p-4 text-left text-xs font-bold text-muted uppercase tracking-wider">Status</th>
+                  <th class="p-4 text-left text-xs font-bold text-muted uppercase tracking-wider">Opens/Clicks</th>
+                  <th class="p-4 text-left text-xs font-bold text-muted uppercase tracking-wider">Send Time</th>
+                  <th class="p-4 text-left text-xs font-bold text-muted uppercase tracking-wider">Sequence</th>
+                  <th class="p-4 text-left text-xs font-bold text-muted uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-divider">${rows}</tbody>
+            </table>
+          </div>
+        </div>`;
+      paintIcons();
+    }
 
-<!-- Footer -->
-<div class="p-6 border-t border-divider flex justify-end space-x-3">
-<button onclick="closeDrawer()" class="secondary-btn">Cancel</button>
-<button onclick="handleSubmit()" class="primary-btn flex items-center ${state.compose.isSending ? 'opacity-70 cursor-not-allowed' : ''}" ${state.compose.isSending ? 'disabled' : ''}>
-${state.compose.isSending ?
-`<i data-lucide="loader-circle" class="w-5 h-5 mr-2 animate-spin"></i> Processing...` :
-`<i data-lucide="send" class="w-5 h-5 mr-2"></i> ${state.scheduleType === 'now' ? 'Send now' : 'Schedule send'}`
-}
-</button>
-</div>
+    function renderCompose() {
+      const { isEmail, isSMS, isSocial } = {
+        isEmail: state.messageType === MESSAGES.EMAIL,
+        isSMS: state.messageType === MESSAGES.SMS,
+        isSocial: state.messageType === MESSAGES.SOCIAL
+      };
+      const isAudienceLocked = state.compose.audienceId?.startsWith('locked');
+      const isReady = state.isCampaignNameSet && state.isAudienceSet;
+      const ro = state.readOnly ? 'disabled' : '';
 
-<!-- 4.0 Pre-flight Check Sheet (Nested inside Drawer) -->
-<div id="preflight-sheet" class="sheet-overlay absolute inset-0 transition-opacity ${isPreflight ? 'opacity-100 visible' : 'opacity-0 invisible'}">
-<div class="absolute inset-0 p-6 flex flex-col bg-white">
-<div class="flex justify-between items-center pb-4 border-b border-divider">
-<h3 class="text-xl font-bold flex items-center"><i data-lucide="shield-check" class="w-6 h-6 mr-2 text-primary"></i>Campaign Pre-flight Check</h3>
-<button onclick="togglePreflightSheet()" class="text-gray-500 hover:text-gray-800 p-1 rounded-full transition-colors" title="Close Sheet" aria-label="Close Pre-flight Check Sheet">
-<i data-lucide="x" class="w-6 h-6"></i>
-</button>
-</div>
-<div class="py-4 space-y-3 flex-1 overflow-y-auto">
-<div class="p-3 bg-green-50 rounded-lg border border-green-300 text-sm">
-<span class="font-semibold">PASSED:</span> Subject Line Check (1/1)
-<p class="text-xs text-green-700">The subject line is not marked as spam.</p>
-</div>
-<div class="p-3 bg-yellow-50 rounded-lg border border-yellow-300 text-sm">
-<span class="font-semibold">WARNING:</span> Link Verification (2/3)
-<p class="text-xs text-yellow-700">One link redirects to an unsecure HTTP URL. Review for optimal deliverability.</p>
-</div>
-<div class="p-3 bg-green-50 rounded-lg border border-green-300 text-sm">
-<span class="font-semibold">PASSED:</span> Audience Size Check
-<p class="text-xs text-green-700">${state.compose.audience} recipients are currently active and valid.</p>
-</div>
-<div class="p-3 bg-green-50 rounded-lg border border-green-300 text-sm">
-<span class="font-semibold">PASSED:</span> Sequence Logic
-<p class="text-xs text-green-700">Follow-up steps (${state.sequenceSteps.length} added) are logically sound.</p>
-</div>
-<p class="text-sm text-gray-500 mt-4">All critical checks passed. You are ready to schedule/send.</p>
-</div>
-<button onclick="togglePreflightSheet()" class="primary-btn w-full mt-4">Return to Schedule</button>
-</div>
-</div>
-`;
-    drawerContainer.innerHTML = drawerHtml;
-    renderIcons();
-}
-
-// --- Event Listeners and Initial Load ---
-document.addEventListener('DOMContentLoaded', () => {
-    render();
-
-    // Accessibility: Close drawer/sheet on ESC
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && state.isDrawerOpen) {
-            closeDrawer();
-        } else if (e.key === 'Escape' && document.getElementById('global-sheet-container').style.display !== 'none') {
-            closeGlobalSheet();
+      const editor = () => {
+        if (isEmail) return `
+          <div class="p-6 space-y-4">
+            <h3 class="text-lg font-extrabold">${state.readOnly ? 'Final Email Content' : 'Email Body Editor'}</h3>
+            ${!state.readOnly ? `<div class="flex justify-end">
+                <button onclick="toggleUnlayer()" class="py-2 px-3 rounded-xl border-2 border-gray-800 text-sm font-semibold hover:bg-gray-100 flex items-center gap-2" ${isSMS || isSocial ? 'disabled' : ''}>
+                  <i data-lucide="${state.compose.isUnlayerOpen ? 'maximize' : 'columns'}" class="w-4 h-4"></i>${state.compose.isUnlayerOpen ? 'Close Editor' : 'Open in Unlayer'}
+                </button></div>` : ''}
+            <div class="min-h-[300px] border-2 border-gray-800 rounded-xl overflow-hidden">
+              ${state.compose.isUnlayerOpen && !state.readOnly
+                ? `<div class="p-4 bg-gray-50 h-full grid place-items-center">
+                    <div class="text-center text-muted"><i data-lucide="brush" class="w-8 h-8 mx-auto mb-2 text-primary"></i>
+                    <p class="font-semibold">Unlayer Editor Placeholder</p></div></div>`
+                : `<textarea id="body" oninput="updateCompose('body', this.value)" rows="8" class="w-full p-4 h-full resize-none border-none focus:ring-0" placeholder="Enter content..." ${ro}>${state.compose.body}</textarea>`
+              }
+            </div>
+          </div>`;
+        if (isSMS) {
+          const count = state.compose.smsText.length;
+          return `<div class="p-6 space-y-4">
+            <h3 class="text-lg font-extrabold">${state.readOnly ? 'Final SMS Text' : 'SMS Text Editor'}</h3>
+            <textarea id="smsText" oninput="updateCompose('smsText', this.value)" rows="5" maxlength="160" class="w-full p-3 border-2 border-gray-800 rounded-xl resize-none focus:border-primary focus:ring-2 focus:ring-blue-200" ${ro}>${state.compose.smsText}</textarea>
+            <div class="flex justify-between text-sm"><span class="text-muted flex items-center gap-1"><i data-lucide="link" class="w-4 h-4"></i>Auto link-shortening applied.</span><span class="${count > 140 ? 'text-danger font-bold' : 'text-muted'}">${count}/160</span></div>
+          </div>`;
         }
-    });
+        if (isSocial) return `
+          <div class="p-6 grid grid-cols-2 gap-6">
+            <div class="space-y-4"><h3 class="text-lg font-extrabold">${state.readOnly ? 'Final Post Caption' : 'Post Caption'}</h3>
+              <textarea id="socialCaption" oninput="updateCompose('socialCaption', this.value)" rows="6" class="w-full p-3 border-2 border-gray-800 rounded-xl resize-none focus:border-primary focus:ring-2 focus:ring-blue-200" ${ro}>${state.compose.socialCaption}</textarea></div>
+            <div class="space-y-4"><h3 class="text-lg font-extrabold">Media</h3>
+              <div class="w-full h-48 bg-gray-100 rounded-xl grid place-items-center border-2 border-dashed border-gray-300 p-4">
+                <div class="text-center text-muted"><i data-lucide="image" class="w-6 h-6 mx-auto mb-2"></i><p class="text-sm font-semibold">Media Placeholder</p>${!state.readOnly ? '<button class="text-xs font-semibold text-primary hover:underline mt-1">Upload</button>' : ''}</div>
+              </div>
+            </div>
+          </div>`;
+        return '';
+      };
+      
+      $("app-container").innerHTML = `
+        <div class="space-y-6">
+          <div class="flex justify-between items-start bg-surface rounded-xl p-4 mb-6 shadow-sm border border-divider">
+            ${!state.readOnly ? `<div>
+                <label class="text-sm font-bold text-muted block mb-2">Compose Mode:</label>
+                <div class="flex gap-2">
+                  ${['template', 'scratch', 'reuse'].map(mode => `
+                    <button onclick="handleModeChange('${mode}')" class="py-2 px-4 rounded-full text-sm font-semibold border-2 ${state.currentComposeMode === mode ? 'bg-yellow-300 text-ink border-yellow-600' : 'bg-gray-100 text-ink border-gray-800 hover:bg-gray-200'}">
+                      ${mode[0].toUpperCase() + mode.slice(1)}
+                    </button>`).join('')}
+                </div>
+              </div>` : '<div></div>'}
+            <div>
+              <label class="text-sm font-bold text-muted block mb-2">Delivery Channel:</label>
+              <div class="flex gap-2">
+                ${[MESSAGES.EMAIL, MESSAGES.SMS, MESSAGES.SOCIAL].map(type => `
+                  <button onclick="changeMessageType('${type}')" class="seg ${state.messageType === type ? 'active' : ''} py-2 px-4 rounded-full text-sm" ${ro}>
+                    ${type}
+                  </button>`).join('')}
+              </div>
+            </div>
+            <button onclick="changePage('list');" class="text-muted hover:text-ink p-2 rounded-full" aria-label="Close compose"><i data-lucide="x" class="w-6 h-6"></i></button>
+          </div>
 
-    // Accessibility: Cmd/Ctrl+Enter submits in drawer (simulated)
-    drawerContainer.addEventListener('keydown', (e) => {
-        if ((e.key === 'Enter' && (e.metaKey || e.ctrlKey)) && state.drawerStep === 'schedule') {
-            e.preventDefault();
-            const submitBtn = document.querySelector('#schedule-drawer .primary-btn:not([disabled])');
-            if (submitBtn) submitBtn.click();
+          <div class="bg-surface rounded-xl p-6 space-y-6 shadow-sm border border-divider">
+            <div class="flex flex-wrap items-center gap-3">
+              ${chip("From: hello@provider.com")}
+              <div class="flex items-center gap-2 px-3 py-2 rounded-xl border-2 border-gray-800 bg-gray-50">
+                <span class="text-xs font-extrabold px-2 py-0.5 rounded-full bg-red-100 text-red-800 tracking-wide">REQUIRED</span>
+                <span class="text-base font-extrabold flex items-center gap-2 ${isAudienceLocked ? 'text-red-800' : 'text-ink'}">
+                  <i data-lucide="users" class="w-4 h-4"></i>
+                  Audience: ${state.compose.audience}
+                </span>
+                ${!isAudienceLocked && !state.readOnly ? `
+                  <button onclick="openAudienceDrawer()" class="ml-2 py-1.5 px-3 rounded-lg btn-outline text-sm">
+                    Change audience
+                  </button>` : isAudienceLocked ? `<i data-lucide="lock" class="w-4 h-4 ml-1"></i>` : ''}
+              </div>
+              ${!state.isAudienceSet && !state.readOnly ? `<p class="text-xs text-danger font-semibold">Please select an audience.</p>` : ''}
+            </div>
+
+            <div class="space-y-4">
+              <div>
+                <label for="campaignName" class="block text-sm font-bold mb-1">Campaign Name (Internal, Required)</label>
+                <input type="text" id="campaignName" oninput="updateCompose('name', this.value)" value="${state.compose.name}" class="w-full p-3 border-2 border-gray-800 rounded-xl focus:border-primary focus:ring-2 focus:ring-blue-200" ${ro} aria-required="true">
+                ${!state.isCampaignNameSet && !state.readOnly ? `<p class="text-xs text-danger mt-1 font-semibold">Campaign Name is required.</p>` : ''}
+              </div>
+              ${(state.messageType !== MESSAGES.SMS) ? `
+                <div>
+                  <label for="subject" class="block text-sm font-bold mb-1">Subject / Post Title</label>
+                  <input type="text" id="subject" oninput="updateCompose('subject', this.value)" value="${state.compose.subject}" class="w-full p-3 border-2 border-gray-800 rounded-xl focus:border-primary focus:ring-2 focus:ring-blue-200" ${ro}>
+                </div>` : ''}
+              ${state.messageType === MESSAGES.EMAIL ? `
+                <div>
+                  <label for="previewText" class="block text-sm font-bold mb-1">Preview Text (Optional)</label>
+                  <input type="text" id="previewText" oninput="updateCompose('previewText', this.value)" value="${state.compose.previewText}" class="w-full p-3 border-2 border-gray-800 rounded-xl focus:border-primary focus:ring-2 focus:ring-blue-200" ${ro}>
+                </div>` : ''}
+            </div>
+          </div>
+          
+          <div class="bg-surface rounded-xl p-6 border-l-4 border-primary shadow-sm border border-divider">
+            <h2 class="text-xl font-extrabold mb-4 flex items-center text-primary gap-2"><i data-lucide="eye" class="w-5 h-5"></i>Inline Preview (${state.messageType})</h2>
+            <div class="bg-gray-50 p-4 rounded-lg border border-divider">
+              <p class="font-extrabold text-ink">${state.compose.subject}</p>
+              ${state.messageType === MESSAGES.EMAIL ? `<p class="text-sm text-muted mt-1">${state.compose.previewText || 'No preview text'}<span class="text-gray-400">...</span></p>` : ''}
+              ${state.messageType === MESSAGES.SMS ? `<p class="text-sm text-ink mt-1">${state.compose.smsText}</p>` : ''}
+              ${state.messageType === MESSAGES.SOCIAL ? `<div class="mt-3 flex gap-2"><img src="${state.compose.mediaUrl}" class="w-16 h-16 object-cover rounded-md" alt="Media preview"><p class="text-sm text-ink">${state.compose.socialCaption.substring(0, 100)}...</p></div>` : ''}
+            </div>
+          </div>
+
+          <div class="bg-surface rounded-xl shadow-sm border border-divider">${editor()}</div>
+
+          <div class="flex justify-between items-center py-4">
+            ${!state.readOnly
+              ? `<div>
+                  <button onclick="renderSheet('preview')" class="py-2 px-4 rounded-xl border-2 border-gray-800 font-semibold hover:bg-gray-100 flex items-center gap-2 text-sm">
+                    <i data-lucide="monitor" class="w-4 h-4"></i>Preview &amp; Test
+                  </button>
+                 </div>
+                 <button onclick="openDrawer()" class="py-2 px-4 rounded-xl btn-primary font-semibold flex items-center gap-2" ${isReady ? '' : 'disabled'}><i data-lucide="calendar" class="w-5 h-5"></i>Schedule</button>`
+              : `<span class="text-sm font-semibold text-muted flex items-center gap-2"><i data-lucide="info" class="w-4 h-4"></i>Viewing read-only campaign history.</span>`
+            }
+          </div>
+        </div>`;
+      paintIcons();
+      if ($("top-cta")) $("top-cta").innerHTML = ""; // no New Campaign on Compose
+    }
+
+    // ---------- Main Render
+    function render() {
+      if ($("global-sheet").classList.contains("hidden")) {
+        $("global-sheet").querySelector("div:last-child").innerHTML = "";
+      }
+      if (state.page === "list") renderList();
+      else if (state.page === "compose") renderCompose();
+      else if (state.page === "alerts") renderAlerts();
+    }
+
+    // ---------- Init
+    document.addEventListener("DOMContentLoaded", () => {
+      render();
+      paintIcons();
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          if (state.drawerOpen) closeDrawer();
+          else if (!$("global-sheet").classList.contains("hidden")) closeSheet();
+          else closeRowMenu();
         }
+      });
     });
-});
-
-function render() {
-    // Ensure the sheet is hidden before main rendering
-    // NOTE: We only check if it should be shown if triggered by a function call.
-    if (globalSheetContainer.style.display === 'none') {
-        globalSheetContainer.innerHTML = '';
-    }
-    
-    if (state.currentPage === 'list') {
-        renderList();
-    } else if (state.currentPage === 'compose' || state.currentPage === 'campaign-detail') {
-        renderCompose();
-    } else if (state.currentPage === 'alert-list') {
-        renderAlertList();
-    }
-
-    // Ensure drawer visibility is synced with state
-    if (state.isDrawerOpen) {
-        renderDrawer();
-    } else {
-        drawerContainer.classList.remove('open');
-        drawerOverlay.classList.add('hidden', 'opacity-0');
-    }
-}
-</script>
+  </script>
 </body>
 </html>
