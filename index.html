@@ -3,1180 +3,1190 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>BeAKampaign – Campaign Prototyper</title>
-
-  <!-- Tailwind config -->
-  <script>
-    window.tailwind = window.tailwind || {};
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            primary: "#0052CC",
-            "primary-hover": "#003E99",
-            success: "#118D57",
-            warning: "#B54708",
-            danger: "#B42318",
-            ink: "#1F2937",
-            muted: "#4B5563",
-            bg: "#F7F9FC",
-            surface: "#FFFFFF",
-            divider: "#E6EDF5",
-          },
-          borderRadius: { xl: "12px" }
-        }
-      }
-    };
-  </script>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
-
+  <title>BeAKampaign — Full Campaign Tool (Light)</title>
   <style>
-    :root { --r-xl: 12px }
-    body { font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, Apple Color Emoji, Segoe UI Emoji; }
-
-    /* High-contrast primary */
-    .btn-primary { background:#0052CC; color:#fff; border:2px solid #003E99; }
-    .btn-primary:hover { background:#003E99; }
-    .btn-primary:focus-visible { outline:none; box-shadow:0 0 0 3px rgba(59,130,246,.5); }
-
-    /* Secondary outline */
-    .btn-outline { border:2px solid #374151; background:#fff; color:#111827; font-weight:700; }
-    .btn-outline:hover { background:#F3F4F6; }
-    .btn-outline:focus-visible { outline:none; box-shadow:0 0 0 3px rgba(59,130,246,.35); }
-
-    /* Segmented control for Delivery Channel */
-    .seg { border:2px solid #374151; color:#111827; font-weight:700; }
-    .seg.active { background:#0052CC; color:#fff; border-color:#003E99; }
-    .seg:focus-visible { outline:none; box-shadow:0 0 0 3px rgba(59,130,246,.5); }
-
-    /* Text-style links (underline; not for CTAs) */
-    .as-link {
-      text-decoration: underline;
-      text-underline-offset: 2px;
-      text-decoration-thickness: 2px;
+    html,body,#root{height:100%}
+    body{
+      margin:0;
+      background:#f5f5f7;
+      color:#0f172a;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif
     }
-    .as-link:focus-visible {
-      outline: none;
-      box-shadow: 0 0 0 3px rgba(59,130,246,.5);
-    }
-
-    /* Chips */
-    .chip { background:#E5E7EB; color:#111827; }
-
-    /* Overflow menu panel */
-    .menu-panel {
-      min-width: 180px;
-      background:#fff;
-      border: 1px solid #E5E7EB;
-      border-radius: 12px;
-      box-shadow: 0 10px 24px rgba(0,0,0,.12);
-      z-index: 40;
-    }
-    .menu-item {
-      display:flex; align-items:center; gap:.5rem;
-      width:100%; text-align:left; padding:.5rem .75rem;
-      font-weight:700; color:#1F2937;
-    }
-    .menu-item:hover { background:#F3F4F6; }
-    .menu-item:focus-visible { outline:none; box-shadow:0 0 0 3px rgba(59,130,246,.35); border-radius: 10px; }
-
-    /* Toggle pills for "When to send?" (very high contrast) */
-    .toggle-pill {
-      border:2px solid #111827; color:#111827; background:#FFFFFF; font-weight:800;
-    }
-    .toggle-pill[aria-pressed="true"] {
-      background:#0052CC; color:#FFFFFF; border-color:#003E99;
-    }
-    .toggle-pill:hover { background:#F3F4F6; }
-    .toggle-pill[aria-pressed="true"]:hover { background:#003E99; }
-
-    /* Simple tooltip */
-    .tooltip-group { position: relative; display: inline-flex; align-items: center; }
-    .tooltip-bubble {
-      position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
-      white-space: nowrap; background: #111827; color:#fff; font-size:12px; font-weight:700;
-      padding:6px 8px; border-radius:8px; box-shadow:0 6px 16px rgba(0,0,0,.2); opacity:0; pointer-events:none; transition:opacity .15s ease;
-    }
-    .tooltip-arrow {
-      position:absolute; top:100%; left:50%; transform: translateX(-50%);
-      width:0; height:0; border-left:6px solid transparent; border-right:6px solid transparent; border-top:6px solid #111827;
-    }
-    .tooltip-group:hover .tooltip-bubble,
-    .tooltip-group:focus-within .tooltip-bubble { opacity:1; }
+    *{box-sizing:border-box}
+    button{font:inherit}
   </style>
 </head>
+<body>
+  <div id="root"></div>
 
-<body class="min-h-screen bg-bg text-ink">
-  <div class="flex h-screen overflow-hidden">
-    <!-- Left rail -->
-    <nav class="w-16 bg-white flex flex-col items-center py-6 shadow-sm border-r border-divider">
-      <span class="text-xl font-bold mb-8">B</span>
-      <div class="flex flex-col gap-3">
-        <button onclick="changePage('alerts')" class="relative p-2 rounded-lg text-muted hover:bg-gray-100" title="Dashboard/Alerts" aria-label="Alerts">
-          <i data-lucide="bell" class="w-6 h-6"></i>
-          <span class="absolute -top-0.5 -right-0.5 text-[10px] text-white bg-red-600 rounded-full h-4 w-4 grid place-items-center font-bold">2</span>
-        </button>
-        <button class="p-2 rounded-lg text-muted hover:bg-gray-100" title="Classes"><i data-lucide="graduation-cap" class="w-6 h-6"></i></button>
-        <button class="p-2 rounded-lg text-muted hover:bg-gray-100" title="Payments"><i data-lucide="wallet" class="w-6 h-6"></i></button>
+  <!-- React + ReactDOM (production) -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <!-- Babel for inline JSX (for the prototype) -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-        <button onclick="changePage('list')" class="p-2 rounded-lg bg-blue-100 text-primary shadow-inner" title="BeAKampaign">
-          <i data-lucide="send" class="w-6 h-6"></i>
-        </button>
+  <script type="text/babel">
+    const { useEffect, useMemo, useRef, useState } = React;
 
-        <button class="p-2 rounded-lg text-muted hover:bg-gray-100" title="Settings"><i data-lucide="settings" class="w-6 h-6"></i></button>
-      </div>
-    </nav>
-
-    <!-- Main -->
-    <main class="flex-1 overflow-y-auto p-8 relative">
-      <header class="mb-6 flex items-center justify-between">
-        <h1 id="main-header" class="text-3xl font-extrabold">BeAKampaign</h1>
-        <!-- Top CTA (list page only) -->
-        <div id="top-cta"></div>
-      </header>
-
-      <div id="app-container"></div>
-
-      <!-- Global sheet -->
-      <div id="global-sheet" class="fixed inset-0 hidden z-50" aria-hidden="true">
-        <div class="absolute inset-0 bg-black/20" onclick="closeSheet()"></div>
-        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-3xl bg-white rounded-xl shadow-xl p-6">
-          <!-- injected -->
-        </div>
-      </div>
-
-      <!-- Toasts -->
-      <div id="toast" class="fixed top-4 left-1/2 -translate-x-1/2 w-full max-w-sm z-50"></div>
-    </main>
-
-    <!-- Right drawer (shared for Schedule & Audience Picker) -->
-    <aside id="drawer" class="fixed top-0 right-0 h-full w-[460px] bg-white shadow-2xl translate-x-full transition-transform duration-300 z-40" role="dialog" aria-modal="true">
-      <!-- injected -->
-    </aside>
-    <div id="drawer-overlay" class="fixed inset-0 bg-black/20 opacity-0 pointer-events-none transition-opacity z-30" onclick="closeDrawer()"></div>
-  </div>
-
-  <script>
-    // ---------- Icons
-    function paintIcons() { if (window.lucide?.createIcons) lucide.createIcons(); }
-
-    // ---------- State
-    const MESSAGES = { EMAIL: "Email", SMS: "SMS", SOCIAL: "Social Post" };
-    const CAMPAIGN_STATUS = { SENT: "Sent", SCHEDULED: "Scheduled", DRAFT: "Drafts", PAUSED: "Paused", ACTIVE: "Active" };
-    const FOLLOWUP_STATUS = { ALERT: "Alert", COMPLETED: "Completed", SKIPPED: "Skipped" };
-
-    const state = {
-      page: "list",
-      readOnly: false,
-      drawerOpen: false,
-      drawerMode: "schedule", // 'schedule' | 'audience'
-      drawerStep: "schedule",
-      messageType: MESSAGES.EMAIL,
-      scheduleType: "now",
-      scheduleTime: "",
-      sequenceSteps: [],
-      currentCampaign: null,
-      isCampaignNameSet: true,
-      isAudienceSet: true,
-      currentComposeMode: 'scratch',
-      openMenuFor: null, // which row's overflow menu is open
-
-      campaigns: [
-        { id: 1, subject: "Your Weekly Class Update: New Features Inside", name: "Weekly Update 10/25", type: MESSAGES.EMAIL, audience: "Parents (1,742)", status: CAMPAIGN_STATUS.SENT, sendTime: "Oct 25, 10:00 AM", opens: 54, clicks: 12, sequences: [], isEditable: false },
-        { id: 2, subject: "Don't Miss Out! Registration Closes Tomorrow", name: "Registration Reminder P1", type: MESSAGES.EMAIL, audience: "Parents (1,742)", status: CAMPAIGN_STATUS.SCHEDULED, sendTime: "Nov 10, 3:00 PM", opens: "-", clicks: "-", sequences: [{ delay: "3d", condition: "Non-openers", messageType: MESSAGES.SMS }, { delay: "7d", condition: "Everyone", messageType: MESSAGES.EMAIL }], isEditable: true },
-        { id: 3, subject: "Summer Camp Early Bird Discount", name: "Summer Camp P1", type: MESSAGES.EMAIL, audience: "Leads (3,200)", status: CAMPAIGN_STATUS.ACTIVE, sendTime: "Sent 2 days ago", opens: 600, clicks: 80, sequences: [], isEditable: true },
-        { id: 4, subject: "Paused Mid-Campaign Test", name: "Mid-Campaign Test", type: MESSAGES.EMAIL, audience: "Leads (1,010)", status: CAMPAIGN_STATUS.PAUSED, sendTime: "Paused • Nov 1", opens: 100, clicks: 11, sequences: [{ delay: "3d", condition: "Non-openers", messageType: MESSAGES.EMAIL }], isEditable: true }
-      ],
-      templates: [
-        { id: 201, name: "Seasonal Promo (Email)", type: MESSAGES.EMAIL, subject: "BIG Savings Inside!", body: "Use this template for major promotions. It includes a high-contrast CTA button ready for personalization." },
-        { id: 202, name: "Enrollment Reminder (SMS)", type: MESSAGES.SMS, smsText: "Last chance to enroll! Don't miss out. [Link]" }
-      ],
-      followups: [
-        { id: 101, campaignId: 3, campaignName: "Summer Camp P1", segment: "Non-Clickers (1,120)", description: "High-value prospects haven't clicked the camp link.", recommendedAction: "SMS follow-up using Template X", autoStopRule: "Reply to any message", status: FOLLOWUP_STATUS.ALERT },
-        { id: 102, campaignId: 2, campaignName: "Registration Reminder P1", segment: "Non-Openers (380)", description: "Segment hasn't opened the final registration reminder.", recommendedAction: "Send Email with new subject line.", autoStopRule: "Class-full status", status: FOLLOWUP_STATUS.ALERT },
-        { id: 103, campaignId: 1, campaignName: "Weekly Update 10/25", segment: "Low-Engagement (52)", description: "Completed last week with low open rate in this segment.", recommendedAction: "Send an SMS survey.", autoStopRule: "Payment received", status: FOLLOWUP_STATUS.COMPLETED }
-      ],
-      compose: {
-        subject: "New Campaign Draft",
-        name: "New Campaign Draft",
-        audience: "None Selected",
-        audienceId: null,
-        previewText: "",
-        body: "Start with a clean slate for your rich HTML content.",
-        smsText: "Start typing your SMS here. [Link]",
-        socialCaption: "Write a new social post caption.",
-        mediaUrl: "https://placehold.co/400x200/4c7ff5/ffffff?text=Media+Placeholder",
-        isUnlayerOpen: false,
-        isSending: false
-      }
+    /* -------------------------- Light Theme Tokens -------------------------- */
+    const COLORS = {
+      bg: "#f5f5f7",
+      panel: "#ffffff",
+      panelAlt: "#f9fafb",
+      text: "#0f172a",
+      subtext: "#6b7280",
+      interactive: "#2563eb",
+      interactiveText: "#ffffff",
+      primary: "#2563eb",
+      primaryText: "#ffffff",
+      danger: "#dc2626",
+      warning: "#f59e0b",
+      success: "#15803d",
+      border: "#e5e7eb",
+      focus: "#93c5fd",
     };
 
-    // ---------- Shorthands + caret helpers
-    const $ = (id) => document.getElementById(id);
+    const focusRing = { outline: `2px solid ${COLORS.focus}`, outlineOffset: "2px" };
+    const btnBase = {
+      padding:"7px 11px",
+      borderRadius:6,
+      border:`1px solid ${COLORS.border}`,
+      fontWeight:600,
+      fontSize:"13px",
+      lineHeight:1.25,
+      cursor:"pointer",
+      background:COLORS.panelAlt,
+      color:COLORS.text
+    };
+    const btnPrimary = { ...btnBase, background:COLORS.primary, color:COLORS.primaryText, borderColor:COLORS.primary };
+    const btnGhost = { ...btnBase, background:"transparent" };
+    const badge = (bg, fg) => ({ display:"inline-block", padding:"2px 8px", borderRadius:999, background:bg, color:fg, fontSize:12 });
 
-    function saveCaret() {
-      const el = document.activeElement;
-      if (!el || !el.id) return null;
-      const data = { id: el.id };
-      try { if ('selectionStart' in el) { data.start = el.selectionStart; data.end = el.selectionEnd; } } catch(e){}
-      return data;
+    function formatNowShort() {
+      const d = new Date();
+      const month = d.toLocaleString("default", { month: "short" });
+      const day = d.getDate();
+      const time = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      return `${month} ${day}, ${time}`;
     }
-    function restoreCaret(saved) {
-      if (!saved) return;
-      const el = document.getElementById(saved.id);
-      if (!el) return;
-      el.focus({ preventScroll: true });
-      try {
-        if (typeof saved.start === 'number' && typeof saved.end === 'number' && 'setSelectionRange' in el) {
-          el.setSelectionRange(saved.start, saved.end);
+
+    /* ------------------------ Campaign data (home list) ---------------------- */
+    const initialCampaigns = [
+      {
+        id: 1,
+        name: "Weekly Update 10/25",
+        subject: "Your Weekly Class Update: New Features Inside",
+        audience: "Parents (1,742)",
+        status: "Sent",
+        sendTime: "Oct 25, 10:00 AM",
+        opens: 54,
+        clicks: 12,
+        sequences: [],
+        editable: false,
+      },
+      {
+        id: 2,
+        name: "Registration Reminder P1",
+        subject: "Don't Miss Out! Registration Closes Tomorrow",
+        audience: "Parents (1,742)",
+        status: "Scheduled",
+        sendTime: "Nov 10, 3:00 PM",
+        opens: "-",
+        clicks: "-",
+        sequences: [
+          { delay: "3d", condition: "Non-openers", messageType: "SMS" },
+          { delay: "7d", condition: "Everyone", messageType: "Email" },
+        ],
+        editable: true,
+        lowPerformance: true, // << show the warning on this one
+      },
+      {
+        id: 3,
+        name: "Summer Camp P1",
+        subject: "Summer Camp Early Bird Discount",
+        audience: "Leads (3,200)",
+        status: "Active",
+        sendTime: "Sent 2 days ago",
+        opens: 600,
+        clicks: 80,
+        sequences: [],
+        editable: true,
+      },
+      {
+        id: 4,
+        name: "Mid-Campaign Test",
+        subject: "Paused Mid-Campaign Test",
+        audience: "Leads (1,010)",
+        status: "Paused",
+        sendTime: "Paused • Nov 1",
+        opens: 100,
+        clicks: 11,
+        sequences: [
+          { delay: "3d", condition: "Non-openers", messageType: "Email" },
+        ],
+        editable: true,
+      },
+    ];
+
+    const STATUS_STYLES = {
+      "Sent": badge("rgba(22,163,74,0.12)", COLORS.success),
+      "Scheduled": badge("rgba(37,99,235,0.12)", COLORS.primary),
+      "Draft": badge("#e2e8f0", COLORS.text),
+      "Active": badge("rgba(37,99,235,0.12)", COLORS.primary),
+      "Paused": badge("rgba(148,163,184,0.3)", "#475569"),
+    };
+
+    /* --------------------------------- App ----------------------------------- */
+    function BeAKampaignApp() {
+      // route now also holds optional step (e.g. for "Compose One Click")
+      const [route, setRoute] = useState({ page:"dashboard", campaignId:null, step:0 });
+      const [campaigns, setCampaigns] = useState(initialCampaigns);
+      const [draftId, setDraftId] = useState(null);
+
+      const startNew = () => {
+        setRoute({ page:"create", campaignId:"new", step:0 });
+        setDraftId(null);
+      };
+
+      const openCampaign = (id) => {
+        setRoute({ page:"create", campaignId:id||"new", step:0 });
+        setDraftId(id);
+      };
+
+      // new: go straight to Compose & Schedule for that campaign
+      const openCampaignCompose = (id) => {
+        setRoute({ page:"create", campaignId:id||"new", step:2 });
+        setDraftId(id);
+      };
+
+      const deleteCampaign = (id) => setCampaigns(p=>p.filter(c=>c.id!==id));
+      const duplicateCampaign = (id) => {
+        const orig = campaigns.find(c=>c.id===id); if(!orig) return;
+        const copy = {
+          ...orig,
+          id: Date.now(),
+          name: orig.name + " (Copy)",
+          status: "Draft",
+          sendTime: "—",
+          opens: "-",
+          clicks: "-",
+          editable: true,
+        };
+        setCampaigns(p=>[copy, ...p]);
+      };
+
+      // pause should reflect the paused time in sendTime
+      const togglePause = (id) => {
+        setCampaigns(prev => prev.map(c => {
+          if (c.id !== id) return c;
+          if (c.status === "Paused") {
+            return { ...c, status: "Active" };
+          }
+          if (c.status === "Active" || c.status === "Scheduled") {
+            return { ...c, status: "Paused", sendTime: `Paused • ${formatNowShort()}` };
+          }
+          return c;
+        }));
+      };
+
+      const ensureDraft = (partial) => {
+        let createdId = draftId;
+        if (!draftId) {
+          createdId = Date.now();
+          const newDraft = {
+            id: createdId,
+            name: partial.name || "Untitled campaign",
+            subject: partial.subject || "(no subject)",
+            audience: partial.audience || "—",
+            status: "Draft",
+            sendTime: "Auto-saved",
+            opens: "-",
+            clicks: "-",
+            sequences: partial.sequences || [],
+            editable: true,
+          };
+          setCampaigns(prev => [newDraft, ...prev]);
+          setDraftId(createdId);
+        } else {
+          setCampaigns(prev =>
+            prev.map(c => c.id === draftId ? { ...c, ...partial } : c)
+          );
         }
-      } catch(e){}
-    }
+        return createdId;
+      };
 
-    function toast(msg, type = "info", ms = 3000) {
-      const m = {
-        info: "bg-blue-100 text-blue-800 border-blue-300",
-        success: "bg-green-100 text-green-800 border-green-300",
-        danger: "bg-red-100 text-red-800 border-red-300",
-      }[type];
-      const icon = { info: "info", success: "check-circle", danger: "alert-triangle" }[type];
-      const el = document.createElement("div");
-      el.className = `p-3 mb-2 rounded-xl border shadow ${m} opacity-0 translate-y-2 transition-all`;
-      el.innerHTML = `<div class="flex items-center gap-2"><i data-lucide="${icon}" class="w-5 h-5"></i><span>${msg}</span></div>`;
-      $("toast").appendChild(el);
-      paintIcons();
-      requestAnimationFrame(() => {
-        el.classList.remove("opacity-0", "translate-y-2");
-        el.classList.add("opacity-100", "translate-y-0");
-      });
-      setTimeout(() => {
-        el.classList.add("opacity-0", "translate-y-2");
-        setTimeout(() => el.remove(), 200);
-      }, ms);
-    }
+      const updateDraft = (id, partial) => {
+        setCampaigns(prev =>
+          prev.map(c => c.id === id ? { ...c, ...partial } : c)
+        );
+      };
 
-    // ---------- Page nav
-    function changePage(page, opts = {}) {
-      state.page = page;
-      state.readOnly = !!opts.readOnly;
-      closeDrawer();
-      closeSheet();
-      state.openMenuFor = null; // close any open overflow menus
-      render();
-      const mh = $("main-header");
-      if (mh) {
-        mh.textContent =
-          page === "alerts" ? "Follow-up Alerts" :
-          page === "compose" ? (opts.readOnly ? `Campaign Detail: ${state.currentCampaign?.name || ""}` : "Compose Campaign") :
-          "BeAKampaign";
-      }
-    }
+      const handleLaunchedCampaign = (newCampaign) => {
+        setCampaigns(prev => {
+          const exists = prev.some(c => c.id === newCampaign.id);
+          if (exists) {
+            return prev.map(c => c.id === newCampaign.id ? newCampaign : c);
+          }
+          return [newCampaign, ...prev];
+        });
+        setDraftId(null);
+        setRoute({ page:"dashboard", campaignId:null, step:0 });
+      };
 
-    function newCampaign() {
-      state.currentCampaign = null;
-      state.messageType = MESSAGES.EMAIL;
-      Object.assign(state.compose, {
-        subject: "New Campaign Draft",
-        name: "New Campaign Draft",
-        audience: "None Selected",
-        audienceId: null,
-        previewText: "",
-        body: "Start with a clean slate for your rich HTML content.",
-        smsText: "Start typing your SMS here. [Link]",
-        socialCaption: "Write a new social post caption.",
-        isUnlayerOpen: false
-      });
-      state.sequenceSteps = [];
-      state.isCampaignNameSet = false;
-      state.isAudienceSet = false;
-      changePage("compose");
-    }
+      const backToDashboard = () => {
+        setRoute({ page:"dashboard", campaignId:null, step:0 });
+      };
 
-    function viewCampaignDetails(id) {
-      const c = state.campaigns.find(x => x.id === id);
-      if (!c) return toast("Campaign not found", "danger");
-      state.currentCampaign = c;
-      state.messageType = c.type;
-      state.readOnly = true;
-      Object.assign(state.compose, {
-        subject: c.subject,
-        name: c.name,
-        audience: c.audience,
-        previewText: c.previewText || "",
-        body: "This is the final sent content (read-only view).",
-        isUnlayerOpen: false
-      });
-      state.isCampaignNameSet = true;
-      state.isAudienceSet = true;
-      state.sequenceSteps = JSON.parse(JSON.stringify(c.sequences));
-      changePage("compose", { readOnly: true });
-    }
+      const currentCampaign = route.campaignId && typeof route.campaignId === "number"
+        ? campaigns.find(c=>c.id===route.campaignId) || null
+        : null;
 
-    function editCampaign(id) {
-      const c = state.campaigns.find(x => x.id === id);
-      if (!c || !c.isEditable) return toast("This campaign is read-only (Sent).", "info");
-      state.currentCampaign = c;
-      state.messageType = c.type;
-      state.readOnly = false;
-      Object.assign(state.compose, {
-        subject: c.subject,
-        name: c.name,
-        audience: c.audience,
-        previewText: c.previewText || "",
-        body: "Restoring content from prior campaign...",
-        isUnlayerOpen: false
-      });
-      state.isCampaignNameSet = true;
-      state.isAudienceSet = true;
-      state.sequenceSteps = JSON.parse(JSON.stringify(c.sequences));
-      changePage("compose", { readOnly: false });
-    }
-
-    // ---------- Compose handlers (caret preserve)
-    function updateCompose(field, value) {
-      if (state.readOnly) return;
-      state.compose[field] = value;
-      if (field === "subject" && state.compose.name === "New Campaign Draft") {
-        state.compose.name = value;
-      }
-      if (field === "name") {
-        state.isCampaignNameSet = value.trim().length > 0;
-      } else {
-        state.isCampaignNameSet = state.compose.name.trim().length > 0;
-      }
-      const saved = saveCaret();
-      renderCompose();
-      restoreCaret(saved);
-    }
-
-    function handleModeChange(mode) {
-      if (mode === 'scratch') changeComposeMode('scratch');
-      else renderSheet('source-selection', mode);
-    }
-
-    function changeComposeMode(mode, source = null) {
-      state.currentComposeMode = mode;
-      state.messageType = MESSAGES.EMAIL;
-      state.compose.isUnlayerOpen = false;
-
-      if (mode === 'template' && source) {
-        Object.assign(state.compose, { subject: source.subject, body: source.body, smsText: source.smsText || "Start typing... [Link]" });
-        state.messageType = source.type;
-      } else if (mode === 'reuse' && source) {
-        Object.assign(state.compose, { subject: `Reusing: ${source.name}`, body: `Content loaded from campaign: ${source.name}.` });
-        state.messageType = source.type;
-      } else if (mode === 'scratch') {
-        Object.assign(state.compose, { subject: "New Campaign Draft", body: "Start with a clean slate for your rich HTML content.", smsText: "Start typing... [Link]" });
-      }
-      const saved = saveCaret();
-      renderCompose();
-      restoreCaret(saved);
-    }
-
-    // ---------- Audience picker
-    function openAudienceDrawer() {
-      if (state.readOnly) return;
-      state.drawerOpen = true;
-      state.drawerMode = 'audience';
-      $("drawer").classList.remove("translate-x-full");
-      $("drawer-overlay").classList.remove("opacity-0", "pointer-events-none");
-      renderDrawer();
-      const focusable = $("drawer").querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-      if (focusable.length > 0) focusable[0].focus();
-    }
-
-    function selectBeAKidAudience() {
-      state.compose.audience = "New Segment (1,500)";
-      state.compose.audienceId = "mock-beakid-001";
-      state.isAudienceSet = true;
-      toast("Audience set: New Segment (1,500)", "success");
-      closeDrawer();
-      renderCompose();
-    }
-
-    function selectAudienceSource(source) { toast(`${source} connection coming soon`, "info"); }
-
-    function mockSetAudience(segment) {
-      if (state.readOnly) return;
-      state.compose.audience = segment;
-      state.compose.audienceId = 'mock-id-123';
-      state.isAudienceSet = true;
-      toast(`Audience set to: ${segment}`, 'info');
-      renderCompose();
-    }
-
-    function changeMessageType(newType) {
-      if (state.readOnly) return;
-      state.messageType = newType;
-      state.compose.isUnlayerOpen = false;
-      const saved = saveCaret();
-      renderCompose();
-      restoreCaret(saved);
-    }
-
-    function toggleUnlayer() {
-      if (state.readOnly) return;
-      state.compose.isUnlayerOpen = !state.compose.isUnlayerOpen;
-      const saved = saveCaret();
-      renderCompose();
-      restoreCaret(saved);
-    }
-
-    // ---------- Drawer (Schedule & Audience)
-    function openDrawer() {
-      if (state.readOnly) return toast("Cannot schedule, viewing in read-only mode.", "info");
-      if (!state.isCampaignNameSet || !state.isAudienceSet) {
-        return toast("Campaign Name and Audience are required before scheduling.", "danger");
-      }
-      state.drawerOpen = true;
-      state.drawerMode = 'schedule';
-      state.drawerStep = 'schedule';
-      $("drawer").classList.remove("translate-x-full");
-      $("drawer-overlay").classList.remove("opacity-0", "pointer-events-none");
-      renderDrawer();
-      const focusable = $("drawer").querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-      if (focusable.length > 0) focusable[0].focus();
-    }
-    function closeDrawer() {
-      state.drawerOpen = false;
-      $("drawer").classList.add("translate-x-full");
-      $("drawer-overlay").classList.add("opacity-0", "pointer-events-none");
-    }
-
-    function renderDrawer() {
-      if (!state.drawerOpen) { $("drawer").innerHTML = ''; return; }
-
-      if (state.drawerMode === 'audience') {
-        $("drawer").setAttribute("aria-label", "Select Audience");
-        $("drawer").innerHTML = `
-          <div class="p-6 border-b border-divider flex justify-between items-center">
-            <h2 class="text-xl font-extrabold">Select Audience</h2>
-            <button onclick="closeDrawer()" class="text-muted hover:text-ink p-2 rounded-full" aria-label="Close audience picker"><i data-lucide="x" class="w-6 h-6"></i></button>
+      return (
+        <div style={{minHeight:"100vh", background:COLORS.bg, color:COLORS.text}}>
+          <TopBar />
+          <div style={{display:"flex", maxWidth:1200, margin:"0 auto"}}>
+            <Sidebar current={route.page} onNav={setRoute} />
+            <main style={{flex:1, padding:24}}>
+              {route.page==="dashboard" && (
+                <CampaignsDashboard
+                  campaigns={campaigns}
+                  onStartNew={startNew}
+                  onOpen={openCampaign}
+                  onDelete={deleteCampaign}
+                  onDuplicate={duplicateCampaign}
+                  onTogglePause={togglePause}
+                  onComposeOneClick={openCampaignCompose}
+                />
+              )}
+              {route.page==="create" && (
+                <CreationFlow
+                  onBackToDashboard={backToDashboard}
+                  onLaunched={handleLaunchedCampaign}
+                  onEnsureDraft={ensureDraft}
+                  onUpdateDraft={updateDraft}
+                  draftId={draftId}
+                  currentCampaign={currentCampaign}
+                  initialStep={route.step || 0}
+                />
+              )}
+            </main>
           </div>
-          <div class="flex-1 overflow-y-auto p-6 space-y-4">
-            <div class="grid gap-3">
-              <button onclick="selectBeAKidAudience()" class="w-full p-4 rounded-xl btn-primary flex items-center justify-between">
-                <span class="font-extrabold">Your BeAKid Audiences</span>
-                <i data-lucide="check-circle" class="w-5 h-5"></i>
-              </button>
-              <button onclick="selectAudienceSource('Excel upload')" class="w-full p-4 rounded-xl btn-outline flex items-center justify-between">
-                <span class="font-extrabold">Excel</span>
-                <i data-lucide="file-spreadsheet" class="w-5 h-5"></i>
-              </button>
-              <button onclick="selectAudienceSource('Google Sheets')" class="w-full p-4 rounded-xl btn-outline flex items-center justify-between">
-                <span class="font-extrabold">Google Sheets</span>
-                <i data-lucide="sheet" class="w-5 h-5"></i>
-              </button>
-              <button onclick="selectAudienceSource('Manual entry')" class="w-full p-4 rounded-xl btn-outline flex items-center justify-between">
-                <span class="font-extrabold">Manual</span>
-                <i data-lucide="keyboard" class="w-5 h-5"></i>
-              </button>
-            </div>
-            <p class="text-sm text-muted mt-4">Tip: You can refine segments later with filters (tags, activity, enrollments).</p>
-          </div>
-        `;
-        paintIcons();
-        return;
-      }
-
-      // Schedule drawer
-      const isPreflight = state.drawerStep === 'preflight';
-      const sequences = state.sequenceSteps.map((step, i) => `
-        <div class="p-3 bg-gray-50 rounded-xl border border-divider flex items-center gap-3 mb-2">
-          <span class="font-bold text-lg text-primary">S${i + 2}</span>
-          <div class="flex-1 grid grid-cols-3 gap-2">
-            <select onchange="updateSequenceStep(${i}, 'delay', this.value)" class="w-full p-2 border-2 border-gray-800 rounded-lg text-sm bg-white">
-                <option value="1d" ${step.delay === '1d' ? 'selected' : ''}>Delay: 1d</option>
-                <option value="3d" ${step.delay === '3d' ? 'selected' : ''}>Delay: 3d</option>
-                <option value="7d" ${step.delay === '7d' ? 'selected' : ''}>Delay: 7d</option>
-            </select>
-            <select onchange="updateSequenceStep(${i}, 'condition', this.value)" class="w-full p-2 border-2 border-gray-800 rounded-lg text-sm bg-white">
-                <option value="Non-openers" ${step.condition === 'Non-openers' ? 'selected' : ''}>Non-openers</option>
-                <option value="Non-clickers" ${step.condition === 'Non-clickers' ? 'selected' : ''}>Non-clickers</option>
-                <option value="Everyone" ${step.condition === 'Everyone' ? 'selected' : ''}>Everyone</option>
-            </select>
-            <select onchange="updateSequenceStep(${i}, 'messageType', this.value)" class="w-full p-2 border-2 border-gray-800 rounded-lg text-sm bg-white">
-                ${[MESSAGES.EMAIL, MESSAGES.SMS, MESSAGES.SOCIAL].map(t => `<option value="${t}" ${step.messageType === t ? 'selected' : ''}>${t}</option>`).join('')}
-            </select>
-          </div>
-          <button onclick="removeSequenceStep(${i})" class="text-gray-700 hover:text-danger p-1" aria-label="Remove step"><i data-lucide="x" class="w-5 h-5"></i></button>
-        </div>`).join('');
-
-      const preflightSheet = `
-        <div class="absolute inset-0 bg-white/85 backdrop-blur-sm transition-opacity ${isPreflight ? 'opacity-100' : 'opacity-0 invisible'} z-10">
-          <div class="absolute inset-0 p-6 flex flex-col bg-white border-l border-divider">
-            <div class="flex justify-between items-center pb-4 border-b border-divider">
-              <h3 class="text-xl font-extrabold flex items-center gap-2"><i data-lucide="shield-check" class="w-6 h-6 text-primary"></i>Pre-flight Check</h3>
-              <button onclick="togglePreflightSheet()" class="text-muted hover:text-ink p-1" aria-label="Close pre-flight"><i data-lucide="x" class="w-6 h-6"></i></button>
-            </div>
-            <div class="py-4 space-y-3 flex-1 overflow-y-auto">
-              <div class="p-3 bg-green-50 rounded-lg border border-green-300 text-sm font-semibold"><strong>PASSED:</strong> Subject Line</div>
-              <div class="p-3 bg-yellow-50 rounded-lg border border-yellow-300 text-sm font-semibold"><strong>WARNING:</strong> 1/3 Links Unsecure</div>
-              <div class="p-3 bg-green-50 rounded-lg border border-green-300 text-sm font-semibold"><strong>PASSED:</strong> Audience Valid</div>
-              <div class="p-3 bg-green-50 rounded-lg border border-green-300 text-sm font-semibold"><strong>PASSED:</strong> Sequence logic OK</div>
-            </div>
-            <button onclick="togglePreflightSheet()" class="py-2 px-4 w-full rounded-xl btn-primary font-extrabold">Return</button>
-          </div>
-        </div>`;
-
-      $("drawer").setAttribute("aria-label", "Schedule Campaign");
-      $("drawer").innerHTML = `
-        <div class="p-6 border-b border-divider flex justify-between items-center">
-          <h2 class="text-xl font-extrabold">Schedule Campaign</h2>
-          <button onclick="closeDrawer()" class="text-muted hover:text-ink p-2 rounded-full" aria-label="Close drawer"><i data-lucide="x" class="w-6 h-6"></i></button>
         </div>
-        <div class="flex-1 overflow-y-auto p-6 space-y-8">
-          <div>
-            <h3 class="font-extrabold text-ink mb-2">Recipients</h3>
-            <div class="p-3 bg-gray-50 rounded-lg text-sm text-ink flex items-center gap-2 border border-gray-200"><i data-lucide="users" class="w-4 h-4"></i>${state.compose.audience}</div>
+      );
+    }
+
+    /* ------------------------------ Layout bits ------------------------------ */
+    function TopBar(){
+      return (
+        <div style={{borderBottom:`1px solid ${COLORS.border}`, background:COLORS.panel}} role="banner">
+          <div style={{maxWidth:1200, margin:"0 auto", padding:"14px 24px", display:"flex", alignItems:"center", gap:10}}>
+            <div aria-hidden style={{width:26, height:26, borderRadius:6, background:"linear-gradient(135deg,#2563eb,#15803d)"}} />
+            <div style={{fontWeight:800, letterSpacing:.2, fontSize:15}} aria-label="Product name">BeAKampaign</div>
           </div>
-          <div>
-            <h3 class="font-extrabold text-ink mb-3">When to send?</h3>
-            <div class="flex gap-4 mb-4">
-              <button
-                onclick="state.scheduleType='now'; renderDrawer();"
-                class="flex-1 py-3 rounded-xl toggle-pill"
-                aria-pressed="${state.scheduleType === 'now' ? 'true' : 'false'}"
-              >
-                Send now
-              </button>
-              <button
-                onclick="state.scheduleType='later'; renderDrawer();"
-                class="flex-1 py-3 rounded-xl toggle-pill"
-                aria-pressed="${state.scheduleType === 'later' ? 'true' : 'false'}"
-              >
-                Send later
-              </button>
+        </div>
+      );
+    }
+
+    function Sidebar({ current, onNav }){
+      const link = (label, page)=>(
+        <button
+          onClick={()=>onNav({page, campaignId:null, step:0})}
+          style={{
+            ...btnGhost,
+            width:"100%",
+            textAlign:"left",
+            background: current===page?COLORS.panelAlt:"transparent",
+            borderColor:"transparent",
+            padding:"8px",
+            color:COLORS.text
+          }}
+          onFocus={(e)=>e.currentTarget.style.outline=focusRing.outline}
+          onBlur={(e)=>e.currentTarget.style.outline="none"}
+          aria-current={current===page?"page":undefined}
+        >
+          <span>{label}</span>
+        </button>
+      );
+      return (
+        <nav aria-label="Primary" style={{width:200, borderRight:`1px solid ${COLORS.border}`, padding:14, background:COLORS.panel}}>
+          {link("Campaigns","dashboard")}
+          <div aria-hidden style={{height:6}}></div>
+          {link("Settings (placeholder)","settings")}
+        </nav>
+      );
+    }
+
+    /* -------------------------- Campaigns Dashboard -------------------------- */
+    function CampaignsDashboard({ campaigns, onStartNew, onOpen, onDelete, onDuplicate, onTogglePause, onComposeOneClick }){
+      return (
+        <section aria-label="Campaign list">
+          <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14}}>
+            <h1 style={{margin:0, fontSize:20}}>Campaigns</h1>
+            <button style={btnPrimary} onClick={onStartNew}>+ New campaign</button>
+          </div>
+          <div style={{border:`1px solid ${COLORS.border}`, borderRadius:12, overflow:"hidden", background:COLORS.panel}}>
+            <CampaignTableHeader />
+            <div role="rowgroup">
+              {campaigns.map(c=>(
+                <CampaignTableRow
+                  key={c.id}
+                  data={c}
+                  onOpen={()=>onOpen(c.id)}
+                  onDelete={()=>onDelete(c.id)}
+                  onDuplicate={()=>onDuplicate(c.id)}
+                  onTogglePause={()=>onTogglePause(c.id)}
+                  onComposeOneClick={()=>onComposeOneClick(c.id)}
+                />
+              ))}
             </div>
-            ${state.scheduleType === 'later' ? `
-              <div class="space-y-3 p-3 bg-gray-50 rounded-lg border border-gray-300">
-                <label class="block text-sm font-bold">Date &amp; Time</label>
-                <input type="datetime-local" onchange="state.scheduleTime=this.value" class="w-full p-2 border-2 border-gray-800 rounded-lg bg-white">
-                <div class="tooltip-group mt-1">
-                  <button onclick="toast('AI time applied!', 'info')" class="text-sm font-extrabold text-primary as-link inline-flex items-center gap-1" aria-describedby="ai-tip">
-                    <i data-lucide="zap" class="w-4 h-4"></i>
-                    AI recommend time
-                  </button>
-                  <div id="ai-tip" role="tooltip" class="tooltip-bubble">
-                    AI-recommended launch time based on open/click data
-                    <span class="tooltip-arrow"></span>
+          </div>
+        </section>
+      );
+    }
+
+    function CampaignTableHeader(){
+      const th = { padding:"10px 12px", fontSize:11, color:COLORS.subtext, borderBottom:`1px solid ${COLORS.border}`, textTransform:"uppercase", letterSpacing:".03em" };
+      return (
+        <div role="row" style={{display:"grid", gridTemplateColumns:"1.6fr 1.2fr 0.8fr 1fr 1fr 48px", background:COLORS.panelAlt}}>
+          <div role="columnheader" style={th}>Campaign Name</div>
+          <div role="columnheader" style={th}>Audience</div>
+          <div role="columnheader" style={th}>Status</div>
+          <div role="columnheader" style={th}>Opens / Clicks</div>
+          <div role="columnheader" style={th}>Send Time</div>
+          <div role="columnheader" style={th} aria-label="Actions">⋮</div>
+        </div>
+      );
+    }
+
+    function CampaignTableRow({ data, onOpen, onDelete, onDuplicate, onTogglePause, onComposeOneClick }){
+      const [open, setOpen] = useState(false);
+      const menuRef = useRef(null);
+      const buttonRef = useRef(null);
+      const [menuPos, setMenuPos] = useState({ top: 0, right: 0 });
+
+      useEffect(()=>{
+        const onDoc = (e)=>{
+          if (!buttonRef.current || !menuRef.current) return;
+          if (!buttonRef.current.contains(e.target) && !menuRef.current.contains(e.target)) {
+             setOpen(false);
+          }
+        };
+        document.addEventListener("mousedown", onDoc);
+        return ()=>document.removeEventListener("mousedown", onDoc);
+      },[]);
+      
+      const handleOpen = () => {
+        if (!open) {
+          const rect = buttonRef.current.getBoundingClientRect();
+          setMenuPos({
+            top: rect.bottom + 5,
+            right: window.innerWidth - rect.right,
+          });
+        }
+        setOpen(s => !s);
+      };
+
+      const statusChip = STATUS_STYLES[data.status] || badge("#e2e8f0", COLORS.text);
+
+      return (
+        <div role="row" style={{display:"grid", gridTemplateColumns:"1.6fr 1.2fr 0.8fr 1fr 1fr 48px", borderBottom:`1px solid ${COLORS.border}`, alignItems:"center"}}>
+          <div role="cell" style={{padding:"10px 12px", display:"flex", alignItems:"center", gap:6}}>
+            <button onClick={onOpen}
+              style={{background:"transparent", border:"none", color:COLORS.interactive, textDecoration:"underline", cursor:"pointer", fontWeight:600, fontSize:13}}
+            >
+              {data.name}
+            </button>
+            {data.lowPerformance && (
+              <span title="This campaign underperformed" style={{color:COLORS.warning, fontSize:14, lineHeight:1}}>⚠️</span>
+            )}
+          </div>
+          <div role="cell" style={{padding:"10px 12px", color:COLORS.subtext, fontSize:12}}>{data.audience}</div>
+          <div role="cell" style={{padding:"10px 12px"}}>
+            <span style={statusChip}>{data.status}</span>
+          </div>
+          <div role="cell" style={{padding:"10px 12px", color:COLORS.subtext, fontSize:12}}>
+            {data.opens} / {data.clicks}
+          </div>
+          <div role="cell" style={{padding:"10px 12px", color:COLORS.subtext, fontSize:12}}>
+            {data.sendTime}
+          </div>
+          <div role="cell" style={{padding:"10px 6px", position:"relative"}}>
+            <button
+              ref={buttonRef}
+              onClick={handleOpen}
+              style={{
+                ...btnGhost,
+                width:26,
+                height:26,
+                padding:0,
+                display:"grid",
+                placeItems:"center",
+                ...(data.lowPerformance ? { borderColor:COLORS.danger, color:COLORS.danger } : {})
+              }}
+              aria-haspopup="menu"
+              aria-expanded={open}
+            >
+              ⋮
+            </button>
+            {open && (
+              <div role="menu"
+                ref={menuRef}
+                style={{
+                  position:"fixed",
+                  right: menuPos.right,
+                  top: menuPos.top,
+                  background:COLORS.panel,
+                  border:`1px solid ${COLORS.border}`,
+                  borderRadius:10,
+                  minWidth:160,
+                  boxShadow:"0 12px 30px rgba(15,23,42,0.12)",
+                  zIndex:1000
+                }}
+              >
+                {data.lowPerformance && (
+                  <MenuItem label="Compose One Click" onClick={()=>{onComposeOneClick(); setOpen(false);}} />
+                )}
+                <MenuItem label="Open" onClick={()=>{onOpen(); setOpen(false);}} />
+                <MenuItem label="Duplicate" onClick={()=>{onDuplicate(); setOpen(false);}} />
+                {(data.status === "Active" || data.status === "Scheduled" || data.status === "Paused") && (
+                  <MenuItem label={data.status === "Paused" ? "Resume" : "Pause"} onClick={()=>{onTogglePause(); setOpen(false);}} />
+                )}
+                <MenuItem label="Delete" danger onClick={()=>{ if(confirm("Delete campaign?")) onDelete(); setOpen(false); }} />
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    function MenuItem({ label, onClick, danger }){
+      return (
+        <button role="menuitem" onClick={onClick}
+          style={{
+            width:"100%",
+            border:"none",
+            background:"transparent",
+            textAlign:"left",
+            padding:"6px 10px",
+            cursor:"pointer",
+            color: danger?COLORS.danger:COLORS.text,
+            fontSize:13
+          }}
+          onFocus={(e)=>e.currentTarget.style.outline=focusRing.outline}
+          onBlur={(e)=>e.currentTarget.style.outline="none"}
+        >
+          {label}
+        </button>
+      );
+    }
+
+    /* ----------------------------- Creation Flow ----------------------------- */
+    const STEPS = ["Create","Audience","Compose & Schedule","Summary"];
+    const EMOJIS = ["🎉","✨","📣","✅","📅"];
+
+    const getTodayDate = () => {
+      const d = new Date();
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    function CreationFlow({ onBackToDashboard, onLaunched, onEnsureDraft, onUpdateDraft, draftId: externalDraftId, currentCampaign, initialStep }){
+      const [activeStep, setActiveStep] = useState(initialStep || 0);
+      const [campaignName, setCampaignName] = useState(currentCampaign?.name || "");
+      const [fromSender, setFromSender] = useState("info@yourprogram.com");
+      const [audienceSegments, setAudienceSegments] = useState([]);
+      const [audPanelOpen, setAudPanelOpen] = useState(false);
+      const [lastSaved, setLastSaved] = useState(null);
+      const [internalDraftId, setInternalDraftId] = useState(externalDraftId || null);
+      const [hasLaunched, setHasLaunched] = useState(false);
+
+      // steps gain autoStopRule
+      const [steps, setSteps] = useState([
+        { id:"s1", type:"Email", date:getTodayDate(), time:"", subject:"", body:"", autoStopRule:"None" },
+      ]);
+      const [activeMsgStepId, setActiveMsgStepId] = useState("s1");
+
+      const [previewOpen, setPreviewOpen] = useState(false);
+      const [emojiOpen, setEmojiOpen] = useState(false);
+
+      useEffect(()=>{
+        // if we navigated via "Compose One Click" on existing campaign
+        if (currentCampaign && currentCampaign.name && !campaignName) {
+          setCampaignName(currentCampaign.name);
+        }
+      },[currentCampaign, campaignName]);
+
+      const audienceCount = 1500 + audienceSegments.length*10;
+
+      const canLaunch = useMemo(()=>{
+        if(!campaignName.trim()) return false;
+        if(audienceSegments.length===0) return false;
+        if(steps.length===0) return false;
+        for(const st of steps){
+          if(!st.date) return false;
+          if(st.type==="Email" && !st.subject.trim()) return false;
+          if(!st.body.trim()) return false;
+        }
+        return true;
+      },[campaignName, audienceSegments, steps]);
+
+      useEffect(() => {
+        if (externalDraftId && !internalDraftId) {
+          setInternalDraftId(externalDraftId);
+        }
+      }, [externalDraftId, internalDraftId]);
+
+      const goNext = ()=>setActiveStep(s=>Math.min(s+1, STEPS.length-1));
+      const goBack = ()=>setActiveStep(s=>Math.max(s-1, 0));
+
+      const addStep = ()=>{
+        const last = steps[steps.length-1];
+        const nextId = "s"+Math.random().toString(36).slice(2,7);
+        const newStep = {
+          id:nextId,
+          type:last?.type||"Email",
+          date:last?.date||getTodayDate(),
+          time:last?.time||"",
+          subject:"",
+          body:"",
+          autoStopRule:"None"
+        };
+        setSteps(p=>[...p, newStep]);
+        setActiveMsgStepId(nextId);
+      };
+      const resetSteps = ()=>{
+        const only = { id:"s1", type:"Email", date:getTodayDate(), time:"", subject:"", body:"", autoStopRule:"None" };
+        setSteps([only]);
+        setActiveMsgStepId("s1");
+      };
+      const updateStep = (id, patch)=> setSteps(p=>p.map(s=>s.id===id?{...s, ...patch}:s));
+      const removeStep = (id)=>{
+        setSteps(prev => {
+          if (prev.length <= 1) return prev;
+          const filtered = prev.filter(s=>s.id!==id);
+          if (id === activeMsgStepId) {
+            const last = filtered[filtered.length-1];
+            setActiveMsgStepId(last.id);
+          }
+          return filtered;
+        });
+      };
+
+      const activeEditorStep = steps.find(s=>s.id===activeMsgStepId) || steps[steps.length-1];
+
+      const autoSave = (changed = {}) => {
+        if (!campaignName.trim()) return;
+        const baseDraft = {
+          id: internalDraftId || undefined,
+          name: campaignName,
+          subject: steps[0]?.subject || "(no subject)",
+          audience: audienceSegments.length
+            ? `${audienceCount.toLocaleString()} (${audienceSegments.length>1?"Multiple segments":audienceSegments[0]})`
+            : "—",
+          sequences: steps.slice(1).map(st=>({
+            delay: st.date || "",
+            condition: "Everyone",
+            messageType: st.type
+          })),
+          ...changed
+        };
+        if (!internalDraftId) {
+          const newId = onEnsureDraft(baseDraft);
+          setInternalDraftId(newId);
+        } else {
+          onUpdateDraft(internalDraftId, baseDraft);
+        }
+        setLastSaved(new Date());
+      };
+
+      const normalizeTime = (t) => t && t.trim() ? t : "09:00";
+
+      const handleLaunch = ()=>{
+        if (!canLaunch) return;
+        const mainStep = steps[0];
+        const followUps = steps.slice(1).map((st,i)=>({
+          delay: st.date ? st.date : `+${i+1}d`,
+          condition: "Everyone",
+          messageType: st.type
+        }));
+        const newCampaign = {
+          id: internalDraftId || Date.now(),
+          name: campaignName || "Untitled Campaign",
+          subject: mainStep?.subject || "(no subject)",
+          audience: audienceSegments.length
+            ? `${audienceCount.toLocaleString()} (${audienceSegments.length>1?"Multiple segments":audienceSegments[0]})`
+            : "—",
+          status: "Active",
+          sendTime: mainStep?.date ? `${mainStep.date} ${normalizeTime(mainStep.time)}` : "Just launched",
+          opens: "-",
+          clicks: "-",
+          sequences: followUps,
+          editable: true,
+        };
+        setHasLaunched(true);
+        onLaunched(newCampaign);
+      };
+
+      const appendEmoji = (emoji)=>{
+        updateStep(activeEditorStep.id, { body: (activeEditorStep.body || "") + emoji });
+        setEmojiOpen(false);
+      };
+
+      return (
+        <section aria-label="Create campaign">
+          <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14}}>
+            <button style={btnGhost} onClick={onBackToDashboard}>← Back</button>
+            {lastSaved && (
+              <div style={{fontSize:11, color:COLORS.subtext}}>
+                Auto-saved {lastSaved.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
+              </div>
+            )}
+          </div>
+
+          <Stepper activeStep={activeStep} onStepClick={setActiveStep} />
+
+          <div style={{marginTop:14}}>
+            {activeStep===0 && (
+              <Panel title="Create">
+                <Labeled label="Campaign name" required>
+                  <Input
+                    placeholder="e.g., Summer Camp 2026 — Early Bird"
+                    value={campaignName}
+                    onChange={(val)=>{
+                      setCampaignName(val);
+                      if (val.trim()) {
+                        autoSave({ name: val.trim() });
+                      }
+                    }}
+                  />
+                </Labeled>
+                <FooterNav onBack={onBackToDashboard} onNext={goNext} nextLabel="Save & Next" nextDisabled={!campaignName.trim()} />
+              </Panel>
+            )}
+
+            {activeStep===1 && (
+              <Panel title="Audience">
+                <Labeled label="From">
+                  <Input
+                    value={fromSender}
+                    onChange={val=>{
+                      setFromSender(val);
+                      if (campaignName.trim()) autoSave({ from: val });
+                    }}
+                  />
+                </Labeled>
+
+                <Labeled label="Select Audience" required
+                  hint={audienceSegments.length ? `Multiple segments — total ${audienceCount.toLocaleString()}` : "Required"}>
+                  <div style={{display:"flex", alignItems:"center", gap:10, flexWrap:"wrap"}}>
+                    <div style={{padding:"8px 10px", borderRadius:10, border:`1px solid ${COLORS.border}`, background:COLORS.panelAlt, minWidth:240}} aria-live="polite">
+                      {audienceSegments.length
+                        ? `${audienceCount.toLocaleString()} · ${audienceSegments.length>1 ? "Multiple segments" : audienceSegments[0]}`
+                        : "No audience selected"}
+                    </div>
+                    <button style={btnBase} onClick={()=>setAudPanelOpen(true)}
+                      aria-controls="audience-panel" aria-expanded={audPanelOpen}>
+                      Change
+                    </button>
+                  </div>
+                </Labeled>
+
+                {audienceSegments.length > 0 && (
+                  <div style={{display:"flex", gap:6, flexWrap:"wrap", marginBottom:10}}>
+                    {audienceSegments.map(seg => (
+                      <span key={seg} style={badge("rgba(148,163,184,0.1)", COLORS.text)}>{seg}</span>
+                    ))}
+                  </div>
+                )}
+
+                <FooterNav onBack={goBack} onNext={goNext} nextLabel="Save & Next" nextDisabled={audienceSegments.length===0}/>
+
+                {audPanelOpen && (
+                  <AudiencePanel id="audience-panel"
+                    onClose={()=>setAudPanelOpen(false)}
+                    onApply={(segments)=>{
+                      setAudienceSegments(segments);
+                      setAudPanelOpen(false);
+                      if (campaignName.trim()) {
+                        autoSave({
+                          audience: segments.length
+                            ? `${(1500 + segments.length*10).toLocaleString()} (${segments.length>1?"Multiple segments":segments[0]})`
+                            : "—"
+                        });
+                      }
+                    }}
+                  />
+                )}
+              </Panel>
+            )}
+
+            {activeStep===2 && (
+              <Panel title="Compose & Schedule">
+                <div style={{display:"grid", gridTemplateColumns:"260px 1fr", gap:14}}>
+                  {/* Steps list */}
+                  <div style={{border:`1px solid ${COLORS.border}`, borderRadius:12, background:COLORS.panelAlt, padding:10}}>
+                    <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6}}>
+                      <div style={{fontWeight:700, fontSize:14}}>Steps</div>
+                      <button style={btnGhost} onClick={()=>{
+                        resetSteps();
+                        if (campaignName.trim()) autoSave({ sequences: [] });
+                      }}>Reset</button>
+                    </div>
+
+                    {steps.map((st, idx)=>{
+                      const isExpanded = st.id===activeMsgStepId;
+                      return (
+                        <div key={st.id}
+                          style={{border:`1px solid ${COLORS.border}`, borderRadius:10, background:COLORS.panel, padding:8, marginBottom:8}}>
+                          <div
+                            style={{display:"flex", alignItems:"center", justifyContent:"space-between", gap:8, cursor: !isExpanded ? "pointer" : "default"}}
+                            onClick={()=>{ if (!isExpanded) setActiveMsgStepId(st.id); }}
+                          >
+                            <div style={{display:"flex", alignItems:"center", gap:6, flexWrap:"wrap"}}>
+                              <span style={badge("rgba(37,99,235,0.12)", COLORS.primary)}>Step {idx+1}</span>
+                              {!isExpanded && <span style={badge("rgba(148,163,184,0.15)", COLORS.subtext)}>{st.type}</span>}
+                              {!isExpanded && (
+                                <span style={{fontSize:11, color:COLORS.subtext}}>
+                                  {st.date || "No date"}
+                                </span>
+                              )}
+                            </div>
+                            {!isExpanded && steps.length>1 && (
+                              <button
+                                title="Remove step"
+                                onClick={(e)=>{
+                                  e.stopPropagation();
+                                  removeStep(st.id);
+                                  if (campaignName.trim()) autoSave();
+                                }}
+                                style={{...btnGhost, padding:"2px 6px", color:COLORS.subtext}}
+                              >×</button>
+                            )}
+                          </div>
+
+                          {isExpanded && (
+                            <div style={{marginTop:8, display:"grid", gap:6}}>
+                              <TypeToggle value={st.type} onChange={(v)=>{
+                                updateStep(st.id, {type:v});
+                                if (campaignName.trim()) autoSave();
+                              }}/>
+                              <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:6}}>
+                                <Labeled label="Date" inline>
+                                  <input type="date" value={st.date} onChange={e=>{
+                                    updateStep(st.id,{date:e.target.value});
+                                    if (campaignName.trim()) autoSave();
+                                  }} style={inputStyle}/>
+                                </Labeled>
+                                <Labeled label="Time" inline>
+                                  <input type="time" value={st.time} onChange={e=>{
+                                    updateStep(st.id,{time:e.target.value});
+                                    if (campaignName.trim()) autoSave();
+                                  }} style={inputStyle}/>
+                                </Labeled>
+                              </div>
+                              {/* Auto-Stop only for steps after step 1 */}
+                              {idx > 0 && (
+                                <Labeled label="Auto-Stop rule">
+                                  <select
+                                    value={st.autoStopRule || "None"}
+                                    onChange={e=>{
+                                      updateStep(st.id, { autoStopRule: e.target.value });
+                                      if (campaignName.trim()) autoSave();
+                                    }}
+                                    style={{...inputStyle}}
+                                  >
+                                    <option value="None">None</option>
+                                    <option value="Stop if opened">Stop if opened</option>
+                                    <option value="Stop if clicked">Stop if clicked</option>
+                                  </select>
+                                </Labeled>
+                              )}
+                              <button style={{...btnGhost, width:"fit-content", padding:"4px 8px", marginTop:4}} onClick={()=>{
+                                addStep();
+                                if (campaignName.trim()) autoSave();
+                              }}>+ Add step</button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Editor for active step */}
+                  <div style={{border:`1px solid ${COLORS.border}`, borderRadius:12, background:COLORS.panel, padding:10}}>
+                    <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8}}>
+                      <button style={btnGhost} onClick={()=>setPreviewOpen(true)}>Preview & Test</button>
+                    </div>
+
+                    {activeEditorStep.type==="Email" && (
+                      <Labeled label="Subject" required>
+                        <Input placeholder="Write a clear, compelling subject…" value={activeEditorStep.subject} onChange={(v)=>{
+                          updateStep(activeEditorStep.id,{subject:v});
+                          if (campaignName.trim()) autoSave();
+                        }}/>
+                      </Labeled>
+                    )}
+
+                    <Labeled label={activeEditorStep.type==="Email" ? "Email body (plain)" : "SMS body (plain)"} required>
+                      <div style={{display:"flex", gap:6, marginBottom:4, position:"relative"}}>
+                        <button style={btnGhost} type="button" onClick={()=>setEmojiOpen(o=>!o)}>Emoji</button>
+                        {emojiOpen && (
+                          <div style={{position:"absolute", top:30, left:0, background:COLORS.panel, border:`1px solid ${COLORS.border}`, borderRadius:10, padding:6, display:"flex", gap:6, zIndex:20, boxShadow:"0 10px 22px rgba(15,23,42,0.1)"}}>
+                            {EMOJIS.map(e=>(
+                              <button key={e} style={{background:"transparent", border:"none", fontSize:19, cursor:"pointer"}} onClick={()=>{
+                                appendEmoji(e);
+                                if (campaignName.trim()) autoSave();
+                              }}>{e}</button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <Textarea placeholder="Write your message…" value={activeEditorStep.body} onChange={(v)=>{
+                        updateStep(activeEditorStep.id,{body:v});
+                        if (campaignName.trim()) autoSave();
+                      }}/>
+                    </Labeled>
+
+                    <div style={{display:"flex", justifyContent:"space-between", marginTop:10}}>
+                      <button style={btnGhost} onClick={goBack}>Back</button>
+                      <div style={{display:"flex", gap:6}}>
+                        <button style={btnPrimary} onClick={()=>setActiveStep(3)}>Save & Next</button>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>` : ''}
+
+                {previewOpen && (
+                  <PreviewOverlay
+                    step={activeEditorStep}
+                    subject={activeEditorStep.subject}
+                    onClose={()=>setPreviewOpen(false)}
+                    onSendTest={()=>{ alert("Test sent to your account email (demo)."); setPreviewOpen(false); }}
+                  />
+                )}
+              </Panel>
+            )}
+
+            {activeStep===3 && (
+              <Panel title="Summary">
+                <div style={{display:"flex", justifyContent:"flex-end", gap:8, marginBottom:8}}>
+                  {hasLaunched && (
+                    <button style={btnGhost} onClick={()=>alert("Campaign paused (demo)")}>Pause</button>
+                  )}
+                  <button
+                    style={{...btnGhost, color:COLORS.danger, borderColor:"transparent"}}
+                    onClick={()=>{ if(confirm("Delete this draft?")) onBackToDashboard(); }}
+                  >
+                    Delete
+                  </button>
+                </div>
+
+                <div style={{border:`1px solid ${COLORS.border}`, borderRadius:12, padding:10, background:COLORS.panelAlt, display:"grid", gap:8}}>
+                  <Row label="Campaign name" value={campaignName||"—"} />
+                  <Row label="From" value={fromSender} />
+                  <Row label="Audience" value={audienceSegments.length ? `${audienceCount.toLocaleString()} (${audienceSegments.length>1?"Multiple segments":audienceSegments[0]})` : "—"} />
+                  {audienceSegments.length > 0 && (
+                    <div>
+                      <div style={{color:COLORS.subtext, fontSize:12, marginBottom:4}}>Selected audiences</div>
+                      <div style={{display:"flex", gap:6, flexWrap:"wrap"}}>
+                        {audienceSegments.map(seg => (
+                          <span key={seg} style={badge("rgba(148,163,184,0.1)", COLORS.text)}>{seg}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div>
+                    <div style={{color:COLORS.subtext, fontSize:12, marginBottom:4}}>Steps</div>
+                    <div style={{display:"grid", gap:6}}>
+                      {steps.map((st,i)=>(
+                        <div key={st.id} style={{border:`1px solid ${COLORS.border}`, borderRadius:10, padding:8, background:COLORS.panel}}>
+                          <div style={{display:"flex", alignItems:"center", gap:6, marginBottom:4}}>
+                            <span style={badge("rgba(37,99,235,0.12)", COLORS.primary)}>Step {i+1}</span>
+                            <span style={badge("rgba(148,163,184,0.12)", COLORS.subtext)}>{st.type}</span>
+                          </div>
+                          <div style={{display:"grid", gap:3, fontSize:13}}>
+                            <div style={{display:"flex", gap:10, alignItems:"center"}}>
+                              <strong>Send on:</strong>
+                              <span>{st.date || "No date"}</span>
+                              <span>{(st.time && st.time.trim()) ? st.time : "09:00"}</span>
+                            </div>
+                            {st.type==="Email" && <div><strong>Subject:</strong> {st.subject || "—"}</div>}
+                            <div>
+                              <strong>Body:</strong> {st.body ? st.body : "—"}
+                            </div>
+                            {i>0 && (
+                              <div>
+                                <strong>Auto-Stop:</strong> {st.autoStopRule || "None"}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{display:"flex", justifyContent:"space-between", marginTop:10}}>
+                  <button style={btnGhost} onClick={()=>setActiveStep(2)}>Back</button>
+                  <button style={{...btnPrimary, opacity:canLaunch?1:.6}} disabled={!canLaunch} onClick={handleLaunch}>Launch</button>
+                </div>
+              </Panel>
+            )}
           </div>
-          <div>
-            <h3 class="font-extrabold text-ink mb-3">Add Follow-ups (Sequences)</h3>
-            <div class="space-y-3">${sequences || '<p class="text-sm text-muted p-2">No follow-ups added.</p>'}</div>
-            <button onclick="addSequenceStep()" class="mt-3 w-full py-2 px-4 rounded-xl border-2 border-gray-800 font-extrabold hover:bg-gray-100 flex items-center justify-center gap-2"><i data-lucide="plus" class="w-5 h-5"></i>+ Add step</button>
-          </div>
-          <div class="pt-4 border-t border-divider">
-            <button onclick="togglePreflightSheet()" class="w-full py-2 px-4 rounded-xl border-2 border-gray-800 font-extrabold hover:bg-gray-100 flex items-center justify-center gap-2"><i data-lucide="shield-check" class="w-5 h-5"></i>Run Pre-flight check</button>
-          </div>
-        </div>
-        <div class="p-6 border-t border-divider flex justify-end gap-3">
-          <button onclick="closeDrawer()" class="py-2 px-4 rounded-xl border-2 border-gray-800 font-extrabold hover:bg-gray-100">Cancel</button>
-          <button onclick="handleSubmit()" class="py-2 px-4 rounded-xl btn-primary font-extrabold flex items-center gap-2 ${state.compose.isSending ? 'opacity-70' : ''}" ${state.compose.isSending ? 'disabled' : ''}>
-            ${state.compose.isSending
-              ? '<i data-lucide="loader-circle" class="w-5 h-5 animate-spin"></i>Processing...'
-              : `<i data-lucide="send" class="w-5 h-5"></i>${state.scheduleType === 'now' ? 'Launch' : 'Schedule'}`}
-          </button>
-        </div>
-        ${preflightSheet}
-      `;
-      paintIcons();
+        </section>
+      );
     }
 
-    // ---------- Sheet (source selection + preview)
-    function renderSheet(mode, context) {
-      let content, title;
-      const sheet = $("global-sheet").querySelector("div:last-child");
-
-      if (mode === 'details' || mode === 'confirm') {
-        const alert = state.followups.find(a => a.id === (mode === 'details' ? context.id : context));
-        if (!alert) return;
-        if (mode === 'details') {
-          title = `Follow-up Details: ${alert.campaignName}`;
-          content = `<div class="space-y-4">
-            <div class="p-3 bg-gray-50 rounded-lg"><h4 class="text-sm font-semibold text-muted">Segment</h4><p class="font-medium text-lg text-danger">${alert.segment}</p><p class="text-xs text-muted">${alert.description}</p></div>
-            <div class="p-3 bg-blue-50 rounded-lg"><h4 class="text-sm font-semibold text-muted">Recommended Action</h4><p class="font-medium text-lg text-primary">${alert.recommendedAction}</p></div>
-            <div class="p-3 bg-yellow-50 rounded-lg"><h4 class="text-sm font-semibold text-muted">Auto-Stop Rule</h4><p class="text-sm text-yellow-700">${alert.autoStopRule}</p></div>
-          </div>
-          <div class="mt-8 flex justify-between gap-4">
-            <button onclick="renderSheet('confirm', ${alert.id})" class="flex-1 py-2 px-4 rounded-xl btn-primary font-semibold flex items-center justify-center gap-2"><i data-lucide="check-circle" class="w-5 h-5"></i>One-Click Send</button>
-            <button onclick="startManualFollowUp(${alert.id})" class="flex-1 py-2 px-4 rounded-xl border-2 border-gray-400 font-semibold hover:bg-gray-100 flex items-center justify-center gap-2"><i data-lucide="edit" class="w-5 h-5"></i>Manual Compose</button>
-          </div>`;
-        } else {
-          title = `Confirm One-Click Follow-Up`;
-          content = `<div class="space-y-6 text-center">
-            <i data-lucide="zap" class="w-12 h-12 mx-auto text-primary"></i>
-            <h4 class="text-xl font-bold">Are you sure?</h4>
-            <p class="text-muted">Send <strong>${alert.recommendedAction}</strong> to <strong>${alert.segment}</strong> immediately?<br/>Auto-Stop Rule: ${alert.autoStopRule}</p>
-          </div>
-          <div class="mt-8 flex justify-end gap-3">
-            <button onclick="closeSheet()" class="py-2 px-4 rounded-xl border-2 border-gray-400 font-semibold hover:bg-gray-100">Cancel</button>
-            <button onclick="confirmOneClickSend(${alert.id})" class="py-2 px-4 rounded-xl bg-green-700 text-white font-semibold hover:bg-green-800 flex items-center gap-2"><i data-lucide="send" class="w-5 h-5"></i>Confirm & Send</button>
-          </div>`;
-        }
-      } else if (mode === 'source-selection') {
-        const isTemplate = context === 'template';
-        const sourceData = isTemplate ? state.templates : state.campaigns.filter(c => c.status !== CAMPAIGN_STATUS.DRAFT);
-        title = isTemplate ? "Select Template" : "Reuse Prior Campaign";
-        const listItems = sourceData.map(item => `
-          <li class="p-3 border-b border-divider hover:bg-gray-50 cursor-pointer" onclick="selectSourceAndClose('${isTemplate ? 'template' : 'reuse'}', ${item.id})" role="link" tabindex="0">
-            <div>
-              <p class="font-medium as-link">${item.name}</p>
-              <p class="text-xs text-muted">${item.subject || item.type}</p>
-            </div>
-            <i data-lucide="arrow-right" class="w-4 h-4 text-primary"></i>
-          </li>`).join('');
-        content = `<p class="text-sm text-muted mb-4">Choose a source to pre-fill your new campaign.</p>
-          <ul class="border border-divider rounded-lg max-h-96 overflow-y-auto bg-white">${listItems || "<li class='p-3 text-sm text-muted'>No sources found.</li>"}</ul>
-          <div class="mt-6 flex justify-end"><button onclick="closeSheet()" class="py-2 px-4 rounded-xl border-2 border-gray-400 font-semibold hover:bg-gray-100">Cancel</button></div>`;
-      } else if (mode === 'preview') {
-        // Build a live preview based on current compose state + channel
-        const isEmail = state.messageType === MESSAGES.EMAIL;
-        const isSMS = state.messageType === MESSAGES.SMS;
-        const isSocial = state.messageType === MESSAGES.SOCIAL;
-
-        title = `Preview: ${state.compose.name || 'Untitled Campaign'}`;
-
-        const emailPreview = `
-          <div class="max-w-[680px] mx-auto border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-            <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
-              <p class="text-sm text-muted"><strong>From:</strong> hello@provider.com</p>
-              <p class="text-sm text-muted"><strong>To:</strong> ${state.compose.audience || '—'}</p>
-            </div>
-            <div class="px-6 py-5">
-              <h3 class="text-xl font-extrabold mb-1">${state.compose.subject || '(no subject)'}</h3>
-              <p class="text-sm text-muted mb-4">${state.compose.previewText || 'No preview text'}...</p>
-              <div class="prose max-w-none">
-                <pre class="text-sm whitespace-pre-wrap leading-relaxed">${state.compose.body || ''}</pre>
-              </div>
-            </div>
-          </div>`;
-
-        const smsPreview = `
-          <div class="max-w-sm mx-auto border-2 border-gray-800 rounded-[36px] p-4 bg-white">
-            <div class="h-6 w-24 bg-gray-200 rounded-full mx-auto mb-4"></div>
-            <div class="space-y-3">
-              <div class="bg-gray-100 rounded-2xl p-3 text-sm text-ink">${state.compose.smsText || ''}</div>
-            </div>
-            <div class="mt-4 text-center text-xs text-muted">SMS preview</div>
-          </div>`;
-
-        const socialPreview = `
-          <div class="max-w-md mx-auto border border-gray-200 rounded-xl overflow-hidden bg-white">
-            <div class="p-3 flex items-center gap-3">
-              <div class="w-8 h-8 rounded-full bg-gray-200"></div>
-              <div>
-                <p class="text-sm font-extrabold">Your Brand</p>
-                <p class="text-xs text-muted">Just now</p>
-              </div>
-            </div>
-            <div class="px-3 pb-3">
-              <p class="text-sm text-ink mb-2">${state.compose.socialCaption || ''}</p>
-              <img src="${state.compose.mediaUrl}" alt="Post media" class="w-full h-56 object-cover rounded-md border">
-            </div>
-          </div>`;
-
-        content = `
-          <div class="space-y-4">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-2">
-                <span class="text-sm font-bold text-muted">Channel:</span>
-                <span class="text-sm font-extrabold">${state.messageType}</span>
-              </div>
-              <div class="flex items-center gap-2">
-                <span class="text-sm font-bold text-muted">Audience:</span>
-                <span class="text-sm font-extrabold">${state.compose.audience || '—'}</span>
-              </div>
-            </div>
-            <div class="bg-white p-4 rounded-xl border border-divider">
-              ${isEmail ? emailPreview : isSMS ? smsPreview : socialPreview}
-            </div>
-            <div class="mt-6 flex justify-end gap-3">
-              <button onclick="closeSheet()" class="py-2 px-4 rounded-xl border-2 border-gray-400 font-semibold hover:bg-gray-100">Back to edit</button>
-              <button onclick="toast('Test sent to hello@provider.com', 'info')" class="py-2 px-4 rounded-xl btn-primary font-semibold flex items-center gap-2">
-                <i data-lucide="mail-check" class="w-5 h-5"></i>Send test
+    /* -------------------------- Shared subcomponents ------------------------- */
+    function Stepper({ activeStep, onStepClick }){
+      return (
+        <div role="navigation" aria-label="Creation steps" style={{display:"flex", gap:6, flexWrap:"wrap", marginBottom:14}}>
+          {STEPS.map((label, idx)=>{
+            const active = idx===activeStep;
+            return (
+              <button
+                key={label}
+                onClick={()=>onStepClick(idx)}
+                style={{
+                  padding: "9px 16px",
+                  borderRadius: 6,
+                  border:`1px solid ${active ? COLORS.primary : COLORS.border}`,
+                  background: active ? "rgba(37,99,235,0.12)" : COLORS.panel,
+                  color: active ? COLORS.primary : COLORS.text,
+                  fontWeight: 600,
+                  fontSize: "13px",
+                  cursor: "pointer"
+                }}
+                aria-current={active?"step":undefined}
+              >
+                {label}
               </button>
-            </div>
-          </div>`;
-      }
-
-      sheet.innerHTML = `<div class="flex justify-between items-center pb-4 border-b border-divider mb-4">
-          <h3 class="text-xl font-bold">${title || ''}</h3>
-          <button onclick="closeSheet()" class="text-muted hover:text-ink p-1 rounded-full" aria-label="Close dialog"><i data-lucide="x" class="w-6 h-6"></i></button>
-        </div>${content || ''}`;
-      $("global-sheet").classList.remove("hidden");
-      $("global-sheet").setAttribute("aria-hidden", "false");
-      paintIcons();
+            );
+          })}
+        </div>
+      );
     }
 
-    function closeSheet() {
-      $("global-sheet").classList.add("hidden");
-      $("global-sheet").setAttribute("aria-hidden", "true");
+    function Panel({ title, children }){
+      return (
+        <div style={{border:`1px solid ${COLORS.border}`, borderRadius:12, background:COLORS.panel, padding:14}} role="region" aria-label={title}>
+          <h2 style={{marginTop:0, fontSize:16}}>{title}</h2>
+          {children}
+        </div>
+      );
     }
 
-    function selectSourceAndClose(mode, sourceId) {
-      const source = (mode === 'template') ? state.templates.find(t => t.id === sourceId) : state.campaigns.find(c => c.id === sourceId);
-      if (source) {
-        changeComposeMode(mode, source);
-        closeSheet();
-        toast(`Content loaded from ${source.name}.`, 'info');
-      }
+    function Labeled({ label, required, hint, inline, children }){
+      return (
+        <div style={{marginBottom:10}}>
+          <div style={{display:inline?"inline-flex":"flex", alignItems:"baseline", gap:6, marginBottom:4}}>
+            <label style={{fontWeight:600, fontSize:13}}>
+              {label} {required && <span style={badge("rgba(220,38,38,0.12)", COLORS.danger)}>Required</span>}
+            </label>
+            {hint && <span style={{color:COLORS.subtext, fontSize:12}}>{hint}</span>}
+          </div>
+          {children}
+        </div>
+      );
     }
 
-    // ---------- Sequence Logic
-    function addSequenceStep() { state.sequenceSteps.push({ delay: '3d', condition: 'Non-openers', messageType: state.messageType }); renderDrawer(); }
-    function removeSequenceStep(index) { state.sequenceSteps.splice(index, 1); renderDrawer(); }
-    function updateSequenceStep(index, field, value) { state.sequenceSteps[index][field] = value; renderDrawer(); }
-    function togglePreflightSheet() { state.drawerStep = state.drawerStep === 'schedule' ? 'preflight' : 'schedule'; renderDrawer(); }
-
-    // ---------- Follow-up Logic
-    function viewFollowUpDetails(id) { const alert = state.followups.find(a => a.id === id); if (alert) renderSheet('details', alert); }
-    function confirmOneClickSend(id) {
-      const index = state.followups.findIndex(a => a.id === id);
-      if (index !== -1) {
-        state.followups[index].status = FOLLOWUP_STATUS.COMPLETED;
-        closeSheet();
-        toast(`Follow-up sent to ${state.followups[index].segment}!`, 'success');
-        render();
-      }
-    }
-    function startManualFollowUp(id) {
-      const alert = state.followups.find(a => a.id === id);
-      if (!alert) return;
-      state.currentCampaign = null;
-      state.messageType = MESSAGES.EMAIL;
-      state.currentComposeMode = 'scratch';
-      Object.assign(state.compose, {
-        subject: `Follow-up: ${alert.description}`,
-        name: `Follow-up: ${alert.segment}`,
-        audience: `${alert.segment} (Locked)`,
-        audienceId: `locked-${alert.segment}`,
-        body: `[MANUAL FOLLOW-UP] Targeting ${alert.segment}. Auto-stop rule: "${alert.autoStopRule}".`
-      });
-      state.isCampaignNameSet = true;
-      state.isAudienceSet = true;
-      state.isReadOnly = false;
-      closeSheet();
-      changePage('compose');
-    }
-
-    // ---------- Overflow menu actions
-    function toggleRowMenu(id, ev) { ev?.stopPropagation(); state.openMenuFor = (state.openMenuFor === id) ? null : id; renderList(); }
-    function closeRowMenu() { if (state.openMenuFor !== null) { state.openMenuFor = null; renderList(); } }
-    function pauseCampaign(id) {
-      const i = state.campaigns.findIndex(c => c.id === id);
-      if (i === -1) return;
-      const c = state.campaigns[i];
-      if (c.status === CAMPAIGN_STATUS.ACTIVE || c.status === CAMPAIGN_STATUS.SCHEDULED) {
-        c.status = CAMPAIGN_STATUS.PAUSED;
-        c.isEditable = true;
-        toast(`Campaign '${c.name}' paused.`, 'success');
-      } else {
-        toast(`Only Active or Scheduled campaigns can be paused.`, 'info');
-      }
-      closeRowMenu();
-    }
-    function resumeCampaign(id) {
-      const i = state.campaigns.findIndex(c => c.id === id);
-      if (i === -1) return;
-      const c = state.campaigns[i];
-      if (c.status === CAMPAIGN_STATUS.PAUSED) {
-        c.status = CAMPAIGN_STATUS.ACTIVE;
-        c.isEditable = true;
-        toast(`Campaign '${c.name}' resumed.`, 'success');
-      } else {
-        toast(`Only Paused campaigns can be resumed.`, 'info');
-      }
-      closeRowMenu();
-    }
-    function deleteCampaign(id) {
-      const c = state.campaigns.find(c => c.id === id);
-      if (!c) return;
-      if (!confirm(`Delete campaign '${c.name}'? This cannot be undone.`)) return;
-      state.campaigns = state.campaigns.filter(c => c.id !== id);
-      toast(`Campaign deleted.`, 'success');
-      closeRowMenu();
-      renderList();
-    }
-    function duplicateCampaign(id) {
-      const c = state.campaigns.find(c => c.id === id);
-      if (!c) return;
-      const copy = {
-        ...c,
-        id: Date.now(),
-        name: `${c.name} (Copy)`,
-        status: CAMPAIGN_STATUS.DRAFT,
-        sendTime: '—',
-        opens: '-',
-        clicks: '-',
-        isEditable: true,
-        sequences: JSON.parse(JSON.stringify(c.sequences || []))
-      };
-      state.campaigns.unshift(copy);
-      toast(`Duplicated '${c.name}' as draft.`, 'success');
-      closeRowMenu();
-      renderList();
-    }
-
-    // ---------- Final Action
-    function handleSubmit() {
-      if (state.compose.isSending || !state.isCampaignNameSet || !state.isAudienceSet || state.readOnly) return;
-      state.compose.isSending = true;
-      renderDrawer();
-
-      setTimeout(() => {
-        const newId = Date.now();
-        const status = state.scheduleType === 'now' ? CAMPAIGN_STATUS.SENT : CAMPAIGN_STATUS.SCHEDULED;
-        const sendTime = state.scheduleType === 'now' ? 'Sent Just Now' : state.scheduleTime || 'Unspecified Time';
-        
-        const campaignData = {
-          id: state.currentCampaign ? state.currentCampaign.id : newId,
-          subject: state.compose.subject,
-          name: state.compose.name,
-          type: state.messageType,
-          audience: state.compose.audience,
-          status: status,
-          sendTime: sendTime,
-          opens: status === CAMPAIGN_STATUS.SENT ? 0 : '-',
-          clicks: status === CAMPAIGN_STATUS.SENT ? 0 : '-',
-          sequences: JSON.parse(JSON.stringify(state.sequenceSteps)),
-          isEditable: status !== CAMPAIGN_STATUS.SENT
-        };
-
-        if (state.currentCampaign) {
-          const index = state.campaigns.findIndex(c => c.id === state.currentCampaign.id);
-          if (index !== -1) state.campaigns[index] = campaignData;
-        } else {
-          state.campaigns.unshift(campaignData);
-        }
-
-        closeDrawer();
-        state.compose.isSending = false;
-        changePage('list');
-        toast(`Campaign '${campaignData.name}' ${status === CAMPAIGN_STATUS.SENT ? 'sent' : 'scheduled'}.`, 'success');
-      }, 700);
-    }
-
-    // ---------- Render helpers
-    const chip = (label, color = "gray") => {
-      const m = {
-        gray: "chip py-0.5 px-2 rounded-full text-xs font-semibold",
-        scheduled: "py-0.5 px-2 rounded-full text-xs font-semibold bg-blue-100 text-blue-800",
-        draft: "py-0.5 px-2 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800",
-        sent: "py-0.5 px-2 rounded-full text-xs font-semibold bg-green-100 text-green-800",
-        active: "py-0.5 px-2 rounded-full text-xs font-semibold bg-blue-100 text-blue-800",
-        alert: "py-0.5 px-2 rounded-full text-xs font-semibold bg-red-100 text-red-800",
-        completed: "py-0.5 px-2 rounded-full text-xs font-semibold bg-green-100 text-green-800",
-        paused: "py-0.5 px-2 rounded-full text-xs font-semibold bg-gray-200 text-gray-800"
-      }[color] || "chip py-0.5 px-2 rounded-full text-xs font-semibold";
-      return `<span class="${m}">${label}</span>`;
+    const inputStyle = {
+      background:COLORS.panelAlt,
+      border:`1px solid ${COLORS.border}`,
+      color:COLORS.text,
+      padding:"8px 10px",
+      borderRadius:8,
+      width:"100%",
+      fontSize:13
     };
 
-    function renderAlerts() {
-      const rows = state.followups.map(a => {
-        const status = chip(a.status, a.status === FOLLOWUP_STATUS.ALERT ? 'alert' : 'completed');
-        const campaignLink = `<button onclick="viewCampaignDetails(${a.campaignId})" class="text-primary as-link font-semibold" role="link">${a.campaignName}</button>`;
-        const actionCell = a.status === FOLLOWUP_STATUS.ALERT
-          ? `<button onclick="viewFollowUpDetails(${a.id})" class="text-primary as-link font-semibold" role="link">View Details</button>`
-          : `<span class="text-muted">Action Taken</span>`;
-        return `<tr class="border-b border-divider hover:bg-gray-50">
-          <td class="p-4">${status}</td>
-          <td class="p-4 font-semibold text-ink">${a.segment}</td>
-          <td class="p-4 text-sm text-muted">${a.description}</td>
-          <td class="p-4">${campaignLink}</td>
-          <td class="p-4 text-sm text-muted">${a.autoStopRule}</td>
-          <td class="p-4">${actionCell}</td>
-        </tr>`;
-      }).join('');
-
-      $("app-container").innerHTML = `
-        <div class="space-y-6">
-          <div class="bg-surface rounded-xl p-6 border-l-4 border-danger shadow-sm">
-            <h2 class="text-xl font-extrabold text-danger flex items-center gap-2 mb-2"><i data-lucide="bell-ring" class="w-5 h-5"></i>Actionable Follow-Up Alerts</h2>
-            <p class="text-muted">These segments require attention. Click to review options.</p>
-          </div>
-          <div class="bg-surface rounded-xl overflow-visible shadow-sm border border-divider">
-            <table class="min-w-full"><thead class="bg-gray-50">
-              <tr>
-                <th class="p-4 text-left text-xs font-bold text-muted uppercase tracking-wider">Status</th>
-                <th class="p-4 text-left text-xs font-bold text-muted uppercase tracking-wider">Segment</th>
-                <th class="p-4 text-left text-xs font-bold text-muted uppercase tracking-wider">Alert Reason</th>
-                <th class="p-4 text-left text-xs font-bold text-muted uppercase tracking-wider">Source Campaign</th>
-                <th class="p-4 text-left text-xs font-bold text-muted uppercase tracking-wider">Auto-Stop Rule</th>
-                <th class="p-4 text-left text-xs font-bold text-muted uppercase tracking-wider">Actions</th>
-              </tr></thead>
-              <tbody class="divide-y divide-divider">${rows}</tbody>
-            </table>
-          </div>
-        </div>`;
-      paintIcons();
-      if ($("top-cta")) $("top-cta").innerHTML = "";
+    function Input({ value, onChange, placeholder }){
+      const [local, setLocal] = useState(value||"");
+      useEffect(()=>setLocal(value||""),[value]);
+      return (
+        <input type="text" value={local} placeholder={placeholder} style={inputStyle}
+          onChange={(e)=>{ setLocal(e.target.value); onChange?.(e.target.value); }}
+          onFocus={(e)=>{ e.currentTarget.style.outline=focusRing.outline; }}
+          onBlur={(e)=>{ e.currentTarget.style.outline="none"; }}
+        />
+      );
     }
 
-    function renderList() {
-      const rows = state.campaigns.map(c => {
-        const statusKey = (c.status === CAMPAIGN_STATUS.PAUSED) ? 'paused' : c.status.toLowerCase();
-        const status = chip(c.status, statusKey);
-        const sequences = c.sequences.map((s, i) => chip(`S${i + 2}: ${s.delay}`, "gray")).join(' ');
-        const nameLink = `<button onclick="${c.isEditable ? 'editCampaign' : 'viewCampaignDetails'}(${c.id})" class="font-semibold text-primary as-link text-left" role="link">${c.name}</button>`;
-        const subjectText = `<span class="text-ink">${c.subject}</span>`;
-
-        const showPause = (c.status === CAMPAIGN_STATUS.ACTIVE || c.status === CAMPAIGN_STATUS.SCHEDULED);
-        const showResume = (c.status === CAMPAIGN_STATUS.PAUSED);
-
-        const overflow = `
-          <div class="relative" data-menu-root>
-            <button
-              class="text-muted hover:text-ink p-1 rounded-full"
-              aria-haspopup="menu"
-              aria-expanded="${state.openMenuFor === c.id ? 'true' : 'false'}"
-              aria-controls="menu-${c.id}"
-              data-menu-toggle
-              onclick="toggleRowMenu(${c.id}, event)"
-              title="More actions"
-            >
-              <i data-lucide="more-horizontal" class="w-5 h-5"></i>
-            </button>
-            ${state.openMenuFor === c.id ? `
-              <div id="menu-${c.id}" role="menu" class="menu-panel absolute right-0 mt-2">
-                ${showPause ? `<button class="menu-item" role="menuitem" onclick="pauseCampaign(${c.id})"><i data-lucide="pause" class="w-4 h-4"></i> Pause</button>` : ``}
-                ${showResume ? `<button class="menu-item" role="menuitem" onclick="resumeCampaign(${c.id})"><i data-lucide="play" class="w-4 h-4"></i> Resume</button>` : ``}
-                <button class="menu-item" role="menuitem" onclick="duplicateCampaign(${c.id})"><i data-lucide="copy" class="w-4 h-4"></i> Duplicate</button>
-                <div class="h-px bg-gray-200 my-1"></div>
-                <button class="menu-item text-red-700" role="menuitem" onclick="deleteCampaign(${c.id})"><i data-lucide="trash-2" class="w-4 h-4"></i> Delete</button>
-              </div>` : ``}
-          </div>`;
-
-        const actionsCell = `
-          <div class="flex items-center gap-3">
-            ${c.status === CAMPAIGN_STATUS.ACTIVE
-              ? `<button onclick="changePage('alerts')" class="text-danger as-link font-semibold text-sm" role="link" title="Open Follow-up Alerts">Follow-up Alert</button>`
-              : ``}
-            ${overflow}
-          </div>`;
-
-        return `<tr class="border-b border-divider hover:bg-gray-50 align-top">
-          <td class="p-4">${nameLink}</td>
-          <td class="p-4 text-sm">${subjectText}</td>
-          <td class="p-4 text-sm text-muted">${c.audience}</td>
-          <td class="p-4">${status}</td>
-          <td class="p-4 text-sm text-muted">${c.opens} / ${c.clicks}</td>
-          <td class="p-4 text-sm text-muted">${c.sendTime}</td>
-          <td class="p-4 space-x-2">${sequences || '<span class="text-sm text-muted">—</span>'}</td>
-          <td class="p-4">${actionsCell}</td>
-        </tr>`;
-      }).join('');
-
-      // Top CTA (visible on list only)
-      $("top-cta").innerHTML = `
-        <button onclick="newCampaign()" class="py-2 px-4 rounded-xl btn-primary font-semibold flex items-center gap-2">
-          <i data-lucide="plus" class="w-5 h-5"></i>
-          New campaign
-        </button>`;
-
-      $("app-container").innerHTML = `
-        <div class="space-y-6">
-          <div class="flex justify-between items-center">
-            <div class="flex gap-2 p-1 bg-surface rounded-xl shadow-sm border border-divider">
-              ${['All', 'Scheduled', 'Sent', 'Drafts', 'Active', 'Paused'].map(tab => `
-                <button class="py-2 px-4 rounded-lg text-sm font-semibold ${tab === 'All' ? 'bg-gray-200 text-ink border-2 border-gray-800' : 'text-ink hover:bg-gray-100 border-2 border-gray-400'}">${tab}</button>
-              `).join('')}
-            </div>
-          </div>
-
-          <div class="bg-surface rounded-xl overflow-visible shadow-sm border border-divider">
-            <table class="min-w-full table-fixed">
-              <colgroup>
-                <col class="w-[18%]">
-                <col class="w-[24%]">
-                <col class="w-[16%]">
-                <col class="w-[10%]">
-                <col class="w-[12%]">
-                <col class="w-[12%]">
-                <col class="w-[6%]">
-                <col class="w-[8%]">
-              </colgroup>
-              <thead class="bg-gray-50">
-                <tr>
-                  <th class="p-4 text-left text-xs font-bold text-muted uppercase tracking-wider">Campaign Name</th>
-                  <th class="p-4 text-left text-xs font-bold text-muted uppercase tracking-wider">Subject</th>
-                  <th class="p-4 text-left text-xs font-bold text-muted uppercase tracking-wider">Audience</th>
-                  <th class="p-4 text-left text-xs font-bold text-muted uppercase tracking-wider">Status</th>
-                  <th class="p-4 text-left text-xs font-bold text-muted uppercase tracking-wider">Opens/Clicks</th>
-                  <th class="p-4 text-left text-xs font-bold text-muted uppercase tracking-wider">Send Time</th>
-                  <th class="p-4 text-left text-xs font-bold text-muted uppercase tracking-wider">Sequence</th>
-                  <th class="p-4 text-left text-xs font-bold text-muted uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-divider">${rows}</tbody>
-            </table>
-          </div>
-        </div>`;
-      paintIcons();
+    function Textarea({ value, onChange, placeholder }){
+      const [local, setLocal] = useState(value||"");
+      useEffect(()=>setLocal(value||""),[value]);
+      return (
+        <textarea value={local} placeholder={placeholder} rows={7}
+          style={{...inputStyle, fontFamily:"system-ui, sans-serif", resize:"vertical"}}
+          onChange={(e)=>{ setLocal(e.target.value); onChange?.(e.target.value); }}
+          onFocus={(e)=>{ e.currentTarget.style.outline=focusRing.outline; }}
+          onBlur={(e)=>{ e.currentTarget.style.outline="none"; }}
+        />
+      );
     }
 
-    function renderCompose() {
-      const { isEmail, isSMS, isSocial } = {
-        isEmail: state.messageType === MESSAGES.EMAIL,
-        isSMS: state.messageType === MESSAGES.SMS,
-        isSocial: state.messageType === MESSAGES.SOCIAL
+    function TypeToggle({ value, onChange }){
+      const Item = ({ v })=>{
+        const active = value===v;
+        return (
+          <button onClick={()=>onChange(v)}
+            style={{...btnGhost, padding:"4px 8px", borderRadius:999, borderColor:active?COLORS.primary:COLORS.border, color:active?COLORS.primary:COLORS.text, background:active?"rgba(37,99,235,0.1)":COLORS.panelAlt, fontSize:12}}
+            aria-pressed={active}>{v}</button>
+        );
       };
-      const isAudienceLocked = state.compose.audienceId?.startsWith('locked');
-      const isReady = state.isCampaignNameSet && state.isAudienceSet;
-      const ro = state.readOnly ? 'disabled' : '';
+      return <div role="group" aria-label="Message type" style={{display:"flex", gap:4}}><Item v="Email" /> <Item v="SMS" /></div>;
+    }
 
-      const editor = () => {
-        if (isEmail) return `
-          <div class="p-6 space-y-4">
-            <h3 class="text-lg font-extrabold">${state.readOnly ? 'Final Email Content' : 'Email Body Editor'}</h3>
-            ${!state.readOnly ? `<div class="flex justify-end">
-                <button onclick="toggleUnlayer()" class="py-2 px-3 rounded-xl border-2 border-gray-800 text-sm font-semibold hover:bg-gray-100 flex items-center gap-2" ${isSMS || isSocial ? 'disabled' : ''}>
-                  <i data-lucide="${state.compose.isUnlayerOpen ? 'maximize' : 'columns'}" class="w-4 h-4"></i>${state.compose.isUnlayerOpen ? 'Close Editor' : 'Open in Unlayer'}
-                </button></div>` : ''}
-            <div class="min-h-[300px] border-2 border-gray-800 rounded-xl overflow-hidden">
-              ${state.compose.isUnlayerOpen && !state.readOnly
-                ? `<div class="p-4 bg-gray-50 h-full grid place-items-center">
-                    <div class="text-center text-muted"><i data-lucide="brush" class="w-8 h-8 mx-auto mb-2 text-primary"></i>
-                    <p class="font-semibold">Unlayer Editor Placeholder</p></div></div>`
-                : `<textarea id="body" oninput="updateCompose('body', this.value)" rows="8" class="w-full p-4 h-full resize-none border-none focus:ring-0" placeholder="Enter content..." ${ro}>${state.compose.body}</textarea>`
-              }
-            </div>
-          </div>`;
-        if (isSMS) {
-          const count = state.compose.smsText.length;
-          return `<div class="p-6 space-y-4">
-            <h3 class="text-lg font-extrabold">${state.readOnly ? 'Final SMS Text' : 'SMS Text Editor'}</h3>
-            <textarea id="smsText" oninput="updateCompose('smsText', this.value)" rows="5" maxlength="160" class="w-full p-3 border-2 border-gray-800 rounded-xl resize-none focus:border-primary focus:ring-2 focus:ring-blue-200" ${ro}>${state.compose.smsText}</textarea>
-            <div class="flex justify-between text-sm"><span class="text-muted flex items-center gap-1"><i data-lucide="link" class="w-4 h-4"></i>Auto link-shortening applied.</span><span class="${count > 140 ? 'text-danger font-bold' : 'text-muted'}">${count}/160</span></div>
-          </div>`;
-        }
-        if (isSocial) return `
-          <div class="p-6 grid grid-cols-2 gap-6">
-            <div class="space-y-4"><h3 class="text-lg font-extrabold">${state.readOnly ? 'Final Post Caption' : 'Post Caption'}</h3>
-              <textarea id="socialCaption" oninput="updateCompose('socialCaption', this.value)" rows="6" class="w-full p-3 border-2 border-gray-800 rounded-xl resize-none focus:border-primary focus:ring-2 focus:ring-blue-200" ${ro}>${state.compose.socialCaption}</textarea></div>
-            <div class="space-y-4"><h3 class="text-lg font-extrabold">Media</h3>
-              <div class="w-full h-48 bg-gray-100 rounded-xl grid place-items-center border-2 border-dashed border-gray-300 p-4">
-                <div class="text-center text-muted"><i data-lucide="image" class="w-6 h-6 mx-auto mb-2"></i><p class="text-sm font-semibold">Media Placeholder</p>${!state.readOnly ? '<button class="text-xs font-semibold text-primary hover:underline mt-1">Upload</button>' : ''}</div>
-              </div>
-            </div>
-          </div>`;
-        return '';
+    function Row({ label, value }){
+      return (
+        <div style={{display:"grid", gridTemplateColumns:"160px 1fr", gap:6}}>
+          <div style={{color:COLORS.subtext, fontSize:12}}>{label}</div>
+          <div style={{fontSize:13}}>{value}</div>
+        </div>
+      );
+    }
+
+    function AudiencePanel({ id, onClose, onApply }){
+      const [tab, setTab] = useState("BeAKid Audiences");
+      const [selected, setSelected] = useState([]);
+      const [manual, setManual] = useState("");
+
+      useEffect(()=>{ const onEsc=(e)=> e.key==="Escape" && onClose(); document.addEventListener("keydown", onEsc); return ()=>document.removeEventListener("keydown", onEsc);},[onClose]);
+
+      const addSegment = (seg)=> setSelected(p=> p.includes(seg)? p : [...p, seg]);
+      const removeSegment = (seg)=> setSelected(p=> p.filter(s=>s!==seg));
+      const parseManual = ()=>{
+        const raw = manual.replace(/\s+/g," ").replace(/[\n;]/g,",").split(",").map(s=>s.trim()).filter(Boolean);
+        const emails = Array.from(new Set(raw));
+        const valid = emails.filter(e=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
+        const invalid = emails.filter(e=>!valid.includes(e));
+        alert(`Parsed ${emails.length} entries.\nValid: ${valid.length}\nInvalid dropped: ${invalid.length}`);
+        addSegment(`Manual list (${valid.length})`);
       };
-      
-      $("app-container").innerHTML = `
-        <div class="space-y-6">
-          <div class="flex justify-between items-start bg-surface rounded-xl p-4 mb-6 shadow-sm border border-divider">
-            ${!state.readOnly ? `<div>
-                <label class="text-sm font-bold text-muted block mb-2">Compose Mode:</label>
-                <div class="flex gap-2">
-                  ${['template', 'scratch', 'reuse'].map(mode => `
-                    <button onclick="handleModeChange('${mode}')" class="py-2 px-4 rounded-full text-sm font-semibold border-2 ${state.currentComposeMode === mode ? 'bg-yellow-300 text-ink border-yellow-600' : 'bg-gray-100 text-ink border-gray-800 hover:bg-gray-200'}">
-                      ${mode[0].toUpperCase() + mode.slice(1)}
-                    </button>`).join('')}
-                </div>
-              </div>` : '<div></div>'}
-            <div>
-              <label class="text-sm font-bold text-muted block mb-2">Delivery Channel:</label>
-              <div class="flex gap-2">
-                ${[MESSAGES.EMAIL, MESSAGES.SMS, MESSAGES.SOCIAL].map(type => `
-                  <button onclick="changeMessageType('${type}')" class="seg ${state.messageType === type ? 'active' : ''} py-2 px-4 rounded-full text-sm" ${ro}>
-                    ${type}
-                  </button>`).join('')}
-              </div>
-            </div>
-            <button onclick="changePage('list');" class="text-muted hover:text-ink p-2 rounded-full" aria-label="Close compose"><i data-lucide="x" class="w-6 h-6"></i></button>
+
+      const segmentsDemo = ["Class A","Class A / Session A1","Class A / Session A2","Class B","Class C / Session C1"];
+
+      return (
+        <aside id={id} role="dialog" aria-modal="true" aria-label="Select audience"
+          style={{position:"fixed", right:0, top:0, bottom:0, width:400, background:COLORS.panel, borderLeft:`1px solid ${COLORS.border}`, padding:14, boxShadow:"-16px 0 32px rgba(15,23,42,0.12)", zIndex:100}}>
+          <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
+            <h3 style={{margin:0, fontSize:15}}>Select audience</h3>
+            <button style={btnGhost} onClick={onClose} aria-label="Close audience panel">✕</button>
           </div>
 
-          <div class="bg-surface rounded-xl p-6 space-y-6 shadow-sm border border-divider">
-            <div class="flex flex-wrap items-center gap-3">
-              ${chip("From: hello@provider.com")}
-              <div class="flex items-center gap-2 px-3 py-2 rounded-xl border-2 border-gray-800 bg-gray-50">
-                <span class="text-xs font-extrabold px-2 py-0.5 rounded-full bg-red-100 text-red-800 tracking-wide">REQUIRED</span>
-                <span class="text-base font-extrabold flex items-center gap-2 ${isAudienceLocked ? 'text-red-800' : 'text-ink'}">
-                  <i data-lucide="users" class="w-4 h-4"></i>
-                  Audience: ${state.compose.audience}
-                </span>
-                ${!isAudienceLocked && !state.readOnly ? `
-                  <button onclick="openAudienceDrawer()" class="ml-2 py-1.5 px-3 rounded-lg btn-outline text-sm">
-                    Change audience
-                  </button>` : isAudienceLocked ? `<i data-lucide="lock" class="w-4 h-4 ml-1"></i>` : ''}
-              </div>
-              ${!state.isAudienceSet && !state.readOnly ? `<p class="text-xs text-danger font-semibold">Please select an audience.</p>` : ''}
-            </div>
+          <div style={{display:"flex", gap:6, marginTop:10}}>
+            {["BeAKid Audiences","Excel","Google Sheets","Manual"].map(t=>{
+              const active = t===tab;
+              return (
+                <button key={t} onClick={()=>setTab(t)}
+                  style={{...btnGhost, padding:"5px 9px", borderRadius:999, borderColor:active?COLORS.primary:COLORS.border, color:active?COLORS.primary:COLORS.text, background:active?"rgba(37,99,235,0.1)":COLORS.panelAlt, fontSize:12}}
+                  aria-pressed={active}>{t}</button>
+              );
+            })}
+          </div>
 
-            <div class="space-y-4">
+          <div style={{marginTop:10}}>
+            {tab==="BeAKid Audiences" && (
               <div>
-                <label for="campaignName" class="block text-sm font-bold mb-1">Campaign Name (Internal, Required)</label>
-                <input type="text" id="campaignName" oninput="updateCompose('name', this.value)" value="${state.compose.name}" class="w-full p-3 border-2 border-gray-800 rounded-xl focus:border-primary focus:ring-2 focus:ring-blue-200" ${ro} aria-required="true">
-                ${!state.isCampaignNameSet && !state.readOnly ? `<p class="text-xs text-danger mt-1 font-semibold">Campaign Name is required.</p>` : ''}
+                <p style={{color:COLORS.subtext, marginTop:0, fontSize:12}}>Click classes/sessions to add:</p>
+                <div style={{display:"grid", gap:6}}>
+                  {segmentsDemo.map(s=>(
+                    <button key={s} onClick={()=>addSegment(s)} style={{...btnGhost, justifyContent:"space-between", display:"flex", padding:"8px 9px", background:COLORS.panelAlt, fontSize:13}}>
+                      <span>{s}</span><span style={{color:COLORS.subtext}}>→</span>
+                    </button>
+                  ))}
+                </div>
               </div>
-              ${(state.messageType !== MESSAGES.SMS) ? `
-                <div>
-                  <label for="subject" class="block text-sm font-bold mb-1">Subject / Post Title</label>
-                  <input type="text" id="subject" oninput="updateCompose('subject', this.value)" value="${state.compose.subject}" class="w-full p-3 border-2 border-gray-800 rounded-xl focus:border-primary focus:ring-2 focus:ring-blue-200" ${ro}>
-                </div>` : ''}
-              ${state.messageType === MESSAGES.EMAIL ? `
-                <div>
-                  <label for="previewText" class="block text-sm font-bold mb-1">Preview Text (Optional)</label>
-                  <input type="text" id="previewText" oninput="updateCompose('previewText', this.value)" value="${state.compose.previewText}" class="w-full p-3 border-2 border-gray-800 rounded-xl focus:border-primary focus:ring-2 focus:ring-blue-200" ${ro}>
-                </div>` : ''}
-            </div>
-          </div>
-          
-          <div class="bg-surface rounded-xl p-6 border-l-4 border-primary shadow-sm border border-divider">
-            <h2 class="text-xl font-extrabold mb-4 flex items-center text-primary gap-2"><i data-lucide="eye" class="w-5 h-5"></i>Inline Preview (${state.messageType})</h2>
-            <div class="bg-gray-50 p-4 rounded-lg border border-divider">
-              <p class="font-extrabold text-ink">${state.compose.subject}</p>
-              ${state.messageType === MESSAGES.EMAIL ? `<p class="text-sm text-muted mt-1">${state.compose.previewText || 'No preview text'}<span class="text-gray-400">...</span></p>` : ''}
-              ${state.messageType === MESSAGES.SMS ? `<p class="text-sm text-ink mt-1">${state.compose.smsText}</p>` : ''}
-              ${state.messageType === MESSAGES.SOCIAL ? `<div class="mt-3 flex gap-2"><img src="${state.compose.mediaUrl}" class="w-16 h-16 object-cover rounded-md" alt="Media preview"><p class="text-sm text-ink">${state.compose.socialCaption.substring(0, 100)}...</p></div>` : ''}
-            </div>
+            )}
+            {tab==="Excel" && <p style={{color:COLORS.subtext, fontSize:12}}>Upload an Excel file (stub).</p>}
+            {tab==="Google Sheets" && <p style={{color:COLORS.subtext, fontSize:12}}>Connect Google Sheets (stub).</p>}
+            {tab==="Manual" && (
+              <div>
+                <p style={{color:COLORS.subtext, marginTop:0, fontSize:12}}>Paste emails. We’ll clean duplicates.</p>
+                <Textarea value={manual} onChange={setManual} placeholder="email1@example.com, email2@example.com …" />
+                <button style={{...btnGhost, marginTop:6}} onClick={parseManual}>Validate & Add</button>
+              </div>
+            )}
           </div>
 
-          <div class="bg-surface rounded-xl shadow-sm border border-divider">${editor()}</div>
-
-          <div class="flex justify-between items-center py-4">
-            ${!state.readOnly
-              ? `<div>
-                  <button onclick="renderSheet('preview')" class="py-2 px-4 rounded-xl border-2 border-gray-800 font-semibold hover:bg-gray-100 flex items-center gap-2 text-sm">
-                    <i data-lucide="monitor" class="w-4 h-4"></i>Preview &amp; Test
-                  </button>
-                 </div>
-                 <button onclick="openDrawer()" class="py-2 px-4 rounded-xl btn-primary font-semibold flex items-center gap-2" ${isReady ? '' : 'disabled'}><i data-lucide="calendar" class="w-5 h-5"></i>Schedule</button>`
-              : `<span class="text-sm font-semibold text-muted flex items-center gap-2"><i data-lucide="info" class="w-4 h-4"></i>Viewing read-only campaign history.</span>`
-            }
+          <div style={{marginTop:10}}>
+            <div style={{color:COLORS.subtext, fontSize:12, marginBottom:4}}>Selected</div>
+            {selected.length===0 ? (
+              <div style={{border:`1px dashed ${COLORS.border}`, borderRadius:10, padding:10, color:COLORS.subtext, fontSize:12}}>Nothing selected yet.</div>
+            ) : (
+              <div style={{display:"flex", gap:6, flexWrap:"wrap"}}>
+                {selected.map(s=>(
+                  <span key={s} style={badge("rgba(148,163,184,0.1)", COLORS.text)}>
+                    {s}
+                    <button onClick={()=>removeSegment(s)} aria-label={`Remove ${s}`} style={{background:"transparent", border:"none", color:COLORS.subtext, marginLeft:6, cursor:"pointer"}}>×</button>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
-        </div>`;
-      paintIcons();
-      if ($("top-cta")) $("top-cta").innerHTML = ""; // no New Campaign on Compose
+
+          <div style={{position:"absolute", bottom:14, left:14, right:14, display:"flex", justifyContent:"space-between"}}>
+            <button style={btnGhost} onClick={onClose}>Cancel</button>
+            <button style={{...btnPrimary, opacity:selected.length?1:.6}} disabled={!selected.length} onClick={()=>onApply(selected)}>Apply</button>
+          </div>
+        </aside>
+      );
     }
 
-    // ---------- Main Render
-    function render() {
-      if ($("global-sheet").classList.contains("hidden")) {
-        $("global-sheet").querySelector("div:last-child").innerHTML = "";
-      }
-      if (state.page === "list") renderList();
-      else if (state.page === "compose") renderCompose();
-      else if (state.page === "alerts") renderAlerts();
+    function PreviewOverlay({ step, subject, onSendTest, onClose }){
+      const ref = useRef(null);
+      useEffect(()=>{ ref.current?.focus(); },[]);
+      return (
+        <div role="dialog" aria-modal="true" aria-label="Preview & Test" tabIndex={-1} ref={ref} onKeyDown={(e)=>e.key==="Escape"&&onClose()}
+          style={{position:"fixed", inset:0, background:"rgba(15,23,42,0.45)", display:"grid", placeItems:"center", zIndex:200}}>
+          <div style={{width:"min(650px, 90vw)", maxHeight:"80vh", overflow:"auto", background:COLORS.panel, border:`1px solid ${COLORS.border}`, borderRadius:12, padding:14}}>
+            <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
+              <h3 style={{margin:0}}>Preview</h3>
+              <button style={btnGhost} onClick={onClose}>✕</button>
+            </div>
+
+            <div style={{borderTop:`1px solid ${COLORS.border}`, marginTop:8, paddingTop:8}}>
+              <div style={{color:COLORS.subtext, marginBottom:6, fontSize:12}}>{step.type} preview</div>
+
+              {step.type==="Email" && (
+                <div style={{border:`1px solid ${COLORS.border}`, borderRadius:10, padding:10, background:COLORS.panelAlt}}>
+                  <div style={{marginBottom:6}}><strong>Subject:</strong> {subject || "(no subject)"}</div>
+                  <div style={{background:"#ffffff", padding:10, borderRadius:8, border:`1px solid ${COLORS.border}`, whiteSpace:"pre-wrap", fontSize:13}}>
+                    {step.body || "(empty)"}
+                  </div>
+                </div>
+              )}
+              {step.type==="SMS" && (
+                <div style={{border:`1px solid ${COLORS.border}`, borderRadius:10, padding:10, background:COLORS.panelAlt}}>
+                  <div style={{marginBottom:6}}><strong>SMS body</strong></div>
+                  <div style={{whiteSpace:"pre-wrap", fontSize:13}}>{step.body || "(empty)"}</div>
+                </div>
+              )}
+            </div>
+
+            <div style={{display:"flex", justifyContent:"space-between", marginTop:10}}>
+              <button style={btnGhost} onClick={onClose}>Back to edit</button>
+              <button style={btnPrimary} onClick={onSendTest}>Send test</button>
+            </div>
+          </div>
+        </div>
+      );
     }
 
-    // ---------- Init
-    document.addEventListener("DOMContentLoaded", () => {
-      render();
-      paintIcons();
-      document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") {
-          if (state.drawerOpen) closeDrawer();
-          else if (!$("global-sheet").classList.contains("hidden")) closeSheet();
-          else closeRowMenu();
-        }
-      });
-    });
+    function FooterNav({ onBack, onNext, nextLabel="Next", nextDisabled }){
+      return (
+        <div style={{display:"flex", justifyContent:"space-between", marginTop:10}}>
+          <button style={btnGhost} onClick={onBack}>Back</button>
+          <button style={{...btnPrimary, opacity:nextDisabled?.valueOf()?0.6:1}} disabled={nextDisabled} onClick={onNext}>{nextLabel}</button>
+        </div>
+      );
+    }
+
+    /* ------------------------------- Mount App ------------------------------- */
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<BeAKampaignApp />);
   </script>
 </body>
 </html>
