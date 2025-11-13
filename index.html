@@ -44,6 +44,7 @@
       success: "#15803d",
       border: "#e5e7eb",
       focus: "#93c5fd",
+      rowWarnBg: "rgba(220,38,38,0.06)",
     };
 
     const focusRing = { outline: `2px solid ${COLORS.focus}`, outlineOffset: "2px" };
@@ -62,15 +63,81 @@
     const btnGhost = { ...btnBase, background:"transparent" };
     const badge = (bg, fg) => ({ display:"inline-block", padding:"2px 8px", borderRadius:999, background:bg, color:fg, fontSize:12 });
 
-    function formatNowShort() {
-      const d = new Date();
-      const month = d.toLocaleString("default", { month: "short" });
-      const day = d.getDate();
-      const time = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-      return `${month} ${day}, ${time}`;
+    const normalizeTime = (t) => t && t.trim() ? t : "09:00";
+
+    /* ----------------------- KPI + Underperforming rules --------------------- */
+    const KPI = {
+      minDelivered: 200,
+      email: { ctrWeak: 0.012, ctorWeak: 0.08, unsubRed: 0.005, spamRed: 0.0005, cooldownH: 72 },
+      sms:   { ctrWeak: 0.12,  replyWeak: 0.02, unsubRed: 0.01,   cooldownH: 24 }
+    };
+
+    function hoursSince(dateISO) {
+      if (!dateISO) return Infinity;
+      const last = new Date(dateISO);
+      const now = new Date();
+      return (now - last) / 36e5;
+    }
+    function isCompleted(c) {
+      const h = (c.channel === "SMS") ? KPI.sms.cooldownH : KPI.email.cooldownH;
+      return !c.hasFutureSteps && hoursSince(c.lastSendAt) >= h;
+    }
+    function eligible(c) {
+      const min = Math.max(KPI.minDelivered, Math.ceil(0.02 * (c.audienceCount || 0)));
+      return (c.delivered || 0) >= min;
+    }
+    function underperforming(c) {
+      if (!isCompleted(c) || !eligible(c)) return false;
+      const goal = c.goal || "Engagement";
+      if (goal === "Informational") {
+        return (c.unsubRate || 0) >= KPI.email.unsubRed || (c.spamRate || 0) >= KPI.email.spamRed;
+      }
+      if (goal === "Conversion") {
+        const convMiss = (c.convTarget != null) && ((c.conversionRate || 0) < c.convTarget);
+        const weakEng = c.channel === 'SMS'
+          ? (c.ctr || 0) < KPI.sms.ctrWeak
+          : ((c.ctr || 0) < KPI.email.ctrWeak) || ((c.ctor ?? 1) < KPI.email.ctorWeak);
+        return convMiss && weakEng;
+      }
+      return c.channel === 'SMS'
+        ? (c.ctr || 0) < KPI.sms.ctrWeak
+        : ((c.ctr || 0) < KPI.email.ctrWeak) || ((c.ctor ?? 1) < KPI.email.ctorWeak);
+    }
+    function buildUnderperfTooltip(c) {
+      const parts = [];
+      if (c.channel === "SMS") {
+        if ((c.ctr || 0) < KPI.sms.ctrWeak) parts.push(`CTR ${(c.ctr*100||0).toFixed(1)}% (< ${(KPI.sms.ctrWeak*100).toFixed(1)}% target)`);
+        if ((c.unsubRate || 0) >= KPI.sms.unsubRed) parts.push(`Unsub ${(c.unsubRate*100).toFixed(2)}% (high)`);
+      } else {
+        if ((c.ctr || 0) < KPI.email.ctrWeak) parts.push(`CTR ${(c.ctr*100||0).toFixed(1)}% (< ${(KPI.email.ctrWeak*100).toFixed(1)}% target)`);
+        if ((c.ctor ?? 1) < KPI.email.ctorWeak) parts.push(`CTOR ${((c.ctor||0)*100).toFixed(1)}% (< ${(KPI.email.ctorWeak*100).toFixed(0)}% target)`);
+        if ((c.unsubRate || 0) >= KPI.email.unsubRed) parts.push(`Unsub ${(c.unsubRate*100).toFixed(2)}% (high)`);
+        if ((c.spamRate || 0) >= KPI.email.spamRed) parts.push(`Spam ${(c.spamRate*100).toFixed(2)}% (high)`);
+      }
+      return `Underperforming — ${parts.join("; ") || "below target"}. Click to revise.`;
     }
 
-    const normalizeTime = (t) => t && t.trim() ? t : "09:00";
+    /* ---------------------- Helpers for scheduling/AI time ------------------- */
+    const addDays = (yyyyMmDd, n=0) => {
+      if (!yyyyMmDd) return "";
+      const d = new Date(yyyyMmDd+"T00:00:00");
+      d.setDate(d.getDate() + Number(n||0));
+      const y = d.getFullYear();
+      const m = String(d.getMonth()+1).padStart(2,'0');
+      const day = String(d.getDate()).padStart(2,'0');
+      return `${y}-${m}-${day}`;
+    };
+    const parseDelayDays = (txt) => {
+      if (!txt) return 0;
+      const m = String(txt).match(/(\d+)\s*d/i);
+      return m ? parseInt(m[1],10) : 0;
+    };
+    function recommendTimeFor({ type, audienceSegments=[] }) {
+      if (type === "SMS") return "17:00";
+      const seed = audienceSegments.join("|").length % 5;
+      const slots = ["09:00","10:30","11:15","14:00","16:45"];
+      return slots[seed];
+    }
 
     /* ------------------------ Campaign data (home list) ---------------------- */
     const initialCampaigns = [
@@ -78,21 +145,32 @@
         id: 1,
         name: "Weekly Update 10/25",
         subject: "Your Weekly Class Update: New Features Inside",
-        audience: "Parents (1,742)",
+        audience: "—",
         audienceCount: 1742,
-        audienceLabels: ["Parents"],
+        audienceLabels: ["All Contacts"],
         status: "Sent",
         sendTime: "Oct 25, 10:00 AM",
-        opens: 54,
+        opens: 540,
         clicks: 12,
         sequences: [],
         editable: false,
+        channel: "Email",
+        goal: "Engagement",
+        delivered: 1700,
+        ctr: 12/1700,
+        ctor: 0.08,
+        unsubRate: 0.001,
+        spamRate: 0.0001,
+        conversionRate: 0.0,
+        convTarget: null,
+        lastSendAt: "2025-10-25T10:00:00-04:00",
+        hasFutureSteps: false
       },
       {
         id: 2,
         name: "Registration Reminder P1",
         subject: "Don't Miss Out! Registration Closes Tomorrow",
-        audience: "Parents (1,742)",
+        audience: "—",
         audienceCount: 1742,
         audienceLabels: ["Class A","Class B"],
         status: "Scheduled",
@@ -104,13 +182,21 @@
           { delay: "7d", condition: "Everyone", messageType: "Email" },
         ],
         editable: true,
-        lowPerformance: true,
+        channel: "Email",
+        goal: "Engagement",
+        delivered: 0,
+        ctr: 0,
+        ctor: 0,
+        unsubRate: 0,
+        spamRate: 0,
+        lastSendAt: "2025-11-10T15:00:00-05:00",
+        hasFutureSteps: true
       },
       {
         id: 3,
         name: "Summer Camp P1",
         subject: "Summer Camp Early Bird Discount",
-        audience: "Leads (3,200)",
+        audience: "—",
         audienceCount: 3200,
         audienceLabels: ["Leads"],
         status: "Active",
@@ -119,12 +205,21 @@
         clicks: 80,
         sequences: [],
         editable: true,
+        channel: "Email",
+        goal: "Engagement",
+        delivered: 2900,
+        ctr: 80/2900,
+        ctor: 0.12,
+        unsubRate: 0.001,
+        spamRate: 0.0001,
+        lastSendAt: "2025-11-10T12:00:00-05:00",
+        hasFutureSteps: false
       },
       {
         id: 4,
         name: "Mid-Campaign Test",
         subject: "Paused Mid-Campaign Test",
-        audience: "Leads (1,010)",
+        audience: "—",
         audienceCount: 1010,
         audienceLabels: ["Leads","Session C1"],
         status: "Paused",
@@ -135,6 +230,15 @@
           { delay: "3d", condition: "Non-openers", messageType: "Email" },
         ],
         editable: true,
+        channel: "Email",
+        goal: "Engagement",
+        delivered: 900,
+        ctr: 11/900,
+        ctor: 0.11,
+        unsubRate: 0.001,
+        spamRate: 0.0001,
+        lastSendAt: "2025-11-01T09:00:00-04:00",
+        hasFutureSteps: true
       },
     ];
 
@@ -144,6 +248,7 @@
       "Draft": badge("#e2e8f0", COLORS.text),
       "Active": badge("rgba(37,99,235,0.12)", COLORS.primary),
       "Paused": badge("rgba(148,163,184,0.3)", "#475569"),
+      "Completed": badge("rgba(148,163,184,0.18)", "#334155"),
     };
 
     /* --------------------------------- App ----------------------------------- */
@@ -156,16 +261,15 @@
         setRoute({ page:"create", campaignId:"new", step:0 });
         setDraftId(null);
       };
-
       const openCampaign = (id) => {
         setRoute({ page:"create", campaignId:id||"new", step:0 });
         setDraftId(id);
       };
-
       const openCampaignCompose = (id) => {
         setRoute({ page:"create", campaignId:id||"new", step:2 });
         setDraftId(id);
       };
+      const openAnalytics = (id) => setRoute({ page:"create", campaignId:id, step:3 });
 
       const deleteCampaign = (id) => setCampaigns(p=>p.filter(c=>c.id!==id));
       const duplicateCampaign = (id) => {
@@ -182,16 +286,12 @@
         };
         setCampaigns(p=>[copy, ...p]);
       };
-
-      // Pause: stamp paused time into sendTime
       const togglePause = (id) => {
         setCampaigns(prev => prev.map(c => {
           if (c.id !== id) return c;
-          if (c.status === "Paused") {
-            return { ...c, status: "Active" };
-          }
+          if (c.status === "Paused") return { ...c, status: "Active" };
           if (c.status === "Active" || c.status === "Scheduled") {
-            return { ...c, status: "Paused", sendTime: `Paused • ${formatNowShort()}` };
+            return { ...c, status: "Paused", sendTime: `Paused • ${new Date().toLocaleString()}` };
           }
           return c;
         }));
@@ -224,13 +324,11 @@
         }
         return createdId;
       };
-
       const updateDraft = (id, partial) => {
         setCampaigns(prev =>
           prev.map(c => c.id === id ? { ...c, ...partial } : c)
         );
       };
-
       const handleLaunchedCampaign = (newCampaign) => {
         setCampaigns(prev => {
           const exists = prev.some(c => c.id === newCampaign.id);
@@ -242,10 +340,7 @@
         setDraftId(null);
         setRoute({ page:"dashboard", campaignId:null, step:0 });
       };
-
-      const backToDashboard = () => {
-        setRoute({ page:"dashboard", campaignId:null, step:0 });
-      };
+      const backToDashboard = () => setRoute({ page:"dashboard", campaignId:null, step:0 });
 
       const currentCampaign = route.campaignId && typeof route.campaignId === "number"
         ? campaigns.find(c=>c.id===route.campaignId) || null
@@ -266,6 +361,7 @@
                   onDuplicate={duplicateCampaign}
                   onTogglePause={togglePause}
                   onComposeOneClick={openCampaignCompose}
+                  onOpenAnalytics={openAnalytics}
                 />
               )}
               {route.page==="create" && (
@@ -296,7 +392,6 @@
         </div>
       );
     }
-
     function Sidebar({ current, onNav }){
       const link = (label, page)=>(
         <button
@@ -327,12 +422,12 @@
     }
 
     /* -------------------------- Campaigns Dashboard -------------------------- */
-    function CampaignsDashboard({ campaigns, onStartNew, onOpen, onDelete, onDuplicate, onTogglePause, onComposeOneClick }){
+    function CampaignsDashboard({ campaigns, onStartNew, onOpen, onDelete, onDuplicate, onTogglePause, onComposeOneClick, onOpenAnalytics }){
       return (
         <section aria-label="Campaign list">
           <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14}}>
             <h1 style={{margin:0, fontSize:20}}>Campaigns</h1>
-            <button style={btnPrimary} onClick={onStartNew}>+ New campaign</button>
+            <button style={btnPrimary} onClick={onStartNew}>New campaign</button>
           </div>
           <div style={{border:`1px solid ${COLORS.border}`, borderRadius:12, overflow:"hidden", background:COLORS.panel}}>
             <CampaignTableHeader />
@@ -346,6 +441,7 @@
                   onDuplicate={()=>onDuplicate(c.id)}
                   onTogglePause={()=>onTogglePause(c.id)}
                   onComposeOneClick={()=>onComposeOneClick(c.id)}
+                  onOpenAnalytics={()=>onOpenAnalytics(c.id)}
                 />
               ))}
             </div>
@@ -353,32 +449,30 @@
         </section>
       );
     }
-
     function CampaignTableHeader(){
       const th = { padding:"10px 12px", fontSize:11, color:COLORS.subtext, borderBottom:`1px solid ${COLORS.border}`, textTransform:"uppercase", letterSpacing:".03em" };
       return (
-        <div role="row" style={{display:"grid", gridTemplateColumns:"1.6fr 1.6fr 0.8fr 1fr 1fr 48px", background:COLORS.panelAlt}}>
+        <div role="row" style={{display:"grid", gridTemplateColumns:"1.4fr 1.4fr 0.8fr 1fr 1fr 0.6fr 48px", background:COLORS.panelAlt}}>
           <div role="columnheader" style={th}>Campaign Name</div>
           <div role="columnheader" style={th}>Audience</div>
           <div role="columnheader" style={th}>Status</div>
           <div role="columnheader" style={th}>Opens / Clicks</div>
           <div role="columnheader" style={th}>Send Time</div>
+          <div role="columnheader" style={th}>Analytics</div>
           <div role="columnheader" style={th} aria-label="Actions">⋮</div>
         </div>
       );
     }
-
     const formatAudienceCell = (data) => {
       if (typeof data.audienceCount === "number" && Array.isArray(data.audienceLabels)) {
-        const labels = data.audienceLabels;
+        const labels = data.audienceLabels.filter(l => l && l.toLowerCase() !== "parents");
+        if (!labels.length || !data.audienceCount) return "—";
         const labelStr = labels.length > 3 ? `${labels.slice(0,3).join(", ")} +${labels.length-3}` : labels.join(", ");
-        return `${data.audienceCount.toLocaleString()} · ${labelStr || "No labels"}`;
+        return `${data.audienceCount.toLocaleString()} · ${labelStr}`;
       }
-      // Fallback to legacy string if count/labels not present
-      return data.audience || "—";
+      return "—";
     };
-
-    function CampaignTableRow({ data, onOpen, onDelete, onDuplicate, onTogglePause, onComposeOneClick }){
+    function CampaignTableRow({ data, onOpen, onDelete, onDuplicate, onTogglePause, onComposeOneClick, onOpenAnalytics }){
       const [open, setOpen] = useState(false);
       const menuRef = useRef(null);
       const buttonRef = useRef(null);
@@ -394,7 +488,6 @@
         document.addEventListener("mousedown", onDoc);
         return ()=>document.removeEventListener("mousedown", onDoc);
       },[]);
-      
       const handleOpen = () => {
         if (!open) {
           const rect = buttonRef.current.getBoundingClientRect();
@@ -406,25 +499,49 @@
         setOpen(s => !s);
       };
 
-      const statusChip = STATUS_STYLES[data.status] || badge("#e2e8f0", COLORS.text);
+      const isUnder = underperforming(data);
+      const computedStatus = isCompleted(data) ? "Completed" : data.status;
+      const statusChip = STATUS_STYLES[computedStatus] || badge("#e2e8f0", COLORS.text);
 
       return (
-        <div role="row" style={{display:"grid", gridTemplateColumns:"1.6fr 1.6fr 0.8fr 1fr 1fr 48px", borderBottom:`1px solid ${COLORS.border}`, alignItems:"center"}}>
+        <div
+          role="row"
+          style={{
+            display:"grid",
+            gridTemplateColumns:"1.4fr 1.4fr 0.8fr 1fr 1fr 0.6fr 48px",
+            borderBottom:`1px solid ${COLORS.border}`,
+            alignItems:"center",
+            background: isUnder ? COLORS.rowWarnBg : "transparent"
+          }}
+        >
           <div role="cell" style={{padding:"10px 12px", display:"flex", alignItems:"center", gap:6}}>
             <button onClick={onOpen}
               style={{background:"transparent", border:"none", color:COLORS.interactive, textDecoration:"underline", cursor:"pointer", fontWeight:600, fontSize:13}}
             >
               {data.name}
             </button>
-            {data.lowPerformance && (
-              <span title="This campaign underperformed" style={{color:COLORS.warning, fontSize:14, lineHeight:1}}>⚠️</span>
+            {isUnder && (
+              <button
+                title={buildUnderperfTooltip(data)}
+                aria-label="Underperforming campaign — click to revise"
+                onClick={onComposeOneClick}
+                style={{
+                  background:"transparent",
+                  border:"none",
+                  cursor:"pointer",
+                  lineHeight:1,
+                  padding:0,
+                  color:COLORS.warning,
+                  fontSize:16
+                }}
+              >⚠️</button>
             )}
           </div>
           <div role="cell" style={{padding:"10px 12px", color:COLORS.subtext, fontSize:12}}>
             {formatAudienceCell(data)}
           </div>
           <div role="cell" style={{padding:"10px 12px"}}>
-            <span style={statusChip}>{data.status}</span>
+            <span style={statusChip}>{computedStatus}</span>
           </div>
           <div role="cell" style={{padding:"10px 12px", color:COLORS.subtext, fontSize:12}}>
             {data.opens} / {data.clicks}
@@ -432,6 +549,13 @@
           <div role="cell" style={{padding:"10px 12px", color:COLORS.subtext, fontSize:12}}>
             {data.sendTime}
           </div>
+
+          {/* Analytics column */}
+          <div role="cell" style={{padding:"10px 12px"}}>
+            <button style={{...btnPrimary, padding:"6px 12px"}} onClick={onOpenAnalytics}>View</button>
+          </div>
+
+          {/* Actions */}
           <div role="cell" style={{padding:"10px 6px", position:"relative"}}>
             <button
               ref={buttonRef}
@@ -443,7 +567,7 @@
                 padding:0,
                 display:"grid",
                 placeItems:"center",
-                ...(data.lowPerformance ? { borderColor:COLORS.danger, color:COLORS.danger } : {})
+                ...(isUnder ? { borderColor:COLORS.danger, color:COLORS.danger } : {})
               }}
               aria-haspopup="menu"
               aria-expanded={open}
@@ -465,8 +589,8 @@
                   zIndex:1000
                 }}
               >
-                {data.lowPerformance && (
-                  <MenuItem label="Compose One Click" onClick={()=>{onComposeOneClick(); setOpen(false);}} />
+                {isUnder && (
+                  <MenuItem label="Compose one click" onClick={()=>{onComposeOneClick(); setOpen(false);}} />
                 )}
                 <MenuItem label="Open" onClick={()=>{onOpen(); setOpen(false);}} />
                 <MenuItem label="Duplicate" onClick={()=>{onDuplicate(); setOpen(false);}} />
@@ -480,7 +604,6 @@
         </div>
       );
     }
-
     function MenuItem({ label, onClick, danger }){
       return (
         <button role="menuitem" onClick={onClick}
@@ -503,7 +626,7 @@
     }
 
     /* ----------------------------- Creation Flow ----------------------------- */
-    const STEPS = ["Create","Audience","Compose & Schedule","Summary"];
+    const STEPS = ["Create","Audience","Compose & Schedule","Review & Analytics"];
     const EMOJIS = ["🎉","✨","📣","✅","📅"];
 
     const getTodayDate = () => {
@@ -513,91 +636,77 @@
       const day = String(d.getDate()).padStart(2, '0');
       return `${year}-${month}-${day}`;
     };
-
-    // Map mock campaign data to internal steps format
     const mapCampaignToSteps = (campaign) => {
-      // Step 1: Main message
       const mainStep = {
         id: "s1",
         type: "Email",
-        date: getTodayDate(), 
+        date: getTodayDate(),
         time: normalizeTime(""),
         subject: campaign.subject || "",
         body: `Body content for ${campaign.name} - Step 1.`,
         autoStopRule: "None",
+        useRecoTime: false
       };
-      
-      // Subsequent steps (sequences)
       const sequenceSteps = (campaign.sequences || []).map((seq, index) => ({
         id: `s${index + 2}`,
         type: seq.messageType,
-        date: seq.delay, 
+        daysOffset: parseDelayDays(seq.delay),
         time: normalizeTime(""),
         subject: `Follow-up ${index + 1} for ${campaign.subject}`,
         body: `Body content for ${campaign.name} - Step ${index + 2}.`,
-        autoStopRule: "Stop if opened" 
+        autoStopRule: "Stop if opened",
+        useRecoTime: false
       }));
       return [mainStep, ...sequenceSteps];
     };
 
-
     function CreationFlow({ onBackToDashboard, onLaunched, onEnsureDraft, onUpdateDraft, draftId: externalDraftId, currentCampaign, initialStep }){
-      
-      const initialSteps = useMemo(() => 
+      const initialSteps = useMemo(() =>
         currentCampaign && typeof currentCampaign.id === "number"
           ? mapCampaignToSteps(currentCampaign)
-          : [{ id:"s1", type:"Email", date:getTodayDate(), time:normalizeTime(""), subject:"", body:"", autoStopRule:"None" }]
+          : [{ id:"s1", type:"Email", date:getTodayDate(), time:normalizeTime(""), subject:"", body:"", autoStopRule:"None", useRecoTime:false }]
       , [currentCampaign?.id]);
 
       const [activeStep, setActiveStep] = useState(initialStep || 0);
       const [campaignName, setCampaignName] = useState(currentCampaign?.name || "");
       const [fromSender, setFromSender] = useState("info@yourprogram.com");
-      
       const initialSegments = currentCampaign?.audienceLabels || [];
       const [audienceSegments, setAudienceSegments] = useState(initialSegments);
-      
       const [audPanelOpen, setAudPanelOpen] = useState(false);
       const [lastSaved, setLastSaved] = useState(null);
       const [internalDraftId, setInternalDraftId] = useState(externalDraftId || null);
       const [hasLaunched, setHasLaunched] = useState(false);
-
       const [steps, setSteps] = useState(initialSteps);
       const [activeMsgStepId, setActiveMsgStepId] = useState(initialSteps[0].id);
-
       const [previewOpen, setPreviewOpen] = useState(false);
       const [emojiOpen, setEmojiOpen] = useState(false);
+      const [htmlMode, setHtmlMode] = useState(false);
 
-      // Effect to handle navigation changes (switching between new/edit mode)
       useEffect(() => {
-        // If the component is reused, but the underlying campaign changed (e.g., from id 1 to id 2)
         if (typeof currentCampaign?.id === "number") {
-          // Editing existing campaign: Reload all states
           setCampaignName(currentCampaign.name || "");
           setAudienceSegments(currentCampaign.audienceLabels || []);
-          
-          const loadedSteps = mapCampaignToSteps(currentCampaign);
-          setSteps(loadedSteps);
-          setActiveMsgStepId(loadedSteps[0].id);
+          const loaded = mapCampaignToSteps(currentCampaign);
+          setSteps(loaded);
+          setActiveMsgStepId(loaded[0].id);
           setInternalDraftId(currentCampaign.id);
-          setActiveStep(initialStep || 0); // Reset step based on route
+          setActiveStep(initialStep || 0);
+          setHtmlMode(false);
         } else if (currentCampaign?.campaignId === "new" || currentCampaign === null) {
-          // Starting new campaign or resetting to default (only if data is stale)
           if(campaignName !== "" || audienceSegments.length > 0 || steps.length > 1) {
             setCampaignName("");
             setAudienceSegments([]);
-            const defaultSteps = [{ id:"s1", type:"Email", date:getTodayDate(), time:normalizeTime(""), subject:"", body:"", autoStopRule:"None" }];
+            const defaultSteps = [{ id:"s1", type:"Email", date:getTodayDate(), time:normalizeTime(""), subject:"", body:"", autoStopRule:"None", useRecoTime:false }];
             setSteps(defaultSteps);
             setActiveMsgStepId(defaultSteps[0].id);
             setActiveStep(initialStep || 0);
           }
           setInternalDraftId(null);
+          setHtmlMode(false);
         }
-      // Depend on currentCampaign.id to re-initialize when switching campaigns
-      // and initialStep to jump directly to compose view if a one-click action was used.
       // eslint-disable-next-line react-hooks/exhaustive-deps
       }, [currentCampaign?.id, initialStep]);
 
-      // Demo audience count formula (replace with real counts as needed)
       const audienceCount = 1500 + audienceSegments.length*10;
 
       const canLaunch = useMemo(()=>{
@@ -605,8 +714,10 @@
         if(audienceSegments.length===0) return false;
         if(steps.length===0) return false;
         for(const st of steps){
-          if(!st.date) return false;
-          if(st.type==="Email" && !st.subject.trim()) return false;
+          if(st.id===steps[0].id){
+            if(!st.date) return false;
+            if(st.type==="Email" && !st.subject.trim()) return false;
+          }
           if(!st.body.trim()) return false;
         }
         return true;
@@ -616,22 +727,22 @@
       const goBack = ()=>setActiveStep(s=>Math.max(s-1, 0));
 
       const addStep = ()=>{
-        const last = steps[steps.length-1];
         const nextId = "s"+Math.random().toString(36).slice(2,7);
         const newStep = {
           id:nextId,
-          type:last?.type||"Email",
-          date:last?.date||getTodayDate(),
-          time:last?.time||"",
+          type:"Email",
+          daysOffset:3,
+          time:"",
           subject:"",
           body:"",
-          autoStopRule:"None"
+          autoStopRule:"None",
+          useRecoTime:false
         };
         setSteps(p=>[...p, newStep]);
         setActiveMsgStepId(nextId);
       };
       const resetSteps = ()=>{
-        const only = { id:"s1", type:"Email", date:getTodayDate(), time:normalizeTime(""), subject:"", body:"", autoStopRule:"None" };
+        const only = { id:"s1", type:"Email", date:getTodayDate(), time:normalizeTime(""), subject:"", body:"", autoStopRule:"None", useRecoTime:false };
         setSteps([only]);
         setActiveMsgStepId("s1");
       };
@@ -649,20 +760,17 @@
       };
 
       const activeEditorStep = steps.find(s=>s.id===activeMsgStepId) || steps[steps.length-1];
-
       const autoSave = (changed = {}) => {
         if (!campaignName.trim()) return;
         const baseDraft = {
           id: internalDraftId || undefined,
           name: campaignName,
           subject: steps[0]?.subject || "(no subject)",
-          audience: audienceSegments.length
-            ? `${audienceCount.toLocaleString()} (${audienceSegments.length>1?"Multiple segments":audienceSegments[0]})`
-            : "—",
+          audience: audienceSegments.length ? `${audienceCount.toLocaleString()} (${audienceSegments.length>1?"Multiple segments":audienceSegments[0]})` : "—",
           audienceCount,
           audienceLabels: audienceSegments,
           sequences: steps.slice(1).map(st=>({
-            delay: st.date || "",
+            delay: typeof st.daysOffset === "number" ? `${st.daysOffset}d` : (st.date || ""),
             condition: "Everyone",
             messageType: st.type
           })),
@@ -676,12 +784,11 @@
         }
         setLastSaved(new Date());
       };
-
       const handleLaunch = ()=>{
         if (!canLaunch) return;
         const mainStep = steps[0];
-        const followUps = steps.slice(1).map((st,i)=>({
-          delay: st.date || "",
+        const followUps = steps.slice(1).map((st)=>({
+          delay: typeof st.daysOffset === "number" ? `${st.daysOffset}d` : (st.date || ""),
           condition: "Everyone",
           messageType: st.type
         }));
@@ -689,9 +796,7 @@
           id: internalDraftId || Date.now(),
           name: campaignName || "Untitled Campaign",
           subject: mainStep?.subject || "(no subject)",
-          audience: audienceSegments.length
-            ? `${audienceCount.toLocaleString()} (${audienceSegments.length>1?"Multiple segments":audienceSegments[0]})`
-            : "—",
+          audience: audienceSegments.length ? `${audienceCount.toLocaleString()} (${audienceSegments.length>1?"Multiple segments":audienceSegments[0]})` : "—",
           audienceCount,
           audienceLabels: audienceSegments,
           status: "Active",
@@ -700,15 +805,25 @@
           clicks: "-",
           sequences: followUps,
           editable: true,
+          channel: "Email",
+          goal: "Engagement",
+          delivered: audienceCount,
+          ctr: 0,
+          ctor: 0.1,
+          unsubRate: 0,
+          spamRate: 0,
+          lastSendAt: new Date().toISOString(),
+          hasFutureSteps: followUps.length>0
         };
         setHasLaunched(true);
         onLaunched(newCampaign);
       };
-
       const appendEmoji = (emoji)=>{
         updateStep(activeEditorStep.id, { body: (activeEditorStep.body || "") + emoji });
         setEmojiOpen(false);
       };
+
+      const baseDate = steps[0]?.date;
 
       return (
         <section aria-label="Create campaign">
@@ -732,13 +847,11 @@
                     value={campaignName}
                     onChange={(val)=>{
                       setCampaignName(val);
-                      if (val.trim()) {
-                        autoSave({ name: val.trim() });
-                      }
+                      if (val.trim()) autoSave({ name: val.trim() });
                     }}
                   />
                 </Labeled>
-                <FooterNav onBack={onBackToDashboard} onNext={goNext} nextLabel="Save & Next" nextDisabled={!campaignName.trim()} />
+                <FooterNav onBack={onBackToDashboard} onNext={goNext} nextLabel="next" nextDisabled={!campaignName.trim()} />
               </Panel>
             )}
 
@@ -754,15 +867,17 @@
                   />
                 </Labeled>
 
-                <Labeled label="Select Audience" required
+                <Labeled label="Select audience" required
                   hint={audienceSegments.length ? `Multiple segments — total ${audienceCount.toLocaleString()}` : "Required"}>
                   <div style={{display:"flex", alignItems:"center", gap:10, flexWrap:"wrap"}}>
                     <div style={{padding:"8px 10px", borderRadius:10, border:`1px solid ${COLORS.border}`, background:COLORS.panelAlt, minWidth:240}} aria-live="polite">
                       {audienceSegments.length
                         ? `${audienceCount.toLocaleString()} · ${audienceSegments.length>1 ? "Multiple segments" : audienceSegments[0]}`
-                        : "No audience selected"}
+                        : "—"}
                     </div>
-                    <button style={btnBase} onClick={()=>setAudPanelOpen(true)}
+                    <button
+                      style={btnPrimary}
+                      onClick={()=>setAudPanelOpen(true)}
                       aria-controls="audience-panel" aria-expanded={audPanelOpen}>
                       Change
                     </button>
@@ -777,8 +892,7 @@
                   </div>
                 )}
 
-                <FooterNav onBack={goBack} onNext={goNext} nextLabel="Save & Next" nextDisabled={audienceSegments.length===0}/>
-
+                <FooterNav onBack={goBack} onNext={goNext} nextLabel="next" nextDisabled={audienceSegments.length===0}/>
                 {audPanelOpen && (
                   <AudiencePanel id="audience-panel"
                     onClose={()=>setAudPanelOpen(false)}
@@ -795,6 +909,7 @@
                         });
                       }
                     }}
+                    initialSelected={audienceSegments}
                   />
                 )}
               </Panel>
@@ -815,20 +930,23 @@
 
                     {steps.map((st, idx)=>{
                       const isExpanded = st.id===activeMsgStepId;
+                      const arriveDate = (idx===0) ? st.date : (baseDate ? addDays(baseDate, st.daysOffset||0) : "");
+                      const stepPill = isExpanded
+                        ? badge("rgba(37,99,235,0.12)", COLORS.primary) // blue when expanded (making selections)
+                        : badge("rgba(148,163,184,0.25)", "#334155");     // gray when condensed
                       return (
                         <div key={st.id}
-                          style={{border:`1px solid ${COLORS.border}`, borderRadius:10, background:COLORS.panel, padding:8, marginBottom:8}}>
+                          style={{border:`1px solid ${COLORS.border}`, borderRadius:10, background:COLORS.panel, padding:10, marginBottom:10}}>
+                          {/* Header row (condensed view) */}
                           <div
                             style={{display:"flex", alignItems:"center", justifyContent:"space-between", gap:8, cursor: !isExpanded ? "pointer" : "default"}}
                             onClick={()=>{ if (!isExpanded) setActiveMsgStepId(st.id); }}
                           >
-                            <div style={{display:"flex", alignItems:"center", gap:6, flexWrap:"wrap"}}>
-                              <span style={badge("rgba(37,99,235,0.12)", COLORS.primary)}>Step {idx+1}</span>
+                            <div style={{display:"flex", alignItems:"center", gap:8, flexWrap:"wrap"}}>
+                              <span style={stepPill}>Step {idx+1}</span>
                               {!isExpanded && <span style={badge("rgba(148,163,184,0.15)", COLORS.subtext)}>{st.type}</span>}
-                              {!isExpanded && (
-                                <span style={{fontSize:11, color:COLORS.subtext}}>
-                                  {st.date || "No date"}
-                                </span>
+                              {!isExpanded && arriveDate && (
+                                <span style={{fontSize:11, color:COLORS.subtext}}>{arriveDate}</span>
                               )}
                             </div>
                             {!isExpanded && steps.length>1 && (
@@ -844,44 +962,99 @@
                             )}
                           </div>
 
+                          {/* Expanded editor */}
                           {isExpanded && (
-                            <div style={{marginTop:8, display:"grid", gap:6}}>
+                            <div style={{marginTop:12, display:"grid", gap:12}}>
                               <TypeToggle value={st.type} onChange={(v)=>{
                                 updateStep(st.id, {type:v});
                                 if (campaignName.trim()) autoSave();
+                                if (v !== "Email") setHtmlMode(false);
                               }}/>
-                              <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:6}}>
-                                <Labeled label="Date" inline>
-                                  <input type="date" value={st.date} onChange={e=>{
-                                    updateStep(st.id,{date:e.target.value});
-                                    if (campaignName.trim()) autoSave();
-                                  }} style={inputStyle}/>
-                                </Labeled>
-                                <Labeled label="Time" inline>
-                                  <input type="time" value={st.time} onChange={e=>{
-                                    updateStep(st.id,{time:e.target.value});
-                                    if (campaignName.trim()) autoSave();
-                                  }} style={inputStyle}/>
-                                </Labeled>
-                              </div>
-                              {/* Auto-Stop only for steps after step 1 */}
-                              {idx > 0 && (
-                                <Labeled label="Auto-Stop rule">
-                                  <select
-                                    value={st.autoStopRule || "None"}
-                                    onChange={e=>{
-                                      updateStep(st.id, { autoStopRule: e.target.value });
-                                      if (campaignName.trim()) autoSave();
-                                    }}
-                                    style={{...inputStyle}}
-                                  >
-                                    <option value="None">None</option>
-                                    <option value="Stop if opened">Stop if opened</option>
-                                    <option value="Stop if clicked">Stop if clicked</option>
-                                  </select>
-                                </Labeled>
+
+                              {/* Scheduling controls */}
+                              {idx===0 ? (
+                                <div style={{display:"grid", gap:10}}>
+                                  <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:10}}>
+                                    <Labeled label="Date" inline>
+                                      <input type="date" value={st.date} onChange={e=>{
+                                        updateStep(st.id,{date:e.target.value});
+                                        if (campaignName.trim()) autoSave();
+                                      }} style={inputStyle}/>
+                                    </Labeled>
+                                    <Labeled label="Time" inline>
+                                      <input type="time" value={st.time} disabled={!!st.useRecoTime} onChange={e=>{
+                                        updateStep(st.id,{time:e.target.value});
+                                        if (campaignName.trim()) autoSave();
+                                      }} style={inputStyle}/>
+                                    </Labeled>
+                                  </div>
+                                  <div style={{marginTop:2}}>
+                                    <label style={{display:"flex", alignItems:"center", gap:8, fontSize:13}}>
+                                      <input
+                                        type="checkbox"
+                                        checked={!!st.useRecoTime}
+                                        onChange={(e)=>{
+                                          const checked = e.target.checked;
+                                          const t = recommendTimeFor({type: st.type, audienceSegments});
+                                          updateStep(st.id, { useRecoTime: checked, time: checked ? t : (st.time||"") });
+                                          if (campaignName.trim()) autoSave();
+                                        }}
+                                      />
+                                      <span>Send at recommended time</span>
+                                    </label>
+                                    <div style={{fontSize:11, color:COLORS.subtext, marginLeft:26}}>
+                                      Based on past opens & clicks {st.useRecoTime && st.time ? `• ${st.time}` : ""}
+                                    </div>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div style={{display:"grid", gap:10}}>
+                                  <Labeled label="Send this message in" inline>
+                                    <div style={{display:"grid", gridTemplateColumns:"1fr auto", gap:8, alignItems:"center"}}>
+                                      <input type="number" min="0" value={st.daysOffset ?? 0} onChange={(e)=>{
+                                        updateStep(st.id,{daysOffset: Number(e.target.value)});
+                                        if (campaignName.trim()) autoSave();
+                                      }} style={inputStyle}/>
+                                      <span style={{fontSize:13, color:COLORS.subtext}}>days</span>
+                                    </div>
+                                  </Labeled>
+                                  <div style={{marginTop:2}}>
+                                    <label style={{display:"flex", alignItems:"center", gap:8, fontSize:13}}>
+                                      <input
+                                        type="checkbox"
+                                        checked={!!st.useRecoTime}
+                                        onChange={(e)=>{
+                                          const checked = e.target.checked;
+                                          const t = recommendTimeFor({type: st.type, audienceSegments});
+                                          updateStep(st.id, { useRecoTime: checked, time: checked ? t : "" });
+                                          if (campaignName.trim()) autoSave();
+                                        }}
+                                      />
+                                      <span>Send at recommended time</span>
+                                    </label>
+                                    <div style={{fontSize:11, color:COLORS.subtext, marginLeft:26}}>
+                                      Based on past opens & clicks {st.useRecoTime && st.time ? `• ${st.time}` : ""}
+                                    </div>
+                                  </div>
+
+                                  <Labeled label="Auto-stop rule">
+                                    <select
+                                      value={st.autoStopRule || "None"}
+                                      onChange={e=>{
+                                        updateStep(st.id, { autoStopRule: e.target.value });
+                                        if (campaignName.trim()) autoSave();
+                                      }}
+                                      style={{...inputStyle}}
+                                    >
+                                      <option value="None">None</option>
+                                      <option value="Stop if opened">Stop if opened</option>
+                                      <option value="Stop if clicked">Stop if clicked</option>
+                                    </select>
+                                  </Labeled>
+                                </div>
                               )}
-                              <button style={{...btnGhost, width:"fit-content", padding:"4px 8px", marginTop:4}} onClick={()=>{
+
+                              <button style={{...btnGhost, width:"fit-content", padding:"4px 8px", marginTop:2}} onClick={()=>{
                                 addStep();
                                 if (campaignName.trim()) autoSave();
                               }}>+ Add step</button>
@@ -894,7 +1067,7 @@
 
                   {/* Editor for active step */}
                   <div style={{border:`1px solid ${COLORS.border}`, borderRadius:12, background:COLORS.panel, padding:10}}>
-                    <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8}}>
+                    <div style={{display:"flex", justifyContent:"flex-end", alignItems:"center", marginBottom:8}}>
                       <button style={btnGhost} onClick={()=>setPreviewOpen(true)}>Preview & Test</button>
                     </div>
 
@@ -907,9 +1080,16 @@
                       </Labeled>
                     )}
 
-                    <Labeled label={activeEditorStep.type==="Email" ? "Email body (plain)" : "SMS body (plain)"} required>
-                      <div style={{display:"flex", gap:6, marginBottom:4, position:"relative"}}>
+                    <Labeled label={activeEditorStep.type==="Email" ? (htmlMode ? "Email body (HTML builder — mock)" : "Email body (plain)") : "SMS body (plain)"} required>
+                      <div style={{display:"flex", gap:6, marginBottom:6, position:"relative"}}>
                         <button style={btnGhost} type="button" onClick={()=>setEmojiOpen(o=>!o)}>Emoji</button>
+                        <button
+                          style={{...btnGhost, ...(activeEditorStep.type!=="Email"?{opacity:.5, cursor:"not-allowed"}:{})}}
+                          type="button"
+                          onClick={()=> activeEditorStep.type==="Email" && setHtmlMode(m=>!m)}
+                          aria-pressed={htmlMode}
+                          title={activeEditorStep.type==="Email" ? "Toggle HTML builder (mock)" : "HTML builder available for Email only"}
+                        >HTML</button>
                         {emojiOpen && (
                           <div style={{position:"absolute", top:30, left:0, background:COLORS.panel, border:`1px solid ${COLORS.border}`, borderRadius:10, padding:6, display:"flex", gap:6, zIndex:20, boxShadow:"0 10px 22px rgba(15,23,42,0.1)"}}>
                             {EMOJIS.map(e=>(
@@ -921,16 +1101,40 @@
                           </div>
                         )}
                       </div>
-                      <Textarea placeholder="Write your message…" value={activeEditorStep.body} onChange={(v)=>{
-                        updateStep(activeEditorStep.id,{body:v});
-                        if (campaignName.trim()) autoSave();
-                      }}/>
+
+                      {activeEditorStep.type==="Email" && htmlMode ? (
+                        <div style={{border:`1px dashed ${COLORS.border}`, borderRadius:10, padding:10, background:COLORS.panelAlt}}>
+                          <div style={{fontSize:12, color:COLORS.subtext, marginBottom:8}}>
+                            HTML builder mock (drag blocks disabled in prototype)
+                          </div>
+                          <div style={{border:`1px solid ${COLORS.border}`, borderRadius:8, overflow:"hidden", background:"#fff"}}>
+                            <div style={{padding:"10px 12px", borderBottom:`1px solid ${COLORS.border}`, fontWeight:700, fontSize:13}}>
+                              Camp Name
+                            </div>
+                            <div style={{display:"grid", gap:10, padding:12}}>
+                              <div style={{height:120, border:`1px solid ${COLORS.border}`, borderRadius:8, display:"grid", placeItems:"center"}}>Image Block</div>
+                              <div style={{border:`1px solid ${COLORS.border}`, borderRadius:8, padding:10}}>
+                                <div style={{fontWeight:700, marginBottom:6}}>Headline</div>
+                                <div style={{fontSize:13, color:COLORS.text}}>Replace this with your rich HTML content…</div>
+                              </div>
+                              <div style={{display:"flex", justifyContent:"center"}}>
+                                <button style={{...btnPrimary, borderRadius:999}}>Primary CTA</button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <Textarea placeholder="Write your message…" value={activeEditorStep.body} onChange={(v)=>{
+                          updateStep(activeEditorStep.id,{body:v});
+                          if (campaignName.trim()) autoSave();
+                        }}/>
+                      )}
                     </Labeled>
 
                     <div style={{display:"flex", justifyContent:"space-between", marginTop:10}}>
                       <button style={btnGhost} onClick={goBack}>Back</button>
                       <div style={{display:"flex", gap:6}}>
-                        <button style={btnPrimary} onClick={()=>setActiveStep(3)}>Save & Next</button>
+                        <button style={btnPrimary} onClick={()=>setActiveStep(3)}>next</button>
                       </div>
                     </div>
                   </div>
@@ -948,71 +1152,69 @@
             )}
 
             {activeStep===3 && (
-              <Panel title="Summary">
-                <div style={{display:"flex", justifyContent:"flex-end", gap:8, marginBottom:8}}>
-                  {hasLaunched && (
-                    <button style={btnGhost} onClick={()=>alert("Campaign paused (demo)")}>Pause</button>
-                  )}
-                  <button
-                    style={{...btnGhost, color:COLORS.danger, borderColor:"transparent"}}
-                    onClick={()=>{ if(confirm("Delete this draft?")) onBackToDashboard(); }}
-                  >
-                    Delete
-                  </button>
-                </div>
+              <Panel title="Review & Analytics">
+                {/* Analytics row directly under the wizard */}
+                <AnalyticsRow steps={steps} audienceCount={audienceCount} />
 
-                <div style={{border:`1px solid ${COLORS.border}`, borderRadius:12, padding:10, background:COLORS.panelAlt, display:"grid", gap:8}}>
-                  <Row label="Campaign name" value={campaignName||"—"} />
-                  <Row label="From" value={fromSender} />
-                  <Row label="Audience" value={
-                    audienceSegments.length
-                      ? `${audienceCount.toLocaleString()} · ${audienceSegments.join(", ")}`
-                      : "—"
-                  } />
-                  {audienceSegments.length > 0 && (
+                {/* Summary below analytics */}
+                <div style={{marginTop:14}}>
+                  <div style={{border:`1px solid ${COLORS.border}`, borderRadius:12, padding:10, background:COLORS.panelAlt, display:"grid", gap:8}}>
+                    <Row label="Campaign name" value={campaignName||"—"} />
+                    <Row label="From" value={fromSender} />
+                    <Row label="Audience" value={
+                      audienceSegments.length
+                        ? `${audienceCount.toLocaleString()} · ${audienceSegments.join(", ")}`
+                        : "—"
+                    } />
+                    {audienceSegments.length > 0 && (
+                      <div>
+                        <div style={{color:COLORS.subtext, fontSize:12, marginBottom:4}}>Selected audiences</div>
+                        <div style={{display:"flex", gap:6, flexWrap:"wrap"}}>
+                          {audienceSegments.map(seg => (
+                            <span key={seg} style={badge("rgba(148,163,184,0.1)", COLORS.text)}>{seg}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     <div>
-                      <div style={{color:COLORS.subtext, fontSize:12, marginBottom:4}}>Selected audiences</div>
-                      <div style={{display:"flex", gap:6, flexWrap:"wrap"}}>
-                        {audienceSegments.map(seg => (
-                          <span key={seg} style={badge("rgba(148,163,184,0.1)", COLORS.text)}>{seg}</span>
-                        ))}
+                      <div style={{color:COLORS.subtext, fontSize:12, marginBottom:4}}>Steps</div>
+                      <div style={{display:"grid", gap:6}}>
+                        {steps.map((st,i)=>{
+                          const arriveDate = (i===0) ? st.date : (steps[0]?.date ? addDays(steps[0].date, st.daysOffset||0) : "");
+                          const timeText = st.useRecoTime ? `${st.time || recommendTimeFor({type: st.type})} (recommended)` : ((i===0 ? normalizeTime(st.time) : (st.time || "09:00")));
+                          return (
+                            <div key={st.id} style={{border:`1px solid ${COLORS.border}`, borderRadius:10, padding:8, background:COLORS.panel}}>
+                              <div style={{display:"flex", alignItems:"center", gap:6, marginBottom:4}}>
+                                <span style={badge("rgba(37,99,235,0.12)", COLORS.primary)}>Step {i+1}</span>
+                                <span style={badge("rgba(148,163,184,0.12)", COLORS.subtext)}>{st.type}</span>
+                              </div>
+                              <div style={{display:"grid", gap:3, fontSize:13}}>
+                                <div style={{display:"flex", gap:12, alignItems:"center"}}>
+                                  <strong>Send on:</strong>
+                                  <span>{arriveDate || "No date"}</span>
+                                  <span>{timeText}</span>
+                                </div>
+                                {st.type==="Email" && <div><strong>Subject:</strong> {st.subject || "—"}</div>}
+                                <div>
+                                  <strong>Body:</strong> {st.body ? st.body : "—"}
+                                </div>
+                                {i>0 && (
+                                  <div>
+                                    <strong>Auto-stop:</strong> {st.autoStopRule || "None"}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
-                  )}
-                  <div>
-                    <div style={{color:COLORS.subtext, fontSize:12, marginBottom:4}}>Steps</div>
-                    <div style={{display:"grid", gap:6}}>
-                      {steps.map((st,i)=>(
-                        <div key={st.id} style={{border:`1px solid ${COLORS.border}`, borderRadius:10, padding:8, background:COLORS.panel}}>
-                          <div style={{display:"flex", alignItems:"center", gap:6, marginBottom:4}}>
-                            <span style={badge("rgba(37,99,235,0.12)", COLORS.primary)}>Step {i+1}</span>
-                            <span style={badge("rgba(148,163,184,0.12)", COLORS.subtext)}>{st.type}</span>
-                          </div>
-                          <div style={{display:"grid", gap:3, fontSize:13}}>
-                            <div style={{display:"flex", gap:12, alignItems:"center"}}>
-                              <strong>Send on:</strong>
-                              <span>{st.date || "No date"}</span>
-                              <span>{(st.time && st.time.trim()) ? st.time : "09:00"}</span>
-                            </div>
-                            {st.type==="Email" && <div><strong>Subject:</strong> {st.subject || "—"}</div>}
-                            <div>
-                              <strong>Body:</strong> {st.body ? st.body : "—"}
-                            </div>
-                            {i>0 && (
-                              <div>
-                                <strong>Auto-Stop:</strong> {st.autoStopRule || "None"}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
                   </div>
-                </div>
 
-                <div style={{display:"flex", justifyContent:"space-between", marginTop:10}}>
-                  <button style={btnGhost} onClick={()=>setActiveStep(2)}>Back</button>
-                  <button style={{...btnPrimary, opacity:canLaunch?1:.6}} disabled={!canLaunch} onClick={handleLaunch}>Launch</button>
+                  <div style={{display:"flex", justifyContent:"space-between", marginTop:10}}>
+                    <button style={btnGhost} onClick={()=>setActiveStep(2)}>Back</button>
+                    <button style={{...btnPrimary, opacity:canLaunch?1:.6}} disabled={!canLaunch} onClick={handleLaunch}>Launch</button>
+                  </div>
                 </div>
               </Panel>
             )}
@@ -1021,9 +1223,36 @@
       );
     }
 
-    /* -------------------------- Shared subcomponents ------------------------- */
+    /* -------------------------- Review & Analytics UI ------------------------ */
+    function MetricCard({ label, value, sub }) {
+      return (
+        <div style={{flex:"1 1 160px", border:`1px solid ${COLORS.border}`, borderRadius:10, background:COLORS.panel, padding:"10px 12px"}}>
+          <div style={{fontSize:11, color:COLORS.subtext, textTransform:"uppercase", letterSpacing:".03em", marginBottom:6}}>{label}</div>
+          <div style={{fontSize:18, fontWeight:800}}>{value}</div>
+          {sub && <div style={{fontSize:12, color:COLORS.subtext, marginTop:4}}>{sub}</div>}
+        </div>
+      );
+    }
+    function AnalyticsRow({ steps, audienceCount }) {
+      // Simple demo numbers (replace with real once wired to backend)
+      const delivered = audienceCount;
+      const openRate = 0.36;
+      const clickRate = 0.042;
+      const unsubRate = 0.002;
+      const spamRate = 0.0002;
 
-    // Tab-wizard style stepper
+      return (
+        <div style={{display:"flex", gap:10, flexWrap:"wrap"}}>
+          <MetricCard label="Delivered" value={delivered.toLocaleString()} />
+          <MetricCard label="Open rate" value={(openRate*100).toFixed(1) + "%"} sub="vs. last 30 days: +2.1%" />
+          <MetricCard label="Click rate" value={(clickRate*100).toFixed(1) + "%"} sub="vs. last 30 days: -0.3%" />
+          <MetricCard label="Unsubscribe" value={(unsubRate*100).toFixed(2) + "%"} />
+          <MetricCard label="Spam" value={(spamRate*100).toFixed(2) + "%"} />
+        </div>
+      );
+    }
+
+    /* -------------------------- Shared subcomponents ------------------------- */
     function Stepper({ activeStep, onStepClick }){
       return (
         <div role="navigation" aria-label="Creation steps"
@@ -1055,7 +1284,6 @@
         </div>
       );
     }
-
     function Panel({ title, children }){
       return (
         <div style={{border:`1px solid ${COLORS.border}`, borderRadius:12, background:COLORS.panel, padding:14, marginTop:10}} role="region" aria-label={title}>
@@ -1064,7 +1292,6 @@
         </div>
       );
     }
-
     function Labeled({ label, required, hint, inline, children }){
       return (
         <div style={{marginBottom:10}}>
@@ -1078,7 +1305,6 @@
         </div>
       );
     }
-
     const inputStyle = {
       background:COLORS.panelAlt,
       border:`1px solid ${COLORS.border}`,
@@ -1088,7 +1314,6 @@
       width:"100%",
       fontSize:13
     };
-
     function Input({ value, onChange, placeholder }){
       const [local, setLocal] = useState(value||"");
       useEffect(()=>setLocal(value||""),[value]);
@@ -1100,7 +1325,6 @@
         />
       );
     }
-
     function Textarea({ value, onChange, placeholder }){
       const [local, setLocal] = useState(value||"");
       useEffect(()=>setLocal(value||""),[value]);
@@ -1113,7 +1337,6 @@
         />
       );
     }
-
     function TypeToggle({ value, onChange }){
       const Item = ({ v })=>{
         const active = value===v;
@@ -1125,7 +1348,6 @@
       };
       return <div role="group" aria-label="Message type" style={{display:"flex", gap:4}}><Item v="Email" /> <Item v="SMS" /></div>;
     }
-
     function Row({ label, value }){
       return (
         <div style={{display:"grid", gridTemplateColumns:"160px 1fr", gap:6}}>
@@ -1135,13 +1357,12 @@
       );
     }
 
-    function AudiencePanel({ id, onClose, onApply }){
+    function AudiencePanel({ id, onClose, onApply, initialSelected=[] }){
       const [tab, setTab] = useState("BeAKid Audiences");
-      const [selected, setSelected] = useState([]);
+      const [selected, setSelected] = useState(initialSelected);
       const [manual, setManual] = useState("");
 
       useEffect(()=>{ const onEsc=(e)=> e.key==="Escape" && onClose(); document.addEventListener("keydown", onEsc); return ()=>document.removeEventListener("keydown", onEsc);},[onClose]);
-
       const addSegment = (seg)=> setSelected(p=> p.includes(seg)? p : [...p, seg]);
       const removeSegment = (seg)=> setSelected(p=> p.filter(s=>s!==seg));
       const parseManual = ()=>{
@@ -1152,8 +1373,7 @@
         alert(`Parsed ${emails.length} entries.\nValid: ${valid.length}\nInvalid dropped: ${invalid.length}`);
         addSegment(`Manual list (${valid.length})`);
       };
-
-      const segmentsDemo = ["Class A","Class A / Session A1","Class A / Session A2","Class B","Class C / Session C1"];
+      const segmentsDemo = ["All Contacts","Class A","Class A / Session A1","Class A / Session A2","Class B","Class C / Session C1"];
 
       return (
         <aside id={id} role="dialog" aria-modal="true" aria-label="Select audience"
@@ -1193,7 +1413,7 @@
               <div>
                 <p style={{color:COLORS.subtext, marginTop:0, fontSize:12}}>Paste emails. We’ll clean duplicates.</p>
                 <Textarea value={manual} onChange={setManual} placeholder="email1@example.com, email2@example.com …" />
-                <button style={{...btnGhost, marginTop:6}} onClick={parseManual}>Validate & Add</button>
+                <button style={{...btnGhost, marginTop:6}} onClick={parseManual}>Validate & add</button>
               </div>
             )}
           </div>
@@ -1216,13 +1436,15 @@
 
           <div style={{position:"absolute", bottom:14, left:14, right:14, display:"flex", justifyContent:"space-between"}}>
             <button style={btnGhost} onClick={onClose}>Cancel</button>
-            <button style={{...btnPrimary, opacity:selected.length?1:.6}} disabled={!selected.length} onClick={()=>onApply(selected)}>Apply</button>
+            <button style={{...btnPrimary, opacity:selected.length?1:.6}} disabled={!selected.length} onClick={()=>{
+              onApply(selected);
+            }}>Apply</button>
           </div>
         </aside>
       );
     }
 
-    function PreviewOverlay({ step, subject, onSendTest, onClose }){
+    function PreviewOverlay({ step, subject, onClose, onSendTest }){
       const ref = useRef(null);
       useEffect(()=>{ ref.current?.focus(); },[]);
       return (
@@ -1261,8 +1483,7 @@
         </div>
       );
     }
-
-    function FooterNav({ onBack, onNext, nextLabel="Next", nextDisabled }){
+    function FooterNav({ onBack, onNext, nextLabel="next", nextDisabled }){
       return (
         <div style={{display:"flex", justifyContent:"space-between", marginTop:10}}>
           <button style={btnGhost} onClick={onBack}>Back</button>
