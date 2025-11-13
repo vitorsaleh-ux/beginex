@@ -851,7 +851,7 @@
                     }}
                   />
                 </Labeled>
-                <FooterNav onBack={onBackToDashboard} onNext={goNext} nextLabel="next" nextDisabled={!campaignName.trim()} />
+                <FooterNav onBack={onBackToDashboard} onNext={goNext} nextLabel="Next" nextDisabled={!campaignName.trim()} />
               </Panel>
             )}
 
@@ -892,7 +892,7 @@
                   </div>
                 )}
 
-                <FooterNav onBack={goBack} onNext={goNext} nextLabel="next" nextDisabled={audienceSegments.length===0}/>
+                <FooterNav onBack={goBack} onNext={goNext} nextLabel="Next" nextDisabled={audienceSegments.length===0}/>
                 {audPanelOpen && (
                   <AudiencePanel id="audience-panel"
                     onClose={()=>setAudPanelOpen(false)}
@@ -1483,7 +1483,7 @@
         </div>
       );
     }
-    function FooterNav({ onBack, onNext, nextLabel="next", nextDisabled }){
+    function FooterNav({ onBack, onNext, nextLabel="Next", nextDisabled }){
       return (
         <div style={{display:"flex", justifyContent:"space-between", marginTop:10}}>
           <button style={btnGhost} onClick={onBack}>Back</button>
@@ -1498,3 +1498,4 @@
   </script>
 </body>
 </html>
+
