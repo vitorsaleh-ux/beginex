@@ -70,6 +70,8 @@
       return `${month} ${day}, ${time}`;
     }
 
+    const normalizeTime = (t) => t && t.trim() ? t : "09:00";
+
     /* ------------------------ Campaign data (home list) ---------------------- */
     const initialCampaigns = [
       {
@@ -77,6 +79,8 @@
         name: "Weekly Update 10/25",
         subject: "Your Weekly Class Update: New Features Inside",
         audience: "Parents (1,742)",
+        audienceCount: 1742,
+        audienceLabels: ["Parents"],
         status: "Sent",
         sendTime: "Oct 25, 10:00 AM",
         opens: 54,
@@ -89,6 +93,8 @@
         name: "Registration Reminder P1",
         subject: "Don't Miss Out! Registration Closes Tomorrow",
         audience: "Parents (1,742)",
+        audienceCount: 1742,
+        audienceLabels: ["Class A","Class B"],
         status: "Scheduled",
         sendTime: "Nov 10, 3:00 PM",
         opens: "-",
@@ -98,13 +104,15 @@
           { delay: "7d", condition: "Everyone", messageType: "Email" },
         ],
         editable: true,
-        lowPerformance: true, // << show the warning on this one
+        lowPerformance: true,
       },
       {
         id: 3,
         name: "Summer Camp P1",
         subject: "Summer Camp Early Bird Discount",
         audience: "Leads (3,200)",
+        audienceCount: 3200,
+        audienceLabels: ["Leads"],
         status: "Active",
         sendTime: "Sent 2 days ago",
         opens: 600,
@@ -117,6 +125,8 @@
         name: "Mid-Campaign Test",
         subject: "Paused Mid-Campaign Test",
         audience: "Leads (1,010)",
+        audienceCount: 1010,
+        audienceLabels: ["Leads","Session C1"],
         status: "Paused",
         sendTime: "Paused • Nov 1",
         opens: 100,
@@ -138,7 +148,6 @@
 
     /* --------------------------------- App ----------------------------------- */
     function BeAKampaignApp() {
-      // route now also holds optional step (e.g. for "Compose One Click")
       const [route, setRoute] = useState({ page:"dashboard", campaignId:null, step:0 });
       const [campaigns, setCampaigns] = useState(initialCampaigns);
       const [draftId, setDraftId] = useState(null);
@@ -153,7 +162,6 @@
         setDraftId(id);
       };
 
-      // new: go straight to Compose & Schedule for that campaign
       const openCampaignCompose = (id) => {
         setRoute({ page:"create", campaignId:id||"new", step:2 });
         setDraftId(id);
@@ -175,7 +183,7 @@
         setCampaigns(p=>[copy, ...p]);
       };
 
-      // pause should reflect the paused time in sendTime
+      // Pause: stamp paused time into sendTime
       const togglePause = (id) => {
         setCampaigns(prev => prev.map(c => {
           if (c.id !== id) return c;
@@ -198,6 +206,8 @@
             name: partial.name || "Untitled campaign",
             subject: partial.subject || "(no subject)",
             audience: partial.audience || "—",
+            audienceCount: partial.audienceCount || 0,
+            audienceLabels: partial.audienceLabels || [],
             status: "Draft",
             sendTime: "Auto-saved",
             opens: "-",
@@ -347,7 +357,7 @@
     function CampaignTableHeader(){
       const th = { padding:"10px 12px", fontSize:11, color:COLORS.subtext, borderBottom:`1px solid ${COLORS.border}`, textTransform:"uppercase", letterSpacing:".03em" };
       return (
-        <div role="row" style={{display:"grid", gridTemplateColumns:"1.6fr 1.2fr 0.8fr 1fr 1fr 48px", background:COLORS.panelAlt}}>
+        <div role="row" style={{display:"grid", gridTemplateColumns:"1.6fr 1.6fr 0.8fr 1fr 1fr 48px", background:COLORS.panelAlt}}>
           <div role="columnheader" style={th}>Campaign Name</div>
           <div role="columnheader" style={th}>Audience</div>
           <div role="columnheader" style={th}>Status</div>
@@ -357,6 +367,16 @@
         </div>
       );
     }
+
+    const formatAudienceCell = (data) => {
+      if (typeof data.audienceCount === "number" && Array.isArray(data.audienceLabels)) {
+        const labels = data.audienceLabels;
+        const labelStr = labels.length > 3 ? `${labels.slice(0,3).join(", ")} +${labels.length-3}` : labels.join(", ");
+        return `${data.audienceCount.toLocaleString()} · ${labelStr || "No labels"}`;
+      }
+      // Fallback to legacy string if count/labels not present
+      return data.audience || "—";
+    };
 
     function CampaignTableRow({ data, onOpen, onDelete, onDuplicate, onTogglePause, onComposeOneClick }){
       const [open, setOpen] = useState(false);
@@ -389,7 +409,7 @@
       const statusChip = STATUS_STYLES[data.status] || badge("#e2e8f0", COLORS.text);
 
       return (
-        <div role="row" style={{display:"grid", gridTemplateColumns:"1.6fr 1.2fr 0.8fr 1fr 1fr 48px", borderBottom:`1px solid ${COLORS.border}`, alignItems:"center"}}>
+        <div role="row" style={{display:"grid", gridTemplateColumns:"1.6fr 1.6fr 0.8fr 1fr 1fr 48px", borderBottom:`1px solid ${COLORS.border}`, alignItems:"center"}}>
           <div role="cell" style={{padding:"10px 12px", display:"flex", alignItems:"center", gap:6}}>
             <button onClick={onOpen}
               style={{background:"transparent", border:"none", color:COLORS.interactive, textDecoration:"underline", cursor:"pointer", fontWeight:600, fontSize:13}}
@@ -400,7 +420,9 @@
               <span title="This campaign underperformed" style={{color:COLORS.warning, fontSize:14, lineHeight:1}}>⚠️</span>
             )}
           </div>
-          <div role="cell" style={{padding:"10px 12px", color:COLORS.subtext, fontSize:12}}>{data.audience}</div>
+          <div role="cell" style={{padding:"10px 12px", color:COLORS.subtext, fontSize:12}}>
+            {formatAudienceCell(data)}
+          </div>
           <div role="cell" style={{padding:"10px 12px"}}>
             <span style={statusChip}>{data.status}</span>
           </div>
@@ -438,7 +460,7 @@
                   background:COLORS.panel,
                   border:`1px solid ${COLORS.border}`,
                   borderRadius:10,
-                  minWidth:160,
+                  minWidth:180,
                   boxShadow:"0 12px 30px rgba(15,23,42,0.12)",
                   zIndex:1000
                 }}
@@ -492,32 +514,90 @@
       return `${year}-${month}-${day}`;
     };
 
+    // Map mock campaign data to internal steps format
+    const mapCampaignToSteps = (campaign) => {
+      // Step 1: Main message
+      const mainStep = {
+        id: "s1",
+        type: "Email",
+        date: getTodayDate(), 
+        time: normalizeTime(""),
+        subject: campaign.subject || "",
+        body: `Body content for ${campaign.name} - Step 1.`,
+        autoStopRule: "None",
+      };
+      
+      // Subsequent steps (sequences)
+      const sequenceSteps = (campaign.sequences || []).map((seq, index) => ({
+        id: `s${index + 2}`,
+        type: seq.messageType,
+        date: seq.delay, 
+        time: normalizeTime(""),
+        subject: `Follow-up ${index + 1} for ${campaign.subject}`,
+        body: `Body content for ${campaign.name} - Step ${index + 2}.`,
+        autoStopRule: "Stop if opened" 
+      }));
+      return [mainStep, ...sequenceSteps];
+    };
+
+
     function CreationFlow({ onBackToDashboard, onLaunched, onEnsureDraft, onUpdateDraft, draftId: externalDraftId, currentCampaign, initialStep }){
+      
+      const initialSteps = useMemo(() => 
+        currentCampaign && typeof currentCampaign.id === "number"
+          ? mapCampaignToSteps(currentCampaign)
+          : [{ id:"s1", type:"Email", date:getTodayDate(), time:normalizeTime(""), subject:"", body:"", autoStopRule:"None" }]
+      , [currentCampaign?.id]);
+
       const [activeStep, setActiveStep] = useState(initialStep || 0);
       const [campaignName, setCampaignName] = useState(currentCampaign?.name || "");
       const [fromSender, setFromSender] = useState("info@yourprogram.com");
-      const [audienceSegments, setAudienceSegments] = useState([]);
+      
+      const initialSegments = currentCampaign?.audienceLabels || [];
+      const [audienceSegments, setAudienceSegments] = useState(initialSegments);
+      
       const [audPanelOpen, setAudPanelOpen] = useState(false);
       const [lastSaved, setLastSaved] = useState(null);
       const [internalDraftId, setInternalDraftId] = useState(externalDraftId || null);
       const [hasLaunched, setHasLaunched] = useState(false);
 
-      // steps gain autoStopRule
-      const [steps, setSteps] = useState([
-        { id:"s1", type:"Email", date:getTodayDate(), time:"", subject:"", body:"", autoStopRule:"None" },
-      ]);
-      const [activeMsgStepId, setActiveMsgStepId] = useState("s1");
+      const [steps, setSteps] = useState(initialSteps);
+      const [activeMsgStepId, setActiveMsgStepId] = useState(initialSteps[0].id);
 
       const [previewOpen, setPreviewOpen] = useState(false);
       const [emojiOpen, setEmojiOpen] = useState(false);
 
-      useEffect(()=>{
-        // if we navigated via "Compose One Click" on existing campaign
-        if (currentCampaign && currentCampaign.name && !campaignName) {
-          setCampaignName(currentCampaign.name);
+      // Effect to handle navigation changes (switching between new/edit mode)
+      useEffect(() => {
+        // If the component is reused, but the underlying campaign changed (e.g., from id 1 to id 2)
+        if (typeof currentCampaign?.id === "number") {
+          // Editing existing campaign: Reload all states
+          setCampaignName(currentCampaign.name || "");
+          setAudienceSegments(currentCampaign.audienceLabels || []);
+          
+          const loadedSteps = mapCampaignToSteps(currentCampaign);
+          setSteps(loadedSteps);
+          setActiveMsgStepId(loadedSteps[0].id);
+          setInternalDraftId(currentCampaign.id);
+          setActiveStep(initialStep || 0); // Reset step based on route
+        } else if (currentCampaign?.campaignId === "new" || currentCampaign === null) {
+          // Starting new campaign or resetting to default (only if data is stale)
+          if(campaignName !== "" || audienceSegments.length > 0 || steps.length > 1) {
+            setCampaignName("");
+            setAudienceSegments([]);
+            const defaultSteps = [{ id:"s1", type:"Email", date:getTodayDate(), time:normalizeTime(""), subject:"", body:"", autoStopRule:"None" }];
+            setSteps(defaultSteps);
+            setActiveMsgStepId(defaultSteps[0].id);
+            setActiveStep(initialStep || 0);
+          }
+          setInternalDraftId(null);
         }
-      },[currentCampaign, campaignName]);
+      // Depend on currentCampaign.id to re-initialize when switching campaigns
+      // and initialStep to jump directly to compose view if a one-click action was used.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, [currentCampaign?.id, initialStep]);
 
+      // Demo audience count formula (replace with real counts as needed)
       const audienceCount = 1500 + audienceSegments.length*10;
 
       const canLaunch = useMemo(()=>{
@@ -531,12 +611,6 @@
         }
         return true;
       },[campaignName, audienceSegments, steps]);
-
-      useEffect(() => {
-        if (externalDraftId && !internalDraftId) {
-          setInternalDraftId(externalDraftId);
-        }
-      }, [externalDraftId, internalDraftId]);
 
       const goNext = ()=>setActiveStep(s=>Math.min(s+1, STEPS.length-1));
       const goBack = ()=>setActiveStep(s=>Math.max(s-1, 0));
@@ -557,7 +631,7 @@
         setActiveMsgStepId(nextId);
       };
       const resetSteps = ()=>{
-        const only = { id:"s1", type:"Email", date:getTodayDate(), time:"", subject:"", body:"", autoStopRule:"None" };
+        const only = { id:"s1", type:"Email", date:getTodayDate(), time:normalizeTime(""), subject:"", body:"", autoStopRule:"None" };
         setSteps([only]);
         setActiveMsgStepId("s1");
       };
@@ -585,6 +659,8 @@
           audience: audienceSegments.length
             ? `${audienceCount.toLocaleString()} (${audienceSegments.length>1?"Multiple segments":audienceSegments[0]})`
             : "—",
+          audienceCount,
+          audienceLabels: audienceSegments,
           sequences: steps.slice(1).map(st=>({
             delay: st.date || "",
             condition: "Everyone",
@@ -601,13 +677,11 @@
         setLastSaved(new Date());
       };
 
-      const normalizeTime = (t) => t && t.trim() ? t : "09:00";
-
       const handleLaunch = ()=>{
         if (!canLaunch) return;
         const mainStep = steps[0];
         const followUps = steps.slice(1).map((st,i)=>({
-          delay: st.date ? st.date : `+${i+1}d`,
+          delay: st.date || "",
           condition: "Everyone",
           messageType: st.type
         }));
@@ -618,6 +692,8 @@
           audience: audienceSegments.length
             ? `${audienceCount.toLocaleString()} (${audienceSegments.length>1?"Multiple segments":audienceSegments[0]})`
             : "—",
+          audienceCount,
+          audienceLabels: audienceSegments,
           status: "Active",
           sendTime: mainStep?.date ? `${mainStep.date} ${normalizeTime(mainStep.time)}` : "Just launched",
           opens: "-",
@@ -713,7 +789,9 @@
                         autoSave({
                           audience: segments.length
                             ? `${(1500 + segments.length*10).toLocaleString()} (${segments.length>1?"Multiple segments":segments[0]})`
-                            : "—"
+                            : "—",
+                          audienceCount: (1500 + segments.length*10),
+                          audienceLabels: segments
                         });
                       }
                     }}
@@ -886,7 +964,11 @@
                 <div style={{border:`1px solid ${COLORS.border}`, borderRadius:12, padding:10, background:COLORS.panelAlt, display:"grid", gap:8}}>
                   <Row label="Campaign name" value={campaignName||"—"} />
                   <Row label="From" value={fromSender} />
-                  <Row label="Audience" value={audienceSegments.length ? `${audienceCount.toLocaleString()} (${audienceSegments.length>1?"Multiple segments":audienceSegments[0]})` : "—"} />
+                  <Row label="Audience" value={
+                    audienceSegments.length
+                      ? `${audienceCount.toLocaleString()} · ${audienceSegments.join(", ")}`
+                      : "—"
+                  } />
                   {audienceSegments.length > 0 && (
                     <div>
                       <div style={{color:COLORS.subtext, fontSize:12, marginBottom:4}}>Selected audiences</div>
@@ -907,7 +989,7 @@
                             <span style={badge("rgba(148,163,184,0.12)", COLORS.subtext)}>{st.type}</span>
                           </div>
                           <div style={{display:"grid", gap:3, fontSize:13}}>
-                            <div style={{display:"flex", gap:10, alignItems:"center"}}>
+                            <div style={{display:"flex", gap:12, alignItems:"center"}}>
                               <strong>Send on:</strong>
                               <span>{st.date || "No date"}</span>
                               <span>{(st.time && st.time.trim()) ? st.time : "09:00"}</span>
@@ -940,9 +1022,12 @@
     }
 
     /* -------------------------- Shared subcomponents ------------------------- */
+
+    // Tab-wizard style stepper
     function Stepper({ activeStep, onStepClick }){
       return (
-        <div role="navigation" aria-label="Creation steps" style={{display:"flex", gap:6, flexWrap:"wrap", marginBottom:14}}>
+        <div role="navigation" aria-label="Creation steps"
+             style={{display:"flex", gap:0, flexWrap:"nowrap", borderBottom:`1px solid ${COLORS.border}`}}>
           {STEPS.map((label, idx)=>{
             const active = idx===activeStep;
             return (
@@ -950,14 +1035,16 @@
                 key={label}
                 onClick={()=>onStepClick(idx)}
                 style={{
-                  padding: "9px 16px",
-                  borderRadius: 6,
-                  border:`1px solid ${active ? COLORS.primary : COLORS.border}`,
-                  background: active ? "rgba(37,99,235,0.12)" : COLORS.panel,
+                  appearance:"none",
+                  border:"none",
+                  background:"transparent",
+                  padding:"10px 16px",
+                  fontWeight:700,
+                  fontSize:"13px",
                   color: active ? COLORS.primary : COLORS.text,
-                  fontWeight: 600,
-                  fontSize: "13px",
-                  cursor: "pointer"
+                  borderBottom: `2px solid ${active ? COLORS.primary : "transparent"}`,
+                  marginBottom:-1,
+                  cursor:"pointer"
                 }}
                 aria-current={active?"step":undefined}
               >
@@ -971,7 +1058,7 @@
 
     function Panel({ title, children }){
       return (
-        <div style={{border:`1px solid ${COLORS.border}`, borderRadius:12, background:COLORS.panel, padding:14}} role="region" aria-label={title}>
+        <div style={{border:`1px solid ${COLORS.border}`, borderRadius:12, background:COLORS.panel, padding:14, marginTop:10}} role="region" aria-label={title}>
           <h2 style={{marginTop:0, fontSize:16}}>{title}</h2>
           {children}
         </div>
