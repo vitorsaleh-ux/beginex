@@ -682,6 +682,15 @@
       const [emojiOpen, setEmojiOpen] = useState(false);
       const [htmlMode, setHtmlMode] = useState(false);
 
+      // New: high-level campaign purpose (ops vs marketing)
+      const [campaignPurpose, setCampaignPurpose] = useState("Operational");
+      const [opsTemplate, setOpsTemplate] = useState("Payment & Billing");
+
+      // New: Smart Switch (prospect → parent) state
+      const [smartSwitchEnabled, setSmartSwitchEnabled] = useState(false);
+      const [smartSwitchMode, setSmartSwitchMode] = useState("stopThisCampaign");
+      const [smartSwitchProgram, setSmartSwitchProgram] = useState("Any program");
+
       useEffect(() => {
         if (typeof currentCampaign?.id === "number") {
           setCampaignName(currentCampaign.name || "");
@@ -703,6 +712,11 @@
           }
           setInternalDraftId(null);
           setHtmlMode(false);
+          setCampaignPurpose("Operational");
+          setOpsTemplate("Payment & Billing");
+          setSmartSwitchEnabled(false);
+          setSmartSwitchMode("stopThisCampaign");
+          setSmartSwitchProgram("Any program");
         }
       // eslint-disable-next-line react-hooks/exhaustive-deps
       }, [currentCampaign?.id, initialStep]);
@@ -760,6 +774,34 @@
       };
 
       const activeEditorStep = steps.find(s=>s.id===activeMsgStepId) || steps[steps.length-1];
+
+      // Apply an operational template to Step 1 (payment, forms, schedule)
+      const applyOpsTemplate = (templateId) => {
+        setOpsTemplate(templateId);
+        setSteps(prev => {
+          const first = prev[0] || { id:"s1", type:"Email", date:getTodayDate(), time:normalizeTime(""), subject:"", body:"", autoStopRule:"None", useRecoTime:false };
+          let updatedFirst = { ...first, type:"Email" };
+          if (templateId === "Payment & Billing") {
+            updatedFirst.subject = "Reminder: Payment due for your child’s program";
+            updatedFirst.body = "Hi [Parent name],\n\nThis is a friendly reminder that your payment for [Program name] is due on [Due date]. Please review your balance and complete payment using the link below.\n\nIf you’ve already paid, thank you — you can ignore this message.\n\n[Payment link]\n\n— [Program name] Team";
+            updatedFirst.autoStopRule = "Stop if payment received";
+          } else if (templateId === "Forms & Waivers") {
+            updatedFirst.subject = "Action needed: Forms and waivers for [Program name]";
+            updatedFirst.body = "Hi [Parent name],\n\nBefore [Child name] attends [Program name], we need a few quick forms and waivers completed.\n\nUse the link below to review and sign:\n[Forms link]\n\nOnce everything is complete, we’ll confirm by email.\n\n— [Program name] Team";
+            updatedFirst.autoStopRule = "Stop if forms completed";
+          } else if (templateId === "Schedule & Logistics") {
+            updatedFirst.subject = "Schedule update for [Program name]";
+            updatedFirst.body = "Hi [Parent name],\n\nWe have an update to the schedule for [Program name].\n\n[Describe change briefly]\n\nPlease review and let us know if you have any questions.\n\n— [Program name] Team";
+            updatedFirst.autoStopRule = "None";
+          }
+          const rest = prev.slice(1);
+          return [updatedFirst, ...rest];
+        });
+        if (campaignName.trim()) {
+          autoSave();
+        }
+      };
+
       const autoSave = (changed = {}) => {
         if (!campaignName.trim()) return;
         const baseDraft = {
@@ -774,6 +816,11 @@
             condition: "Everyone",
             messageType: st.type
           })),
+          campaignPurpose,
+          opsTemplate,
+          smartSwitchEnabled,
+          smartSwitchMode,
+          smartSwitchProgram,
           ...changed
         };
         if (!internalDraftId) {
@@ -784,6 +831,7 @@
         }
         setLastSaved(new Date());
       };
+
       const handleLaunch = ()=>{
         if (!canLaunch) return;
         const mainStep = steps[0];
@@ -851,6 +899,78 @@
                     }}
                   />
                 </Labeled>
+
+                <Labeled label="What is this campaign for?" hint="We’ll tune the flow to must-read ops or broader marketing.">
+                  <div style={{display:"flex", gap:8, flexWrap:"wrap"}}>
+                    {["Operational","Marketing","Announcement"].map(purpose=>{
+                      const active = campaignPurpose === purpose;
+                      return (
+                        <button
+                          key={purpose}
+                          type="button"
+                          onClick={()=>{
+                            setCampaignPurpose(purpose);
+                            if (campaignName.trim()) autoSave({ campaignPurpose: purpose });
+                          }}
+                          style={{
+                            ...btnGhost,
+                            padding:"6px 10px",
+                            borderRadius:999,
+                            borderColor: active ? COLORS.primary : COLORS.border,
+                            background: active ? "rgba(37,99,235,0.08)" : COLORS.panelAlt,
+                            color: active ? COLORS.primary : COLORS.text,
+                            fontSize:12
+                          }}
+                          aria-pressed={active}
+                        >
+                          {purpose === "Operational" ? "Operational (payments, forms, schedule)" :
+                           purpose === "Marketing" ? "Marketing / promotion" :
+                           "Announcement / update"}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </Labeled>
+
+                {campaignPurpose === "Operational" && (
+                  <div style={{border:`1px solid ${COLORS.border}`, borderRadius:10, padding:10, background:COLORS.panelAlt, marginBottom:10}}>
+                    <div style={{fontSize:13, fontWeight:600, marginBottom:6}}>Recommended operational flow</div>
+                    <div style={{fontSize:12, color:COLORS.subtext, marginBottom:8}}>
+                      Choose a template to prefill Step 1 with language for must-read messages.
+                    </div>
+                    <div style={{display:"flex", gap:8, flexWrap:"wrap"}}>
+                      {["Payment & Billing","Forms & Waivers","Schedule & Logistics"].map(tpl=>{
+                        const active = opsTemplate === tpl;
+                        return (
+                          <button
+                            key={tpl}
+                            type="button"
+                            onClick={()=>applyOpsTemplate(tpl)}
+                            style={{
+                              ...btnGhost,
+                              borderRadius:10,
+                              padding:"8px 10px",
+                              borderColor: active ? COLORS.primary : COLORS.border,
+                              background: active ? "rgba(37,99,235,0.1)" : COLORS.panel,
+                              fontSize:12,
+                              textAlign:"left",
+                              minWidth:160
+                            }}
+                            aria-pressed={active}
+                          >
+                            <div style={{fontWeight:600}}>{tpl}</div>
+                            <div style={{fontSize:11, color:COLORS.subtext, marginTop:2}}>
+                              {tpl === "Payment & Billing" && "Due / past-due reminders and confirmations"}
+                              {tpl === "Forms & Waivers" && "Collect required forms before kids attend"}
+                              {tpl === "Schedule & Logistics" && "Share schedule changes and logistics clearly"}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 <FooterNav onBack={onBackToDashboard} onNext={goNext} nextLabel="Next" nextDisabled={!campaignName.trim()} />
               </Panel>
             )}
@@ -892,6 +1012,76 @@
                   </div>
                 )}
 
+                {/* Smart Switch: prospect → parent */}
+                <div style={{borderTop:`1px solid ${COLORS.border}`, paddingTop:10, marginTop:6}}>
+                  <div style={{fontSize:13, fontWeight:600, marginBottom:4}}>Smart Switch (prospect → parent)</div>
+                  <div style={{fontSize:12, color:COLORS.subtext, marginBottom:6}}>
+                    Automatically stop marketing once a family enrolls, and move them into the right operational flow.
+                  </div>
+                  <label style={{display:"flex", alignItems:"center", gap:8, fontSize:13, marginBottom:6}}>
+                    <input
+                      type="checkbox"
+                      checked={smartSwitchEnabled}
+                      onChange={(e)=>{
+                        const enabled = e.target.checked;
+                        setSmartSwitchEnabled(enabled);
+                        if (campaignName.trim()) autoSave({ smartSwitchEnabled: enabled });
+                      }}
+                    />
+                    <span>Turn on Smart Switch for this campaign</span>
+                  </label>
+
+                  {smartSwitchEnabled && (
+                    <div style={{display:"grid", gap:8, fontSize:13, marginTop:4}}>
+                      <div style={{display:"grid", gap:4}}>
+                        <span style={{fontSize:12, color:COLORS.subtext}}>Program to watch</span>
+                        <select
+                          value={smartSwitchProgram}
+                          onChange={(e)=>{
+                            setSmartSwitchProgram(e.target.value);
+                            if (campaignName.trim()) autoSave({ smartSwitchProgram: e.target.value });
+                          }}
+                          style={{...inputStyle, maxWidth:260}}
+                        >
+                          <option value="Any program">Any program in this campaign</option>
+                          <option value="After-school">After-school</option>
+                          <option value="Summer camp">Summer camp</option>
+                        </select>
+                      </div>
+
+                      <div style={{display:"grid", gap:4}}>
+                        <span style={{fontSize:12, color:COLORS.subtext}}>When a contact enrolls in that program</span>
+                        <label style={{display:"flex", alignItems:"center", gap:6}}>
+                          <input
+                            type="radio"
+                            name="smart-switch-mode"
+                            value="stopThisCampaign"
+                            checked={smartSwitchMode === "stopThisCampaign"}
+                            onChange={(e)=>{
+                              setSmartSwitchMode(e.target.value);
+                              if (campaignName.trim()) autoSave({ smartSwitchMode: e.target.value });
+                            }}
+                          />
+                          <span>Stop remaining marketing steps for this campaign</span>
+                        </label>
+                        <label style={{display:"flex", alignItems:"center", gap:6}}>
+                          <input
+                            type="radio"
+                            name="smart-switch-mode"
+                            value="moveToOnboarding"
+                            checked={smartSwitchMode === "moveToOnboarding"}
+                            onChange={(e)=>{
+                              setSmartSwitchMode(e.target.value);
+                              if (campaignName.trim()) autoSave({ smartSwitchMode: e.target.value });
+                            }}
+                          />
+                          <span>Move them into “New family onboarding” (demo)</span>
+                        </label>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <FooterNav onBack={goBack} onNext={goNext} nextLabel="Next" nextDisabled={audienceSegments.length===0}/>
                 {audPanelOpen && (
                   <AudiencePanel id="audience-panel"
@@ -917,6 +1107,9 @@
 
             {activeStep===2 && (
               <Panel title="Compose & Schedule">
+                <div style={{marginBottom:8, fontSize:12, color:COLORS.subtext}}>
+                  Use steps to automate must-read operational messages (e.g., “3 days before payment is due, day-of reminder, past-due SMS”).
+                </div>
                 <div style={{display:"grid", gridTemplateColumns:"260px 1fr", gap:14}}>
                   {/* Steps list */}
                   <div style={{border:`1px solid ${COLORS.border}`, borderRadius:12, background:COLORS.panelAlt, padding:10}}>
@@ -926,6 +1119,78 @@
                         resetSteps();
                         if (campaignName.trim()) autoSave({ sequences: [] });
                       }}>Reset</button>
+                    </div>
+
+                    <div style={{marginBottom:8}}>
+                      <div style={{fontSize:11, color:COLORS.subtext, marginBottom:4}}>Quick add templates</div>
+                      <div style={{display:"flex", flexWrap:"wrap", gap:6}}>
+                        <button
+                          type="button"
+                          style={{...btnGhost, padding:"4px 8px", borderRadius:999, fontSize:11}}
+                          onClick={()=>{
+                            const nextId = "s"+Math.random().toString(36).slice(2,7);
+                            const newStep = {
+                              id: nextId,
+                              type: "Email",
+                              daysOffset: 3,
+                              time: "",
+                              subject: "Reminder: Payment still due for [Program name]",
+                              body: "Hi [Parent name],\n\nOur records show your payment for [Program name] is still outstanding. Please use the link below to complete payment so we can hold your child’s spot.\n\n[Payment link]\n\nIf you’ve just paid, thank you — this reminder may have crossed paths.\n\n— [Program name] Team",
+                              autoStopRule: "Stop if payment received",
+                              useRecoTime: true
+                            };
+                            setSteps(p=>[...p, newStep]);
+                            setActiveMsgStepId(nextId);
+                            if (campaignName.trim()) autoSave();
+                          }}
+                        >
+                          + Payment reminder
+                        </button>
+                        <button
+                          type="button"
+                          style={{...btnGhost, padding:"4px 8px", borderRadius:999, fontSize:11}}
+                          onClick={()=>{
+                            const nextId = "s"+Math.random().toString(36).slice(2,7);
+                            const newStep = {
+                              id: nextId,
+                              type: "Email",
+                              daysOffset: 1,
+                              time: "",
+                              subject: "Still need your forms for [Program name]",
+                              body: "Hi [Parent name],\n\nWe still need a few forms completed for [Child name] before they attend [Program name].\n\nPlease use the link below to finish everything today:\n[Forms link]\n\nOnce complete, we’ll confirm by email.\n\n— [Program name] Team",
+                              autoStopRule: "Stop if forms completed",
+                              useRecoTime: true
+                            };
+                            setSteps(p=>[...p, newStep]);
+                            setActiveMsgStepId(nextId);
+                            if (campaignName.trim()) autoSave();
+                          }}
+                        >
+                          + Forms reminder
+                        </button>
+                        <button
+                          type="button"
+                          style={{...btnGhost, padding:"4px 8px", borderRadius:999, fontSize:11}}
+                          onClick={()=>{
+                            const nextId = "s"+Math.random().toString(36).slice(2,7);
+                            const newStep = {
+                              id: nextId,
+                              type: "SMS",
+                              daysOffset: 0,
+                              time: "",
+                              subject: "",
+                              body: "Hi [Parent name], quick update: [Short schedule change]. Check your email for details.",
+                              autoStopRule: "None",
+                              useRecoTime: true
+                            };
+                            setSteps(p=>[...p, newStep]);
+                            setActiveMsgStepId(nextId);
+                            if (campaignName.trim()) autoSave();
+                          }}
+                        >
+                          + Schedule change SMS
+                        </button>
+                      </div>
                     </div>
 
                     {steps.map((st, idx)=>{
@@ -1049,6 +1314,8 @@
                                       <option value="None">None</option>
                                       <option value="Stop if opened">Stop if opened</option>
                                       <option value="Stop if clicked">Stop if clicked</option>
+                                      <option value="Stop if payment received">Stop if payment received (demo)</option>
+                                      <option value="Stop if forms completed">Stop if forms completed (demo)</option>
                                     </select>
                                   </Labeled>
                                 </div>
@@ -1156,10 +1423,17 @@
                 {/* Analytics row directly under the wizard */}
                 <AnalyticsRow steps={steps} audienceCount={audienceCount} />
 
+                <div style={{marginTop:8}}>
+                  <button style={btnGhost} onClick={()=>setActiveStep(2)}>
+                    Adjust messages & follow-ups
+                  </button>
+                </div>
+
                 {/* Summary below analytics */}
                 <div style={{marginTop:14}}>
                   <div style={{border:`1px solid ${COLORS.border}`, borderRadius:12, padding:10, background:COLORS.panelAlt, display:"grid", gap:8}}>
                     <Row label="Campaign name" value={campaignName||"—"} />
+                    <Row label="Purpose" value={campaignPurpose === "Operational" ? "Operational (payments, forms, schedule)" : campaignPurpose} />
                     <Row label="From" value={fromSender} />
                     <Row label="Audience" value={
                       audienceSegments.length
@@ -1176,6 +1450,25 @@
                         </div>
                       </div>
                     )}
+
+                    <div>
+                      <div style={{color:COLORS.subtext, fontSize:12, marginBottom:4}}>Smart Switch</div>
+                      <div style={{fontSize:13}}>
+                        {smartSwitchEnabled ? (
+                          <>
+                            <div>Watching: {smartSwitchProgram}</div>
+                            <div>
+                              Behavior: {smartSwitchMode === "stopThisCampaign"
+                                ? "Stop remaining marketing steps for this campaign once a family enrolls."
+                                : "Move enrolled families into the onboarding flow and stop this campaign for them."}
+                            </div>
+                          </>
+                        ) : (
+                          "Off — this campaign will continue regardless of enrollment changes."
+                        )}
+                      </div>
+                    </div>
+
                     <div>
                       <div style={{color:COLORS.subtext, fontSize:12, marginBottom:4}}>Steps</div>
                       <div style={{display:"grid", gap:6}}>
@@ -1238,16 +1531,16 @@
       const delivered = audienceCount;
       const openRate = 0.36;
       const clickRate = 0.042;
-      const unsubRate = 0.002;
-      const spamRate = 0.0002;
+      const onTimePaymentsRate = 0.82;
+      const newEnrollments = Math.round(audienceCount * 0.08);
 
       return (
         <div style={{display:"flex", gap:10, flexWrap:"wrap"}}>
           <MetricCard label="Delivered" value={delivered.toLocaleString()} />
           <MetricCard label="Open rate" value={(openRate*100).toFixed(1) + "%"} sub="vs. last 30 days: +2.1%" />
           <MetricCard label="Click rate" value={(clickRate*100).toFixed(1) + "%"} sub="vs. last 30 days: -0.3%" />
-          <MetricCard label="Unsubscribe" value={(unsubRate*100).toFixed(2) + "%"} />
-          <MetricCard label="Spam" value={(spamRate*100).toFixed(2) + "%"} />
+          <MetricCard label="On-time payments" value={(onTimePaymentsRate*100).toFixed(0) + "%"} sub="Families who paid by due date (demo)" />
+          <MetricCard label="New enrollments" value={newEnrollments} sub="Attributed to this campaign (demo)" />
         </div>
       );
     }
@@ -1373,7 +1666,14 @@
         alert(`Parsed ${emails.length} entries.\nValid: ${valid.length}\nInvalid dropped: ${invalid.length}`);
         addSegment(`Manual list (${valid.length})`);
       };
-      const segmentsDemo = ["All Contacts","Class A","Class A / Session A1","Class A / Session A2","Class B","Class C / Session C1"];
+      const segmentsDemo = [
+        "All enrolled families",
+        "Past-due payments (all programs)",
+        "After-school · Monday · Class A",
+        "Summer Camp · Prospects",
+        "Waitlist — Summer Camp",
+        "Families missing forms"
+      ];
 
       return (
         <aside id={id} role="dialog" aria-modal="true" aria-label="Select audience"
@@ -1397,7 +1697,37 @@
           <div style={{marginTop:10}}>
             {tab==="BeAKid Audiences" && (
               <div>
-                <p style={{color:COLORS.subtext, marginTop:0, fontSize:12}}>Click classes/sessions to add:</p>
+                <p style={{color:COLORS.subtext, marginTop:0, fontSize:12}}>Filter by roster data, then click to add classes/sessions.</p>
+
+                <div style={{border:`1px solid ${COLORS.border}`, borderRadius:8, padding:8, marginBottom:8}}>
+                  <div style={{fontSize:12, color:COLORS.subtext, marginBottom:6}}>Roster filters (demo)</div>
+                  <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:6}}>
+                    <select style={{...inputStyle, fontSize:12}}>
+                      <option>Any program</option>
+                      <option>After-school</option>
+                      <option>Summer camp</option>
+                    </select>
+                    <select style={{...inputStyle, fontSize:12}}>
+                      <option>Any location</option>
+                      <option>Main campus</option>
+                      <option>Downtown</option>
+                    </select>
+                    <select style={{...inputStyle, fontSize:12}}>
+                      <option>Enrollment: All</option>
+                      <option>Enrollment: Enrolled</option>
+                      <option>Enrollment: Prospects</option>
+                    </select>
+                    <select style={{...inputStyle, fontSize:12}}>
+                      <option>Payment: All</option>
+                      <option>Payment: Paid</option>
+                      <option>Payment: Past due</option>
+                    </select>
+                  </div>
+                  <div style={{fontSize:11, color:COLORS.subtext, marginTop:6}}>
+                    Filters are for prototype only; final product will read live data from the BeAKid roster.
+                  </div>
+                </div>
+
                 <div style={{display:"grid", gap:6}}>
                   {segmentsDemo.map(s=>(
                     <button key={s} onClick={()=>addSegment(s)} style={{...btnGhost, justifyContent:"space-between", display:"flex", padding:"8px 9px", background:COLORS.panelAlt, fontSize:13}}>
@@ -1498,4 +1828,3 @@
   </script>
 </body>
 </html>
-
