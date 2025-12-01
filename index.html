@@ -52,16 +52,12 @@
       success: "#15803d",
       border: "#e5e7eb",
       focus: BRAND.purple,
-      // Light red tint for underperforming rows
       rowWarnBg: "rgba(233,58,59,0.08)",
-      // Light blue tint for option hover
       optionHoverBg: "rgba(86,201,254,0.12)"
     };
 
-    // Single source of truth for wizard line thickness
-    const WIZARD_LINE = 3;
-
     const focusRing = { outline: `2px solid ${COLORS.focus}`, outlineOffset: "2px" };
+
     const btnBase = {
       padding:"7px 11px",
       borderRadius:6,
@@ -130,6 +126,8 @@
       return (now - last) / 36e5;
     }
     function isCompleted(c) {
+      if (!c || !c.lastSendAt) return false;
+      if (c.status === "Draft") return false;
       const h = (c.channel === "SMS") ? KPI.sms.cooldownH : KPI.email.cooldownH;
       return !c.hasFutureSteps && hoursSince(c.lastSendAt) >= h;
     }
@@ -294,12 +292,12 @@
     ];
 
     const STATUS_STYLES = {
-      "Sent": tagStatic("rgba(22,163,74,0.12)", COLORS.success),
-      "Scheduled": tagStatic("rgba(226,232,240,0.6)", COLORS.text),
-      "Draft": tagStatic("#e2e8f0", COLORS.text),
-      "Active": tagStatic("rgba(37,99,235,0.15)", COLORS.text),
-      "Paused": tagStatic("rgba(148,163,184,0.18)", "#4b5563"),
-      "Completed": tagStatic("rgba(148,163,184,0.18)", "#334155"),
+      "Draft":      tagStatic("rgba(148,163,184,0.26)", "#1f2937"),        // slate
+      "Active":     tagStatic("rgba(37,99,235,0.20)", "#1d4ed8"),          // blue
+      "Scheduled":  tagStatic("rgba(169,99,255,0.22)", "#6b21a8"),         // purple
+      "Paused":     tagStatic("rgba(253,224,171,0.95)", "#92400e"),        // amber
+      "Sent":       tagStatic("rgba(22,163,74,0.20)", "#15803d"),          // green
+      "Completed":  tagStatic("rgba(121,249,219,0.32)", "#047857"),        // mint
     };
 
     /* --------------------------------- App ----------------------------------- */
@@ -338,6 +336,13 @@
           clicks: "-",
           sequences: orig.sequences || [],
           editable: true,
+          lastSendAt: null,
+          hasFutureSteps: false,
+          delivered: 0,
+          ctr: 0,
+          ctor: 0,
+          unsubRate: 0,
+          spamRate: 0
         };
         setCampaigns(p=>[copy, ...p]);
       };
@@ -369,6 +374,13 @@
             clicks: "-",
             sequences: partial.sequences || [],
             editable: true,
+            lastSendAt: null,
+            hasFutureSteps: false,
+            delivered: 0,
+            ctr: 0,
+            ctor: 0,
+            unsubRate: 0,
+            spamRate: 0
           };
           setCampaigns(prev => [newDraft, ...prev]);
           setDraftId(createdId);
@@ -833,6 +845,8 @@
 
       const [activeStep, setActiveStep] = useState(initialStep || 0);
       const [campaignName, setCampaignName] = useState(currentCampaign?.name || "");
+      const [campaignGoal, setCampaignGoal] = useState("Operational");
+      const [operationalTemplate, setOperationalTemplate] = useState("");
       const [fromSender, setFromSender] = useState("info@yourprogram.com");
       const initialSegments = currentCampaign?.audienceLabels || [];
       const [audienceSegments, setAudienceSegments] = useState(initialSegments);
@@ -952,6 +966,8 @@
             : "—",
           audienceCount,
           audienceLabels: audienceSegments,
+          campaignGoal,
+          operationalTemplate,
           sequences: steps.slice(1).map(st=>({
             delay: typeof st.daysOffset === "number" ? `${st.daysOffset}d` : (st.date || ""),
             condition: "Everyone",
@@ -1020,9 +1036,10 @@
           <Stepper activeStep={activeStep} onStepClick={setActiveStep} />
 
           <div style={{marginTop:14}}>
+            {/* CREATE STEP */}
             {activeStep===0 && (
               <Panel title="Create">
-                <Labeled label="Campaign Name" required>
+                <Labeled label="Campaign name" required>
                   <Input
                     placeholder="e.g., Summer Camp 2026 — Early Bird"
                     value={campaignName}
@@ -1032,6 +1049,111 @@
                     }}
                   />
                 </Labeled>
+
+                <Labeled
+                  label="What is this campaign for?"
+                  hint="We’ll tune the flow to must-read ops or broader marketing."
+                >
+                  <div style={{display:"flex", gap:8, flexWrap:"wrap"}}>
+                    {[
+                      {
+                        id:"Operational",
+                        label:"Operational (payments, forms, schedule)"
+                      },
+                      {
+                        id:"Marketing",
+                        label:"Marketing / promotion"
+                      },
+                      {
+                        id:"Announcement",
+                        label:"Announcement / update"
+                      }
+                    ].map(opt=>{
+                      const active = campaignGoal === opt.id;
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={()=>{
+                            setCampaignGoal(opt.id);
+                            if (opt.id !== "Operational") {
+                              setOperationalTemplate("");
+                            }
+                            if (campaignName.trim()) {
+                              const payload = { campaignGoal: opt.id };
+                              if (opt.id !== "Operational") {
+                                payload.operationalTemplate = "";
+                              }
+                              autoSave(payload);
+                            }
+                          }}
+                          style={chipSelectable(active)}
+                        >
+                          {opt.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </Labeled>
+
+                {campaignGoal === "Operational" && (
+                  <Labeled
+                    label="Recommended operational flow"
+                    hint="Choose a template to prefill Step 1 with language for must-read messages."
+                  >
+                    <div style={{display:"flex", gap:8, flexWrap:"wrap"}}>
+                      {[
+                        {
+                          id:"Payment & Billing",
+                          label:"Payment & Billing",
+                          sub:"Due / past-due reminders and confirmations"
+                        },
+                        {
+                          id:"Forms & Waivers",
+                          label:"Forms & Waivers",
+                          sub:"Collect required forms before kids attend"
+                        },
+                        {
+                          id:"Schedule & Logistics",
+                          label:"Schedule & Logistics",
+                          sub:"Share schedule changes and logistics clearly"
+                        }
+                      ].map(opt=>{
+                        const active = operationalTemplate === opt.id;
+                        return (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={()=>{
+                              setOperationalTemplate(opt.id);
+                              if (campaignName.trim()) autoSave({ operationalTemplate: opt.id });
+                            }}
+                            style={{
+                              ...chipSelectable(active),
+                              flexDirection:"column",
+                              alignItems:"flex-start",
+                              minWidth:190
+                            }}
+                          >
+                            <span style={{fontSize:13, fontWeight:600}}>
+                              {opt.label}
+                            </span>
+                            <span
+                              style={{
+                                fontSize:11,
+                                color:COLORS.subtext,
+                                marginTop:2
+                              }}
+                            >
+                              {opt.sub}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </Labeled>
+                )}
+
                 <FooterNav
                   onBack={onBackToDashboard}
                   onNext={goNext}
@@ -1041,6 +1163,7 @@
               </Panel>
             )}
 
+            {/* AUDIENCE STEP */}
             {activeStep===1 && (
               <Panel title="Audience">
                 <Labeled label="From">
@@ -1059,7 +1182,7 @@
                   hint={
                     audienceSegments.length
                       ? `Multiple segments — total ${audienceCount.toLocaleString()}`
-                      : "Required"
+                      : ""
                   }
                 >
                   <div style={{display:"flex", alignItems:"center", gap:10, flexWrap:"wrap"}}>
@@ -1129,6 +1252,7 @@
               </Panel>
             )}
 
+            {/* COMPOSE & SCHEDULE STEP */}
             {activeStep===2 && (
               <Panel title="Compose & Schedule">
                 <div style={{display:"grid", gridTemplateColumns:"260px 1fr", gap:14}}>
@@ -1151,9 +1275,7 @@
                     >
                       <div style={{display:"flex", alignItems:"center", gap:6}}>
                         <div style={{fontWeight:700, fontSize:14, textAlign:"left"}}>Steps</div>
-                        <InfoDot
-                          title="Use steps to automate must-read operational messages (for example, 3 days before payment is due, day-of reminder, and past-due SMS) so you don’t have to create a new campaign every time."
-                        />
+                        <InfoDot title="Use steps to automate must-read operational messages (for example, 3 days before payment is due, day-of reminder, and past-due SMS) so you don’t have to create a new campaign every time." />
                       </div>
                       <button
                         style={btnGhost}
@@ -1184,11 +1306,11 @@
                         />
                         <span style={{display:"inline-flex", alignItems:"center", gap:6}}>
                           <span style={{fontWeight:600}}>Smart Switch</span>
-                          <InfoDot
-                            title="Smart Switch automatically stops follow-ups once a family enrolls or takes the key action, so they don’t keep getting reminder messages after they’re already up to date."
-                          />
+                          <InfoDot title="Automatically stop follow-ups once a family enrolls or takes the key action, and move them into the right operational flow." />
                           <span
-                            style={tagStatic("rgba(121,249,219,0.25)", "#047857")}
+                            style={{
+                              ...tagStatic("rgba(121,249,219,0.25)", "#047857")
+                            }}
                           >
                             Beta
                           </span>
@@ -1426,7 +1548,7 @@
                                     </div>
                                   </div>
 
-                                  <Labeled label="Auto-Stop Rule">
+                                  <Labeled label="Auto-stop rule">
                                     <select
                                       value={st.autoStopRule || "None"}
                                       onChange={e=>{
@@ -1549,9 +1671,9 @@
               </Panel>
             )}
 
+            {/* REVIEW & ANALYTICS STEP */}
             {activeStep===3 && (
               <Panel title="Review & Analytics">
-                {/* Analytics row directly under the wizard */}
                 <AnalyticsRow
                   steps={steps}
                   audienceCount={audienceCount}
@@ -1559,7 +1681,6 @@
                   onSelectMetric={setSelectedMetric}
                 />
 
-                {/* Summary below analytics */}
                 <div style={{marginTop:14}}>
                   <div
                     style={{
@@ -1571,7 +1692,7 @@
                       gap:8
                     }}
                   >
-                    <Row label="Campaign Name" value={campaignName||"—"} />
+                    <Row label="Campaign name" value={campaignName||"—"} />
                     <Row label="From" value={fromSender} />
                     <Row
                       label="Audience"
@@ -1843,7 +1964,6 @@
     }
 
     function AnalyticsRow({ audienceCount, selectedMetric, onSelectMetric }) {
-      // Simple demo numbers
       const delivered = audienceCount;
       const openRate = 0.36;
       const clickRate = 0.042;
@@ -1921,7 +2041,6 @@
                     flex:1,
                     appearance:"none",
                     border:"none",
-                    borderBottom: `${WIZARD_LINE}px solid ${active ? COLORS.primary : "transparent"}`,
                     background: active ? COLORS.panel : "transparent",
                     padding:"10px 16px",
                     fontWeight:700,
@@ -1943,7 +2062,7 @@
           <div
             style={{
               position:"relative",
-              height:WIZARD_LINE,
+              height:3,
               borderRadius:999,
               background:"#e5e7eb",
               overflow:"hidden"
@@ -2107,78 +2226,75 @@
       );
     }
 
-    // Click-to-open info dot with tooltip bubble
-// Click-to-open info dot with wider, more readable tooltip
-function InfoDot({ title }) {
-  const [open, setOpen] = React.useState(false);
-  const ref = React.useRef(null);
+    function InfoDot({ title }) {
+      const [open, setOpen] = useState(false);
+      const btnRef = useRef(null);
 
-  React.useEffect(() => {
-    const handler = (e) => {
-      if (!ref.current) return;
-      if (!ref.current.contains(e.target)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
+      useEffect(() => {
+        if (!open) return;
+        const handleClick = (e) => {
+          if (!btnRef.current) return;
+          if (!btnRef.current.contains(e.target)) {
+            setOpen(false);
+          }
+        };
+        document.addEventListener("mousedown", handleClick);
+        return () => document.removeEventListener("mousedown", handleClick);
+      }, [open]);
 
-  return (
-    <span
-      ref={ref}
-      style={{
-        position: "relative",
-        display: "inline-flex",
-        alignItems: "center"
-      }}
-    >
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-label={title}
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: 16,
-          height: 16,
-          borderRadius: "999px",
-          border: `1px solid ${COLORS.border}`,
-          background: COLORS.panelAlt,
-          color: COLORS.subtext,
-          fontSize: 11,
-          cursor: "pointer",
-          padding: 0
-        }}
-      >
-        ?
-      </button>
-
-      {open && (
-        <div
-          role="tooltip"
-          style={{
-            position: "absolute",
-            top: "130%",
-            left: "50%",
-            transform: "translateX(-50%)",
-            width: 260,
-            padding: "10px 12px",
-            borderRadius: 10,
-            background: COLORS.panel,
-            border: `1px solid ${COLORS.border}`,
-            boxShadow: "0 10px 25px rgba(15,23,42,0.18)",
-            fontSize: 12,
-            lineHeight: 1.5,
-            color: COLORS.text,
-            zIndex: 100
-          }}
-        >
-          {title}
-        </div>
-      )}
-    </span>
-  );
-}
+      return (
+        <span style={{position:"relative", display:"inline-flex"}}>
+          <button
+            type="button"
+            ref={btnRef}
+            onClick={()=>setOpen(o=>!o)}
+            aria-label={title}
+            aria-expanded={open}
+            style={{
+              display:"inline-flex",
+              alignItems:"center",
+              justifyContent:"center",
+              width:18,
+              height:18,
+              borderRadius:"999px",
+              border:`1px solid ${COLORS.border}`,
+              background:COLORS.panelAlt,
+              color:COLORS.subtext,
+              fontSize:11,
+              cursor:"pointer",
+              padding:0
+            }}
+          >
+            ?
+          </button>
+          {open && (
+            <div
+              style={{
+                position:"absolute",
+                top:"120%",
+                left:"50%",
+                transform:"translateX(-50%)",
+                minWidth:220,
+                maxWidth:280,
+                padding:"8px 10px",
+                borderRadius:8,
+                background:COLORS.panel,
+                border:`1px solid ${COLORS.border}`,
+                boxShadow:"0 8px 20px rgba(15,23,42,0.18)",
+                fontSize:12,
+                color:COLORS.text,
+                textAlign:"left",
+                lineHeight:1.4,
+                whiteSpace:"normal",
+                zIndex:1200
+              }}
+            >
+              {title}
+            </div>
+          )}
+        </span>
+      );
+    }
 
     function AudienceSelectorInline({ onClose, onApply, initialSelected=[] }){
       const [source, setSource] = useState("roster");
@@ -2370,7 +2486,7 @@ function InfoDot({ title }) {
                 style={{...btnGhost, marginTop:6}}
                 onClick={parseManual}
               >
-                Validate &amp; Add
+                Validate & Add
               </button>
             </div>
           )}
@@ -2566,7 +2682,7 @@ function InfoDot({ title }) {
                   }}
                 >
                   <div style={{marginBottom:6}}>
-                    <strong>SMS body</strong>
+                    <strong>SMS Body</strong>
                   </div>
                   <div
                     style={{
@@ -2602,7 +2718,6 @@ function InfoDot({ title }) {
               </div>
             )}
 
-            {/* Bottom-center toast for Preview, matching Launch pattern */}
             {toastVisible && (
               <div
                 style={{
