@@ -28,7 +28,15 @@
   <script type="text/babel">
     const { useEffect, useMemo, useRef, useState } = React;
 
-    /* -------------------------- Light Theme Tokens -------------------------- */
+    /* -------------------------- Brand & Theme Tokens ------------------------- */
+    const BRAND = {
+      red:   "#e93a3b",
+      purple:"#a963ff",
+      yellow:"rgba(249,201,0,0.65)",
+      blue:  "#56c9fe",
+      mint:  "#79f9db"
+    };
+
     const COLORS = {
       bg: "#f5f5f7",
       panel: "#ffffff",
@@ -39,13 +47,19 @@
       interactiveText: "#ffffff",
       primary: "#2563eb",
       primaryText: "#ffffff",
-      danger: "#dc2626",
+      danger: BRAND.red,
       warning: "#f59e0b",
       success: "#15803d",
       border: "#e5e7eb",
-      focus: "#93c5fd",
-      rowWarnBg: "rgba(220,38,38,0.06)",
+      focus: BRAND.purple,
+      // Light red tint for underperforming rows
+      rowWarnBg: "rgba(233,58,59,0.08)",
+      // Light blue tint for option hover
+      optionHoverBg: "rgba(86,201,254,0.12)"
     };
+
+    // Single source of truth for wizard line thickness
+    const WIZARD_LINE = 3;
 
     const focusRing = { outline: `2px solid ${COLORS.focus}`, outlineOffset: "2px" };
     const btnBase = {
@@ -57,11 +71,48 @@
       lineHeight:1.25,
       cursor:"pointer",
       background:COLORS.panelAlt,
-      color:COLORS.text
+      color:COLORS.text,
+      textAlign:"left"
     };
-    const btnPrimary = { ...btnBase, background:COLORS.primary, color:COLORS.primaryText, borderColor:COLORS.primary };
-    const btnGhost = { ...btnBase, background:"transparent" };
-    const badge = (bg, fg) => ({ display:"inline-block", padding:"2px 8px", borderRadius:999, background:bg, color:fg, fontSize:12 });
+    const btnPrimary = {
+      ...btnBase,
+      background:COLORS.primary,
+      color:COLORS.primaryText,
+      borderColor:COLORS.primary
+    };
+    const btnGhost = {
+      ...btnBase,
+      background:"transparent"
+    };
+    const badge = (bg, fg) => ({
+      display:"inline-block",
+      padding:"2px 8px",
+      borderRadius:999,
+      background:bg,
+      color:fg,
+      fontSize:12,
+      textAlign:"left"
+    });
+    const chipSelectable = (active) => ({
+      display:"inline-flex",
+      alignItems:"center",
+      padding:"4px 10px",
+      borderRadius:999,
+      border:`1px solid ${active ? COLORS.primary : COLORS.border}`,
+      background: active ? "rgba(37,99,235,0.10)" : COLORS.panelAlt,
+      fontSize:12,
+      cursor:"pointer",
+      textAlign:"left"
+    });
+    const tagStatic = (bg, fg) => ({
+      display:"inline-block",
+      padding:"2px 8px",
+      borderRadius:999,
+      background:bg,
+      color:fg,
+      fontSize:11,
+      textAlign:"left"
+    });
 
     const normalizeTime = (t) => t && t.trim() ? t : "09:00";
 
@@ -124,7 +175,7 @@
       d.setDate(d.getDate() + Number(n||0));
       const y = d.getFullYear();
       const m = String(d.getMonth()+1).padStart(2,'0');
-      const day = String(d.getDate()).padStart(2,'0');
+      const day = String(d.getDate(), 10).padStart(2,'0');
       return `${y}-${m}-${day}`;
     };
     const parseDelayDays = (txt) => {
@@ -243,12 +294,12 @@
     ];
 
     const STATUS_STYLES = {
-      "Sent": badge("rgba(22,163,74,0.12)", COLORS.success),
-      "Scheduled": badge("rgba(37,99,235,0.12)", COLORS.primary),
-      "Draft": badge("#e2e8f0", COLORS.text),
-      "Active": badge("rgba(37,99,235,0.12)", COLORS.primary),
-      "Paused": badge("rgba(148,163,184,0.3)", "#475569"),
-      "Completed": badge("rgba(148,163,184,0.18)", "#334155"),
+      "Sent": tagStatic("rgba(22,163,74,0.12)", COLORS.success),
+      "Scheduled": tagStatic("rgba(226,232,240,0.6)", COLORS.text),
+      "Draft": tagStatic("#e2e8f0", COLORS.text),
+      "Active": tagStatic("rgba(37,99,235,0.15)", COLORS.text),
+      "Paused": tagStatic("rgba(148,163,184,0.18)", "#4b5563"),
+      "Completed": tagStatic("rgba(148,163,184,0.18)", "#334155"),
     };
 
     /* --------------------------------- App ----------------------------------- */
@@ -256,6 +307,9 @@
       const [route, setRoute] = useState({ page:"dashboard", campaignId:null, step:0 });
       const [campaigns, setCampaigns] = useState(initialCampaigns);
       const [draftId, setDraftId] = useState(null);
+
+      // Global toast for "Launch — Undo"
+      const [toast, setToast] = useState(null); // { type: "launch", campaignId }
 
       const startNew = () => {
         setRoute({ page:"create", campaignId:"new", step:0 });
@@ -277,11 +331,12 @@
         const copy = {
           ...orig,
           id: Date.now(),
-          name: orig.name + " (Copy)",
+          name: `(Copy) ${orig.name}`,
           status: "Draft",
           sendTime: "—",
           opens: "-",
           clicks: "-",
+          sequences: orig.sequences || [],
           editable: true,
         };
         setCampaigns(p=>[copy, ...p]);
@@ -303,7 +358,7 @@
           createdId = Date.now();
           const newDraft = {
             id: createdId,
-            name: partial.name || "Untitled campaign",
+            name: partial.name || "Untitled Campaign",
             subject: partial.subject || "(no subject)",
             audience: partial.audience || "—",
             audienceCount: partial.audienceCount || 0,
@@ -338,8 +393,21 @@
           return [newCampaign, ...prev];
         });
         setDraftId(null);
+        setToast({ type:"launch", campaignId:newCampaign.id });
         setRoute({ page:"dashboard", campaignId:null, step:0 });
       };
+
+      const undoLaunch = () => {
+        if (!toast || toast.type !== "launch") return;
+        const id = toast.campaignId;
+        setCampaigns(prev =>
+          prev.map(c =>
+            c.id === id ? { ...c, status:"Draft", sendTime:"—" } : c
+          )
+        );
+        setToast(null);
+      };
+
       const backToDashboard = () => setRoute({ page:"dashboard", campaignId:null, step:0 });
 
       const currentCampaign = route.campaignId && typeof route.campaignId === "number"
@@ -375,8 +443,48 @@
                   initialStep={route.step || 0}
                 />
               )}
+              {route.page==="settings" && (
+                <div style={{fontSize:14, color:COLORS.subtext, textAlign:"left"}}>
+                  Settings placeholder.
+                </div>
+              )}
             </main>
           </div>
+
+          {toast && toast.type==="launch" && (
+            <div
+              style={{
+                position:"fixed",
+                left:"50%",
+                transform:"translateX(-50%)",
+                bottom:16,
+                background:COLORS.panel,
+                borderRadius:999,
+                border:`1px solid ${COLORS.border}`,
+                boxShadow:"0 10px 35px rgba(15,23,42,0.18)",
+                padding:"8px 16px",
+                display:"flex",
+                alignItems:"center",
+                gap:10,
+                fontSize:13,
+                zIndex:1100
+              }}
+            >
+              <span style={{textAlign:"left"}}>Campaign launched.</span>
+              <button
+                style={{...btnGhost, padding:"4px 8px"}}
+                onClick={undoLaunch}
+              >
+                Undo
+              </button>
+              <button
+                style={{...btnGhost, padding:"4px 8px"}}
+                onClick={()=>setToast(null)}
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
         </div>
       );
     }
@@ -386,8 +494,18 @@
       return (
         <div style={{borderBottom:`1px solid ${COLORS.border}`, background:COLORS.panel}} role="banner">
           <div style={{maxWidth:1200, margin:"0 auto", padding:"14px 24px", display:"flex", alignItems:"center", gap:10}}>
-            <div aria-hidden style={{width:26, height:26, borderRadius:6, background:"linear-gradient(135deg,#2563eb,#15803d)"}} />
-            <div style={{fontWeight:800, letterSpacing:.2, fontSize:15}} aria-label="Product name">BeAKampaign</div>
+            <div
+              aria-hidden
+              style={{
+                width:26,
+                height:26,
+                borderRadius:8,
+                background:`linear-gradient(135deg, ${BRAND.blue}, ${BRAND.purple}, ${BRAND.mint})`
+              }}
+            />
+            <div style={{fontWeight:800, letterSpacing:.2, fontSize:15, textAlign:"left"}} aria-label="Product name">
+              BeAKampaign
+            </div>
           </div>
         </div>
       );
@@ -403,7 +521,8 @@
             background: current===page?COLORS.panelAlt:"transparent",
             borderColor:"transparent",
             padding:"8px",
-            color:COLORS.text
+            color:COLORS.text,
+            borderRadius:8
           }}
           onFocus={(e)=>e.currentTarget.style.outline=focusRing.outline}
           onBlur={(e)=>e.currentTarget.style.outline="none"}
@@ -416,7 +535,7 @@
         <nav aria-label="Primary" style={{width:200, borderRight:`1px solid ${COLORS.border}`, padding:14, background:COLORS.panel}}>
           {link("Campaigns","dashboard")}
           <div aria-hidden style={{height:6}}></div>
-          {link("Settings (placeholder)","settings")}
+          {link("Settings (Placeholder)","settings")}
         </nav>
       );
     }
@@ -426,8 +545,8 @@
       return (
         <section aria-label="Campaign list">
           <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14}}>
-            <h1 style={{margin:0, fontSize:20}}>Campaigns</h1>
-            <button style={btnPrimary} onClick={onStartNew}>New campaign</button>
+            <h1 style={{margin:0, fontSize:20, textAlign:"left"}}>Campaigns</h1>
+            <button style={{...btnPrimary, textAlign:"center"}} onClick={onStartNew}>New Campaign</button>
           </div>
           <div style={{border:`1px solid ${COLORS.border}`, borderRadius:12, overflow:"hidden", background:COLORS.panel}}>
             <CampaignTableHeader />
@@ -450,7 +569,15 @@
       );
     }
     function CampaignTableHeader(){
-      const th = { padding:"10px 12px", fontSize:11, color:COLORS.subtext, borderBottom:`1px solid ${COLORS.border}`, textTransform:"uppercase", letterSpacing:".03em" };
+      const th = {
+        padding:"10px 12px",
+        fontSize:11,
+        color:COLORS.subtext,
+        borderBottom:`1px solid ${COLORS.border}`,
+        textTransform:"uppercase",
+        letterSpacing:".03em",
+        textAlign:"left"
+      };
       return (
         <div role="row" style={{display:"grid", gridTemplateColumns:"1.4fr 1.4fr 0.8fr 1fr 1fr 0.6fr 48px", background:COLORS.panelAlt}}>
           <div role="columnheader" style={th}>Campaign Name</div>
@@ -501,7 +628,7 @@
 
       const isUnder = underperforming(data);
       const computedStatus = isCompleted(data) ? "Completed" : data.status;
-      const statusChip = STATUS_STYLES[computedStatus] || badge("#e2e8f0", COLORS.text);
+      const statusChip = STATUS_STYLES[computedStatus] || tagStatic("#e2e8f0", COLORS.text);
 
       return (
         <div
@@ -515,8 +642,18 @@
           }}
         >
           <div role="cell" style={{padding:"10px 12px", display:"flex", alignItems:"center", gap:6}}>
-            <button onClick={onOpen}
-              style={{background:"transparent", border:"none", color:COLORS.interactive, textDecoration:"underline", cursor:"pointer", fontWeight:600, fontSize:13}}
+            <button
+              onClick={onOpen}
+              style={{
+                background:"transparent",
+                border:"none",
+                color:COLORS.interactive,
+                textDecoration:"underline",
+                cursor:"pointer",
+                fontWeight:600,
+                fontSize:13,
+                textAlign:"left"
+              }}
             >
               {data.name}
             </button>
@@ -537,26 +674,26 @@
               >⚠️</button>
             )}
           </div>
-          <div role="cell" style={{padding:"10px 12px", color:COLORS.subtext, fontSize:12}}>
+          <div role="cell" style={{padding:"10px 12px", color:COLORS.subtext, fontSize:12, textAlign:"left"}}>
             {formatAudienceCell(data)}
           </div>
-          <div role="cell" style={{padding:"10px 12px"}}>
+          <div role="cell" style={{padding:"10px 12px", textAlign:"left"}}>
             <span style={statusChip}>{computedStatus}</span>
           </div>
-          <div role="cell" style={{padding:"10px 12px", color:COLORS.subtext, fontSize:12}}>
+          <div role="cell" style={{padding:"10px 12px", color:COLORS.subtext, fontSize:12, textAlign:"left"}}>
             {data.opens} / {data.clicks}
           </div>
-          <div role="cell" style={{padding:"10px 12px", color:COLORS.subtext, fontSize:12}}>
+          <div role="cell" style={{padding:"10px 12px", color:COLORS.subtext, fontSize:12, textAlign:"left"}}>
             {data.sendTime}
           </div>
 
           {/* Analytics column */}
-          <div role="cell" style={{padding:"10px 12px"}}>
-            <button style={{...btnPrimary, padding:"6px 12px"}} onClick={onOpenAnalytics}>View</button>
+          <div role="cell" style={{padding:"10px 12px", textAlign:"left"}}>
+            <button style={{...btnPrimary, padding:"6px 12px", textAlign:"center"}} onClick={onOpenAnalytics}>View</button>
           </div>
 
           {/* Actions */}
-          <div role="cell" style={{padding:"10px 6px", position:"relative"}}>
+          <div role="cell" style={{padding:"10px 6px", position:"relative", textAlign:"left"}}>
             <button
               ref={buttonRef}
               onClick={handleOpen}
@@ -575,7 +712,8 @@
               ⋮
             </button>
             {open && (
-              <div role="menu"
+              <div
+                role="menu"
                 ref={menuRef}
                 style={{
                   position:"fixed",
@@ -590,14 +728,18 @@
                 }}
               >
                 {isUnder && (
-                  <MenuItem label="Compose one click" onClick={()=>{onComposeOneClick(); setOpen(false);}} />
+                  <MenuItem label="Compose One-Click" onClick={()=>{onComposeOneClick(); setOpen(false);}} />
                 )}
                 <MenuItem label="Open" onClick={()=>{onOpen(); setOpen(false);}} />
                 <MenuItem label="Duplicate" onClick={()=>{onDuplicate(); setOpen(false);}} />
                 {(data.status === "Active" || data.status === "Scheduled" || data.status === "Paused") && (
                   <MenuItem label={data.status === "Paused" ? "Resume" : "Pause"} onClick={()=>{onTogglePause(); setOpen(false);}} />
                 )}
-                <MenuItem label="Delete" danger onClick={()=>{ if(confirm("Delete campaign?")) onDelete(); setOpen(false); }} />
+                <MenuItem
+                  label="Delete"
+                  danger
+                  onClick={()=>{ if(confirm("Delete campaign?")) onDelete(); setOpen(false); }}
+                />
               </div>
             )}
           </div>
@@ -606,7 +748,9 @@
     }
     function MenuItem({ label, onClick, danger }){
       return (
-        <button role="menuitem" onClick={onClick}
+        <button
+          role="menuitem"
+          onClick={onClick}
           style={{
             width:"100%",
             border:"none",
@@ -619,6 +763,8 @@
           }}
           onFocus={(e)=>e.currentTarget.style.outline=focusRing.outline}
           onBlur={(e)=>e.currentTarget.style.outline="none"}
+          onMouseEnter={(e)=>{ e.currentTarget.style.backgroundColor = COLORS.optionHoverBg; }}
+          onMouseLeave={(e)=>{ e.currentTarget.style.backgroundColor = "transparent"; }}
         >
           {label}
         </button>
@@ -627,13 +773,12 @@
 
     /* ----------------------------- Creation Flow ----------------------------- */
     const STEPS = ["Create","Audience","Compose & Schedule","Review & Analytics"];
-    const EMOJIS = ["🎉","✨","📣","✅","📅"];
 
     const getTodayDate = () => {
       const d = new Date();
       const year = d.getFullYear();
       const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
+      const day = String(d.getDate(), 10).padStart(2, '0');
       return `${year}-${month}-${day}`;
     };
     const mapCampaignToSteps = (campaign) => {
@@ -654,18 +799,37 @@
         time: normalizeTime(""),
         subject: `Follow-up ${index + 1} for ${campaign.subject}`,
         body: `Body content for ${campaign.name} - Step ${index + 2}.`,
-        autoStopRule: "Stop if opened",
+        autoStopRule: "Stop If Opened",
         useRecoTime: false
       }));
       return [mainStep, ...sequenceSteps];
     };
 
-    function CreationFlow({ onBackToDashboard, onLaunched, onEnsureDraft, onUpdateDraft, draftId: externalDraftId, currentCampaign, initialStep }){
-      const initialSteps = useMemo(() =>
-        currentCampaign && typeof currentCampaign.id === "number"
-          ? mapCampaignToSteps(currentCampaign)
-          : [{ id:"s1", type:"Email", date:getTodayDate(), time:normalizeTime(""), subject:"", body:"", autoStopRule:"None", useRecoTime:false }]
-      , [currentCampaign?.id]);
+    function CreationFlow({
+      onBackToDashboard,
+      onLaunched,
+      onEnsureDraft,
+      onUpdateDraft,
+      draftId: externalDraftId,
+      currentCampaign,
+      initialStep
+    }){
+      const initialSteps = useMemo(
+        () =>
+          currentCampaign && typeof currentCampaign.id === "number"
+            ? mapCampaignToSteps(currentCampaign)
+            : [{
+                id:"s1",
+                type:"Email",
+                date:getTodayDate(),
+                time:normalizeTime(""),
+                subject:"",
+                body:"",
+                autoStopRule:"None",
+                useRecoTime:false
+              }],
+        [currentCampaign?.id]
+      );
 
       const [activeStep, setActiveStep] = useState(initialStep || 0);
       const [campaignName, setCampaignName] = useState(currentCampaign?.name || "");
@@ -679,17 +843,9 @@
       const [steps, setSteps] = useState(initialSteps);
       const [activeMsgStepId, setActiveMsgStepId] = useState(initialSteps[0].id);
       const [previewOpen, setPreviewOpen] = useState(false);
-      const [emojiOpen, setEmojiOpen] = useState(false);
-      const [htmlMode, setHtmlMode] = useState(false);
-
-      // New: high-level campaign purpose (ops vs marketing)
-      const [campaignPurpose, setCampaignPurpose] = useState("Operational");
-      const [opsTemplate, setOpsTemplate] = useState("Payment & Billing");
-
-      // New: Smart Switch (prospect → parent) state
-      const [smartSwitchEnabled, setSmartSwitchEnabled] = useState(false);
-      const [smartSwitchMode, setSmartSwitchMode] = useState("stopThisCampaign");
-      const [smartSwitchProgram, setSmartSwitchProgram] = useState("Any program");
+      const [smartSwitchOn, setSmartSwitchOn] = useState(true);
+      const [selectedMetric, setSelectedMetric] = useState("Open Rate");
+      const [showLaunchConfirm, setShowLaunchConfirm] = useState(false);
 
       useEffect(() => {
         if (typeof currentCampaign?.id === "number") {
@@ -700,23 +856,25 @@
           setActiveMsgStepId(loaded[0].id);
           setInternalDraftId(currentCampaign.id);
           setActiveStep(initialStep || 0);
-          setHtmlMode(false);
         } else if (currentCampaign?.campaignId === "new" || currentCampaign === null) {
           if(campaignName !== "" || audienceSegments.length > 0 || steps.length > 1) {
             setCampaignName("");
             setAudienceSegments([]);
-            const defaultSteps = [{ id:"s1", type:"Email", date:getTodayDate(), time:normalizeTime(""), subject:"", body:"", autoStopRule:"None", useRecoTime:false }];
+            const defaultSteps = [{
+              id:"s1",
+              type:"Email",
+              date:getTodayDate(),
+              time:normalizeTime(""),
+              subject:"",
+              body:"",
+              autoStopRule:"None",
+              useRecoTime:false
+            }];
             setSteps(defaultSteps);
             setActiveMsgStepId(defaultSteps[0].id);
             setActiveStep(initialStep || 0);
           }
           setInternalDraftId(null);
-          setHtmlMode(false);
-          setCampaignPurpose("Operational");
-          setOpsTemplate("Payment & Billing");
-          setSmartSwitchEnabled(false);
-          setSmartSwitchMode("stopThisCampaign");
-          setSmartSwitchProgram("Any program");
         }
       // eslint-disable-next-line react-hooks/exhaustive-deps
       }, [currentCampaign?.id, initialStep]);
@@ -756,7 +914,16 @@
         setActiveMsgStepId(nextId);
       };
       const resetSteps = ()=>{
-        const only = { id:"s1", type:"Email", date:getTodayDate(), time:normalizeTime(""), subject:"", body:"", autoStopRule:"None", useRecoTime:false };
+        const only = {
+          id:"s1",
+          type:"Email",
+          date:getTodayDate(),
+          time:normalizeTime(""),
+          subject:"",
+          body:"",
+          autoStopRule:"None",
+          useRecoTime:false
+        };
         setSteps([only]);
         setActiveMsgStepId("s1");
       };
@@ -774,41 +941,15 @@
       };
 
       const activeEditorStep = steps.find(s=>s.id===activeMsgStepId) || steps[steps.length-1];
-
-      // Apply an operational template to Step 1 (payment, forms, schedule)
-      const applyOpsTemplate = (templateId) => {
-        setOpsTemplate(templateId);
-        setSteps(prev => {
-          const first = prev[0] || { id:"s1", type:"Email", date:getTodayDate(), time:normalizeTime(""), subject:"", body:"", autoStopRule:"None", useRecoTime:false };
-          let updatedFirst = { ...first, type:"Email" };
-          if (templateId === "Payment & Billing") {
-            updatedFirst.subject = "Reminder: Payment due for your child’s program";
-            updatedFirst.body = "Hi [Parent name],\n\nThis is a friendly reminder that your payment for [Program name] is due on [Due date]. Please review your balance and complete payment using the link below.\n\nIf you’ve already paid, thank you — you can ignore this message.\n\n[Payment link]\n\n— [Program name] Team";
-            updatedFirst.autoStopRule = "Stop if payment received";
-          } else if (templateId === "Forms & Waivers") {
-            updatedFirst.subject = "Action needed: Forms and waivers for [Program name]";
-            updatedFirst.body = "Hi [Parent name],\n\nBefore [Child name] attends [Program name], we need a few quick forms and waivers completed.\n\nUse the link below to review and sign:\n[Forms link]\n\nOnce everything is complete, we’ll confirm by email.\n\n— [Program name] Team";
-            updatedFirst.autoStopRule = "Stop if forms completed";
-          } else if (templateId === "Schedule & Logistics") {
-            updatedFirst.subject = "Schedule update for [Program name]";
-            updatedFirst.body = "Hi [Parent name],\n\nWe have an update to the schedule for [Program name].\n\n[Describe change briefly]\n\nPlease review and let us know if you have any questions.\n\n— [Program name] Team";
-            updatedFirst.autoStopRule = "None";
-          }
-          const rest = prev.slice(1);
-          return [updatedFirst, ...rest];
-        });
-        if (campaignName.trim()) {
-          autoSave();
-        }
-      };
-
       const autoSave = (changed = {}) => {
         if (!campaignName.trim()) return;
         const baseDraft = {
           id: internalDraftId || undefined,
           name: campaignName,
           subject: steps[0]?.subject || "(no subject)",
-          audience: audienceSegments.length ? `${audienceCount.toLocaleString()} (${audienceSegments.length>1?"Multiple segments":audienceSegments[0]})` : "—",
+          audience: audienceSegments.length
+            ? `${audienceCount.toLocaleString()} (${audienceSegments.length>1?"Multiple segments":audienceSegments[0]})`
+            : "—",
           audienceCount,
           audienceLabels: audienceSegments,
           sequences: steps.slice(1).map(st=>({
@@ -816,11 +957,6 @@
             condition: "Everyone",
             messageType: st.type
           })),
-          campaignPurpose,
-          opsTemplate,
-          smartSwitchEnabled,
-          smartSwitchMode,
-          smartSwitchProgram,
           ...changed
         };
         if (!internalDraftId) {
@@ -831,7 +967,6 @@
         }
         setLastSaved(new Date());
       };
-
       const handleLaunch = ()=>{
         if (!canLaunch) return;
         const mainStep = steps[0];
@@ -844,7 +979,9 @@
           id: internalDraftId || Date.now(),
           name: campaignName || "Untitled Campaign",
           subject: mainStep?.subject || "(no subject)",
-          audience: audienceSegments.length ? `${audienceCount.toLocaleString()} (${audienceSegments.length>1?"Multiple segments":audienceSegments[0]})` : "—",
+          audience: audienceSegments.length
+            ? `${audienceCount.toLocaleString()} (${audienceSegments.length>1?"Multiple segments":audienceSegments[0]})`
+            : "—",
           audienceCount,
           audienceLabels: audienceSegments,
           status: "Active",
@@ -866,10 +1003,6 @@
         setHasLaunched(true);
         onLaunched(newCampaign);
       };
-      const appendEmoji = (emoji)=>{
-        updateStep(activeEditorStep.id, { body: (activeEditorStep.body || "") + emoji });
-        setEmojiOpen(false);
-      };
 
       const baseDate = steps[0]?.date;
 
@@ -878,7 +1011,7 @@
           <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14}}>
             <button style={btnGhost} onClick={onBackToDashboard}>← Back</button>
             {lastSaved && (
-              <div style={{fontSize:11, color:COLORS.subtext}}>
+              <div style={{fontSize:11, color:COLORS.subtext, textAlign:"left"}}>
                 Auto-saved {lastSaved.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
               </div>
             )}
@@ -889,7 +1022,7 @@
           <div style={{marginTop:14}}>
             {activeStep===0 && (
               <Panel title="Create">
-                <Labeled label="Campaign name" required>
+                <Labeled label="Campaign Name" required>
                   <Input
                     placeholder="e.g., Summer Camp 2026 — Early Bird"
                     value={campaignName}
@@ -899,79 +1032,12 @@
                     }}
                   />
                 </Labeled>
-
-                <Labeled label="What is this campaign for?" hint="We’ll tune the flow to must-read ops or broader marketing.">
-                  <div style={{display:"flex", gap:8, flexWrap:"wrap"}}>
-                    {["Operational","Marketing","Announcement"].map(purpose=>{
-                      const active = campaignPurpose === purpose;
-                      return (
-                        <button
-                          key={purpose}
-                          type="button"
-                          onClick={()=>{
-                            setCampaignPurpose(purpose);
-                            if (campaignName.trim()) autoSave({ campaignPurpose: purpose });
-                          }}
-                          style={{
-                            ...btnGhost,
-                            padding:"6px 10px",
-                            borderRadius:999,
-                            borderColor: active ? COLORS.primary : COLORS.border,
-                            background: active ? "rgba(37,99,235,0.08)" : COLORS.panelAlt,
-                            color: active ? COLORS.primary : COLORS.text,
-                            fontSize:12
-                          }}
-                          aria-pressed={active}
-                        >
-                          {purpose === "Operational" ? "Operational (payments, forms, schedule)" :
-                           purpose === "Marketing" ? "Marketing / promotion" :
-                           "Announcement / update"}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </Labeled>
-
-                {campaignPurpose === "Operational" && (
-                  <div style={{border:`1px solid ${COLORS.border}`, borderRadius:10, padding:10, background:COLORS.panelAlt, marginBottom:10}}>
-                    <div style={{fontSize:13, fontWeight:600, marginBottom:6}}>Recommended operational flow</div>
-                    <div style={{fontSize:12, color:COLORS.subtext, marginBottom:8}}>
-                      Choose a template to prefill Step 1 with language for must-read messages.
-                    </div>
-                    <div style={{display:"flex", gap:8, flexWrap:"wrap"}}>
-                      {["Payment & Billing","Forms & Waivers","Schedule & Logistics"].map(tpl=>{
-                        const active = opsTemplate === tpl;
-                        return (
-                          <button
-                            key={tpl}
-                            type="button"
-                            onClick={()=>applyOpsTemplate(tpl)}
-                            style={{
-                              ...btnGhost,
-                              borderRadius:10,
-                              padding:"8px 10px",
-                              borderColor: active ? COLORS.primary : COLORS.border,
-                              background: active ? "rgba(37,99,235,0.1)" : COLORS.panel,
-                              fontSize:12,
-                              textAlign:"left",
-                              minWidth:160
-                            }}
-                            aria-pressed={active}
-                          >
-                            <div style={{fontWeight:600}}>{tpl}</div>
-                            <div style={{fontSize:11, color:COLORS.subtext, marginTop:2}}>
-                              {tpl === "Payment & Billing" && "Due / past-due reminders and confirmations"}
-                              {tpl === "Forms & Waivers" && "Collect required forms before kids attend"}
-                              {tpl === "Schedule & Logistics" && "Share schedule changes and logistics clearly"}
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                <FooterNav onBack={onBackToDashboard} onNext={goNext} nextLabel="Next" nextDisabled={!campaignName.trim()} />
+                <FooterNav
+                  onBack={onBackToDashboard}
+                  onNext={goNext}
+                  nextLabel="Next"
+                  nextDisabled={!campaignName.trim()}
+                />
               </Panel>
             )}
 
@@ -987,19 +1053,40 @@
                   />
                 </Labeled>
 
-                <Labeled label="Select audience" required
-                  hint={audienceSegments.length ? `Multiple segments — total ${audienceCount.toLocaleString()}` : "Required"}>
+                <Labeled
+                  label="Select Audience"
+                  required
+                  hint={
+                    audienceSegments.length
+                      ? `Multiple segments — total ${audienceCount.toLocaleString()}`
+                      : "Required"
+                  }
+                >
                   <div style={{display:"flex", alignItems:"center", gap:10, flexWrap:"wrap"}}>
-                    <div style={{padding:"8px 10px", borderRadius:10, border:`1px solid ${COLORS.border}`, background:COLORS.panelAlt, minWidth:240}} aria-live="polite">
+                    <div
+                      style={{
+                        padding:"8px 10px",
+                        borderRadius:10,
+                        border:`1px solid ${COLORS.border}`,
+                        background:COLORS.panelAlt,
+                        minWidth:240,
+                        textAlign:"left"
+                      }}
+                      aria-live="polite"
+                    >
                       {audienceSegments.length
-                        ? `${audienceCount.toLocaleString()} · ${audienceSegments.length>1 ? "Multiple segments" : audienceSegments[0]}`
+                        ? `${audienceCount.toLocaleString()} · ${
+                            audienceSegments.length>1 ? "Multiple segments" : audienceSegments[0]
+                          }`
                         : "—"}
                     </div>
                     <button
-                      style={btnPrimary}
-                      onClick={()=>setAudPanelOpen(true)}
-                      aria-controls="audience-panel" aria-expanded={audPanelOpen}>
-                      Change
+                      style={{...btnPrimary, textAlign:"center"}}
+                      onClick={()=>setAudPanelOpen(o=>!o)}
+                      aria-controls="audience-selector"
+                      aria-expanded={audPanelOpen}
+                    >
+                      {audPanelOpen ? "Done" : "Change"}
                     </button>
                   </div>
                 </Labeled>
@@ -1012,89 +1099,19 @@
                   </div>
                 )}
 
-                {/* Smart Switch: prospect → parent */}
-                <div style={{borderTop:`1px solid ${COLORS.border}`, paddingTop:10, marginTop:6}}>
-                  <div style={{fontSize:13, fontWeight:600, marginBottom:4}}>Smart Switch (prospect → parent)</div>
-                  <div style={{fontSize:12, color:COLORS.subtext, marginBottom:6}}>
-                    Automatically stop marketing once a family enrolls, and move them into the right operational flow.
-                  </div>
-                  <label style={{display:"flex", alignItems:"center", gap:8, fontSize:13, marginBottom:6}}>
-                    <input
-                      type="checkbox"
-                      checked={smartSwitchEnabled}
-                      onChange={(e)=>{
-                        const enabled = e.target.checked;
-                        setSmartSwitchEnabled(enabled);
-                        if (campaignName.trim()) autoSave({ smartSwitchEnabled: enabled });
-                      }}
-                    />
-                    <span>Turn on Smart Switch for this campaign</span>
-                  </label>
-
-                  {smartSwitchEnabled && (
-                    <div style={{display:"grid", gap:8, fontSize:13, marginTop:4}}>
-                      <div style={{display:"grid", gap:4}}>
-                        <span style={{fontSize:12, color:COLORS.subtext}}>Program to watch</span>
-                        <select
-                          value={smartSwitchProgram}
-                          onChange={(e)=>{
-                            setSmartSwitchProgram(e.target.value);
-                            if (campaignName.trim()) autoSave({ smartSwitchProgram: e.target.value });
-                          }}
-                          style={{...inputStyle, maxWidth:260}}
-                        >
-                          <option value="Any program">Any program in this campaign</option>
-                          <option value="After-school">After-school</option>
-                          <option value="Summer camp">Summer camp</option>
-                        </select>
-                      </div>
-
-                      <div style={{display:"grid", gap:4}}>
-                        <span style={{fontSize:12, color:COLORS.subtext}}>When a contact enrolls in that program</span>
-                        <label style={{display:"flex", alignItems:"center", gap:6}}>
-                          <input
-                            type="radio"
-                            name="smart-switch-mode"
-                            value="stopThisCampaign"
-                            checked={smartSwitchMode === "stopThisCampaign"}
-                            onChange={(e)=>{
-                              setSmartSwitchMode(e.target.value);
-                              if (campaignName.trim()) autoSave({ smartSwitchMode: e.target.value });
-                            }}
-                          />
-                          <span>Stop remaining marketing steps for this campaign</span>
-                        </label>
-                        <label style={{display:"flex", alignItems:"center", gap:6}}>
-                          <input
-                            type="radio"
-                            name="smart-switch-mode"
-                            value="moveToOnboarding"
-                            checked={smartSwitchMode === "moveToOnboarding"}
-                            onChange={(e)=>{
-                              setSmartSwitchMode(e.target.value);
-                              if (campaignName.trim()) autoSave({ smartSwitchMode: e.target.value });
-                            }}
-                          />
-                          <span>Move them into “New family onboarding” (demo)</span>
-                        </label>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <FooterNav onBack={goBack} onNext={goNext} nextLabel="Next" nextDisabled={audienceSegments.length===0}/>
                 {audPanelOpen && (
-                  <AudiencePanel id="audience-panel"
+                  <AudienceSelectorInline
                     onClose={()=>setAudPanelOpen(false)}
                     onApply={(segments)=>{
                       setAudienceSegments(segments);
                       setAudPanelOpen(false);
                       if (campaignName.trim()) {
+                        const count = 1500 + segments.length*10;
                         autoSave({
                           audience: segments.length
-                            ? `${(1500 + segments.length*10).toLocaleString()} (${segments.length>1?"Multiple segments":segments[0]})`
+                            ? `${count.toLocaleString()} (${segments.length>1?"Multiple segments":segments[0]})`
                             : "—",
-                          audienceCount: (1500 + segments.length*10),
+                          audienceCount: count,
                           audienceLabels: segments
                         });
                       }
@@ -1102,207 +1119,314 @@
                     initialSelected={audienceSegments}
                   />
                 )}
+
+                <FooterNav
+                  onBack={goBack}
+                  onNext={goNext}
+                  nextLabel="Next"
+                  nextDisabled={audienceSegments.length===0}
+                />
               </Panel>
             )}
 
             {activeStep===2 && (
               <Panel title="Compose & Schedule">
-                <div style={{marginBottom:8, fontSize:12, color:COLORS.subtext}}>
-                  Use steps to automate must-read operational messages (e.g., “3 days before payment is due, day-of reminder, past-due SMS”).
-                </div>
                 <div style={{display:"grid", gridTemplateColumns:"260px 1fr", gap:14}}>
                   {/* Steps list */}
-                  <div style={{border:`1px solid ${COLORS.border}`, borderRadius:12, background:COLORS.panelAlt, padding:10}}>
-                    <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6}}>
-                      <div style={{fontWeight:700, fontSize:14}}>Steps</div>
-                      <button style={btnGhost} onClick={()=>{
-                        resetSteps();
-                        if (campaignName.trim()) autoSave({ sequences: [] });
-                      }}>Reset</button>
+                  <div
+                    style={{
+                      border:`1px solid ${COLORS.border}`,
+                      borderRadius:12,
+                      background:COLORS.panelAlt,
+                      padding:10
+                    }}
+                  >
+                    <div
+                      style={{
+                        display:"flex",
+                        justifyContent:"space-between",
+                        alignItems:"center",
+                        marginBottom:6
+                      }}
+                    >
+                      <div style={{display:"flex", alignItems:"center", gap:6}}>
+                        <div style={{fontWeight:700, fontSize:14, textAlign:"left"}}>Steps</div>
+                        <InfoDot
+                          title="Use steps to automate must-read operational messages (for example, 3 days before payment is due, day-of reminder, and past-due SMS) so you don’t have to create a new campaign every time."
+                        />
+                      </div>
+                      <button
+                        style={btnGhost}
+                        onClick={()=>{
+                          resetSteps();
+                          if (campaignName.trim()) autoSave({ sequences: [] });
+                        }}
+                      >
+                        Reset
+                      </button>
                     </div>
 
-                    <div style={{marginBottom:8}}>
-                      <div style={{fontSize:11, color:COLORS.subtext, marginBottom:4}}>Quick add templates</div>
-                      <div style={{display:"flex", flexWrap:"wrap", gap:6}}>
-                        <button
-                          type="button"
-                          style={{...btnGhost, padding:"4px 8px", borderRadius:999, fontSize:11}}
-                          onClick={()=>{
-                            const nextId = "s"+Math.random().toString(36).slice(2,7);
-                            const newStep = {
-                              id: nextId,
-                              type: "Email",
-                              daysOffset: 3,
-                              time: "",
-                              subject: "Reminder: Payment still due for [Program name]",
-                              body: "Hi [Parent name],\n\nOur records show your payment for [Program name] is still outstanding. Please use the link below to complete payment so we can hold your child’s spot.\n\n[Payment link]\n\nIf you’ve just paid, thank you — this reminder may have crossed paths.\n\n— [Program name] Team",
-                              autoStopRule: "Stop if payment received",
-                              useRecoTime: true
-                            };
-                            setSteps(p=>[...p, newStep]);
-                            setActiveMsgStepId(nextId);
-                            if (campaignName.trim()) autoSave();
-                          }}
-                        >
-                          + Payment reminder
-                        </button>
-                        <button
-                          type="button"
-                          style={{...btnGhost, padding:"4px 8px", borderRadius:999, fontSize:11}}
-                          onClick={()=>{
-                            const nextId = "s"+Math.random().toString(36).slice(2,7);
-                            const newStep = {
-                              id: nextId,
-                              type: "Email",
-                              daysOffset: 1,
-                              time: "",
-                              subject: "Still need your forms for [Program name]",
-                              body: "Hi [Parent name],\n\nWe still need a few forms completed for [Child name] before they attend [Program name].\n\nPlease use the link below to finish everything today:\n[Forms link]\n\nOnce complete, we’ll confirm by email.\n\n— [Program name] Team",
-                              autoStopRule: "Stop if forms completed",
-                              useRecoTime: true
-                            };
-                            setSteps(p=>[...p, newStep]);
-                            setActiveMsgStepId(nextId);
-                            if (campaignName.trim()) autoSave();
-                          }}
-                        >
-                          + Forms reminder
-                        </button>
-                        <button
-                          type="button"
-                          style={{...btnGhost, padding:"4px 8px", borderRadius:999, fontSize:11}}
-                          onClick={()=>{
-                            const nextId = "s"+Math.random().toString(36).slice(2,7);
-                            const newStep = {
-                              id: nextId,
-                              type: "SMS",
-                              daysOffset: 0,
-                              time: "",
-                              subject: "",
-                              body: "Hi [Parent name], quick update: [Short schedule change]. Check your email for details.",
-                              autoStopRule: "None",
-                              useRecoTime: true
-                            };
-                            setSteps(p=>[...p, newStep]);
-                            setActiveMsgStepId(nextId);
-                            if (campaignName.trim()) autoSave();
-                          }}
-                        >
-                          + Schedule change SMS
-                        </button>
-                      </div>
+                    <div style={{marginTop:4, marginBottom:10}}>
+                      <label
+                        style={{
+                          display:"flex",
+                          alignItems:"flex-start",
+                          gap:8,
+                          fontSize:12,
+                          textAlign:"left"
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={smartSwitchOn}
+                          onChange={e=>setSmartSwitchOn(e.target.checked)}
+                          style={{marginTop:2}}
+                        />
+                        <span style={{display:"inline-flex", alignItems:"center", gap:6}}>
+                          <span style={{fontWeight:600}}>Smart Switch</span>
+                          <InfoDot
+                            title="Smart Switch automatically stops follow-ups once a family enrolls or takes the key action, so they don’t keep getting reminder messages after they’re already up to date."
+                          />
+                          <span
+                            style={tagStatic("rgba(121,249,219,0.25)", "#047857")}
+                          >
+                            Beta
+                          </span>
+                        </span>
+                      </label>
                     </div>
 
                     {steps.map((st, idx)=>{
                       const isExpanded = st.id===activeMsgStepId;
-                      const arriveDate = (idx===0) ? st.date : (baseDate ? addDays(baseDate, st.daysOffset||0) : "");
+                      const arriveDate = (idx===0)
+                        ? st.date
+                        : (baseDate ? addDays(baseDate, st.daysOffset||0) : "");
                       const stepPill = isExpanded
-                        ? badge("rgba(37,99,235,0.12)", COLORS.primary) // blue when expanded (making selections)
-                        : badge("rgba(148,163,184,0.25)", "#334155");     // gray when condensed
+                        ? tagStatic("rgba(37,99,235,0.16)", COLORS.text)
+                        : tagStatic("rgba(148,163,184,0.25)", "#334155");
                       return (
-                        <div key={st.id}
-                          style={{border:`1px solid ${COLORS.border}`, borderRadius:10, background:COLORS.panel, padding:10, marginBottom:10}}>
+                        <div
+                          key={st.id}
+                          style={{
+                            border:`1px solid ${COLORS.border}`,
+                            borderRadius:10,
+                            background:COLORS.panel,
+                            padding:10,
+                            marginBottom:10
+                          }}
+                        >
                           {/* Header row (condensed view) */}
                           <div
-                            style={{display:"flex", alignItems:"center", justifyContent:"space-between", gap:8, cursor: !isExpanded ? "pointer" : "default"}}
+                            style={{
+                              display:"flex",
+                              alignItems:"center",
+                              justifyContent:"space-between",
+                              gap:8,
+                              cursor: !isExpanded ? "pointer" : "default"
+                            }}
                             onClick={()=>{ if (!isExpanded) setActiveMsgStepId(st.id); }}
                           >
-                            <div style={{display:"flex", alignItems:"center", gap:8, flexWrap:"wrap"}}>
+                            <div
+                              style={{
+                                display:"flex",
+                                alignItems:"center",
+                                gap:8,
+                                flexWrap:"wrap"
+                              }}
+                            >
                               <span style={stepPill}>Step {idx+1}</span>
-                              {!isExpanded && <span style={badge("rgba(148,163,184,0.15)", COLORS.subtext)}>{st.type}</span>}
+                              {!isExpanded && (
+                                <span
+                                  style={tagStatic("rgba(148,163,184,0.15)", COLORS.subtext)}
+                                >
+                                  {st.type}
+                                </span>
+                              )}
                               {!isExpanded && arriveDate && (
-                                <span style={{fontSize:11, color:COLORS.subtext}}>{arriveDate}</span>
+                                <span
+                                  style={{
+                                    fontSize:11,
+                                    color:COLORS.subtext,
+                                    textAlign:"left"
+                                  }}
+                                >
+                                  {arriveDate}
+                                </span>
                               )}
                             </div>
                             {!isExpanded && steps.length>1 && (
                               <button
-                                title="Remove step"
+                                title="Remove Step"
                                 onClick={(e)=>{
                                   e.stopPropagation();
                                   removeStep(st.id);
                                   if (campaignName.trim()) autoSave();
                                 }}
                                 style={{...btnGhost, padding:"2px 6px", color:COLORS.subtext}}
-                              >×</button>
+                              >
+                                ×
+                              </button>
                             )}
                           </div>
 
                           {/* Expanded editor */}
                           {isExpanded && (
                             <div style={{marginTop:12, display:"grid", gap:12}}>
-                              <TypeToggle value={st.type} onChange={(v)=>{
-                                updateStep(st.id, {type:v});
-                                if (campaignName.trim()) autoSave();
-                                if (v !== "Email") setHtmlMode(false);
-                              }}/>
+                              <TypeToggle
+                                value={st.type}
+                                onChange={(v)=>{
+                                  updateStep(st.id, {type:v});
+                                  if (campaignName.trim()) autoSave();
+                                }}
+                              />
 
                               {/* Scheduling controls */}
                               {idx===0 ? (
                                 <div style={{display:"grid", gap:10}}>
-                                  <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:10}}>
+                                  <div
+                                    style={{
+                                      display:"grid",
+                                      gridTemplateColumns:"1fr 1fr",
+                                      gap:10
+                                    }}
+                                  >
                                     <Labeled label="Date" inline>
-                                      <input type="date" value={st.date} onChange={e=>{
-                                        updateStep(st.id,{date:e.target.value});
-                                        if (campaignName.trim()) autoSave();
-                                      }} style={inputStyle}/>
+                                      <input
+                                        type="date"
+                                        value={st.date}
+                                        onChange={e=>{
+                                          updateStep(st.id,{date:e.target.value});
+                                          if (campaignName.trim()) autoSave();
+                                        }}
+                                        style={inputStyle}
+                                      />
                                     </Labeled>
                                     <Labeled label="Time" inline>
-                                      <input type="time" value={st.time} disabled={!!st.useRecoTime} onChange={e=>{
-                                        updateStep(st.id,{time:e.target.value});
-                                        if (campaignName.trim()) autoSave();
-                                      }} style={inputStyle}/>
+                                      <input
+                                        type="time"
+                                        value={st.time}
+                                        disabled={!!st.useRecoTime}
+                                        onChange={e=>{
+                                          updateStep(st.id,{time:e.target.value});
+                                          if (campaignName.trim()) autoSave();
+                                        }}
+                                        style={inputStyle}
+                                      />
                                     </Labeled>
                                   </div>
-                                  <div style={{marginTop:2}}>
-                                    <label style={{display:"flex", alignItems:"center", gap:8, fontSize:13}}>
+                                  <div style={{marginTop:2, textAlign:"left"}}>
+                                    <label
+                                      style={{
+                                        display:"flex",
+                                        alignItems:"center",
+                                        gap:8,
+                                        fontSize:13
+                                      }}
+                                    >
                                       <input
                                         type="checkbox"
                                         checked={!!st.useRecoTime}
                                         onChange={(e)=>{
                                           const checked = e.target.checked;
-                                          const t = recommendTimeFor({type: st.type, audienceSegments});
-                                          updateStep(st.id, { useRecoTime: checked, time: checked ? t : (st.time||"") });
+                                          const t = recommendTimeFor({
+                                            type: st.type,
+                                            audienceSegments
+                                          });
+                                          updateStep(st.id, {
+                                            useRecoTime: checked,
+                                            time: checked ? t : (st.time||"")
+                                          });
                                           if (campaignName.trim()) autoSave();
                                         }}
                                       />
                                       <span>Send at recommended time</span>
                                     </label>
-                                    <div style={{fontSize:11, color:COLORS.subtext, marginLeft:26}}>
-                                      Based on past opens & clicks {st.useRecoTime && st.time ? `• ${st.time}` : ""}
+                                    <div
+                                      style={{
+                                        fontSize:11,
+                                        color:COLORS.subtext,
+                                        marginLeft:26,
+                                        textAlign:"left"
+                                      }}
+                                    >
+                                      Based on past opens and clicks{" "}
+                                      {st.useRecoTime && st.time ? `• ${st.time}` : ""}
                                     </div>
                                   </div>
                                 </div>
                               ) : (
                                 <div style={{display:"grid", gap:10}}>
-                                  <Labeled label="Send this message in" inline>
-                                    <div style={{display:"grid", gridTemplateColumns:"1fr auto", gap:8, alignItems:"center"}}>
-                                      <input type="number" min="0" value={st.daysOffset ?? 0} onChange={(e)=>{
-                                        updateStep(st.id,{daysOffset: Number(e.target.value)});
-                                        if (campaignName.trim()) autoSave();
-                                      }} style={inputStyle}/>
-                                      <span style={{fontSize:13, color:COLORS.subtext}}>days</span>
+                                  <Labeled label="Send This Message In" inline>
+                                    <div
+                                      style={{
+                                        display:"grid",
+                                        gridTemplateColumns:"1fr auto",
+                                        gap:8,
+                                        alignItems:"center"
+                                      }}
+                                    >
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        value={st.daysOffset ?? 0}
+                                        onChange={(e)=>{
+                                          updateStep(st.id,{daysOffset: Number(e.target.value)});
+                                          if (campaignName.trim()) autoSave();
+                                        }}
+                                        style={inputStyle}
+                                      />
+                                      <span
+                                        style={{
+                                          fontSize:13,
+                                          color:COLORS.subtext,
+                                          textAlign:"left"
+                                        }}
+                                      >
+                                        days
+                                      </span>
                                     </div>
                                   </Labeled>
-                                  <div style={{marginTop:2}}>
-                                    <label style={{display:"flex", alignItems:"center", gap:8, fontSize:13}}>
+                                  <div style={{marginTop:2, textAlign:"left"}}>
+                                    <label
+                                      style={{
+                                        display:"flex",
+                                        alignItems:"center",
+                                        gap:8,
+                                        fontSize:13
+                                      }}
+                                    >
                                       <input
                                         type="checkbox"
                                         checked={!!st.useRecoTime}
                                         onChange={(e)=>{
                                           const checked = e.target.checked;
-                                          const t = recommendTimeFor({type: st.type, audienceSegments});
-                                          updateStep(st.id, { useRecoTime: checked, time: checked ? t : "" });
+                                          const t = recommendTimeFor({
+                                            type: st.type,
+                                            audienceSegments
+                                          });
+                                          updateStep(st.id, {
+                                            useRecoTime: checked,
+                                            time: checked ? t : ""
+                                          });
                                           if (campaignName.trim()) autoSave();
                                         }}
                                       />
                                       <span>Send at recommended time</span>
                                     </label>
-                                    <div style={{fontSize:11, color:COLORS.subtext, marginLeft:26}}>
-                                      Based on past opens & clicks {st.useRecoTime && st.time ? `• ${st.time}` : ""}
+                                    <div
+                                      style={{
+                                        fontSize:11,
+                                        color:COLORS.subtext,
+                                        marginLeft:26,
+                                        textAlign:"left"
+                                      }}
+                                    >
+                                      Based on past opens and clicks{" "}
+                                      {st.useRecoTime && st.time ? `• ${st.time}` : ""}
                                     </div>
                                   </div>
 
-                                  <Labeled label="Auto-stop rule">
+                                  <Labeled label="Auto-Stop Rule">
                                     <select
                                       value={st.autoStopRule || "None"}
                                       onChange={e=>{
@@ -1312,19 +1436,27 @@
                                       style={{...inputStyle}}
                                     >
                                       <option value="None">None</option>
-                                      <option value="Stop if opened">Stop if opened</option>
-                                      <option value="Stop if clicked">Stop if clicked</option>
-                                      <option value="Stop if payment received">Stop if payment received (demo)</option>
-                                      <option value="Stop if forms completed">Stop if forms completed (demo)</option>
+                                      <option value="Stop If Opened">Stop If Opened</option>
+                                      <option value="Stop If Clicked">Stop If Clicked</option>
                                     </select>
                                   </Labeled>
                                 </div>
                               )}
 
-                              <button style={{...btnGhost, width:"fit-content", padding:"4px 8px", marginTop:2}} onClick={()=>{
-                                addStep();
-                                if (campaignName.trim()) autoSave();
-                              }}>+ Add step</button>
+                              <button
+                                style={{
+                                  ...btnGhost,
+                                  width:"fit-content",
+                                  padding:"4px 8px",
+                                  marginTop:2
+                                }}
+                                onClick={()=>{
+                                  addStep();
+                                  if (campaignName.trim()) autoSave();
+                                }}
+                              >
+                                + Add Step
+                              </button>
                             </div>
                           )}
                         </div>
@@ -1333,75 +1465,74 @@
                   </div>
 
                   {/* Editor for active step */}
-                  <div style={{border:`1px solid ${COLORS.border}`, borderRadius:12, background:COLORS.panel, padding:10}}>
-                    <div style={{display:"flex", justifyContent:"flex-end", alignItems:"center", marginBottom:8}}>
-                      <button style={btnGhost} onClick={()=>setPreviewOpen(true)}>Preview & Test</button>
+                  <div
+                    style={{
+                      border:`1px solid ${COLORS.border}`,
+                      borderRadius:12,
+                      background:COLORS.panel,
+                      padding:10
+                    }}
+                  >
+                    <div
+                      style={{
+                        display:"flex",
+                        justifyContent:"flex-end",
+                        alignItems:"center",
+                        marginBottom:8
+                      }}
+                    >
+                      <button style={btnGhost} onClick={()=>setPreviewOpen(true)}>
+                        Preview & Test
+                      </button>
                     </div>
 
                     {activeEditorStep.type==="Email" && (
                       <Labeled label="Subject" required>
-                        <Input placeholder="Write a clear, compelling subject…" value={activeEditorStep.subject} onChange={(v)=>{
-                          updateStep(activeEditorStep.id,{subject:v});
-                          if (campaignName.trim()) autoSave();
-                        }}/>
+                        <Input
+                          placeholder="Write a clear, compelling subject…"
+                          value={activeEditorStep.subject}
+                          onChange={(v)=>{
+                            updateStep(activeEditorStep.id,{subject:v});
+                            if (campaignName.trim()) autoSave();
+                          }}
+                        />
                       </Labeled>
                     )}
 
-                    <Labeled label={activeEditorStep.type==="Email" ? (htmlMode ? "Email body (HTML builder — mock)" : "Email body (plain)") : "SMS body (plain)"} required>
-                      <div style={{display:"flex", gap:6, marginBottom:6, position:"relative"}}>
-                        <button style={btnGhost} type="button" onClick={()=>setEmojiOpen(o=>!o)}>Emoji</button>
-                        <button
-                          style={{...btnGhost, ...(activeEditorStep.type!=="Email"?{opacity:.5, cursor:"not-allowed"}:{})}}
-                          type="button"
-                          onClick={()=> activeEditorStep.type==="Email" && setHtmlMode(m=>!m)}
-                          aria-pressed={htmlMode}
-                          title={activeEditorStep.type==="Email" ? "Toggle HTML builder (mock)" : "HTML builder available for Email only"}
-                        >HTML</button>
-                        {emojiOpen && (
-                          <div style={{position:"absolute", top:30, left:0, background:COLORS.panel, border:`1px solid ${COLORS.border}`, borderRadius:10, padding:6, display:"flex", gap:6, zIndex:20, boxShadow:"0 10px 22px rgba(15,23,42,0.1)"}}>
-                            {EMOJIS.map(e=>(
-                              <button key={e} style={{background:"transparent", border:"none", fontSize:19, cursor:"pointer"}} onClick={()=>{
-                                appendEmoji(e);
-                                if (campaignName.trim()) autoSave();
-                              }}>{e}</button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      {activeEditorStep.type==="Email" && htmlMode ? (
-                        <div style={{border:`1px dashed ${COLORS.border}`, borderRadius:10, padding:10, background:COLORS.panelAlt}}>
-                          <div style={{fontSize:12, color:COLORS.subtext, marginBottom:8}}>
-                            HTML builder mock (drag blocks disabled in prototype)
-                          </div>
-                          <div style={{border:`1px solid ${COLORS.border}`, borderRadius:8, overflow:"hidden", background:"#fff"}}>
-                            <div style={{padding:"10px 12px", borderBottom:`1px solid ${COLORS.border}`, fontWeight:700, fontSize:13}}>
-                              Camp Name
-                            </div>
-                            <div style={{display:"grid", gap:10, padding:12}}>
-                              <div style={{height:120, border:`1px solid ${COLORS.border}`, borderRadius:8, display:"grid", placeItems:"center"}}>Image Block</div>
-                              <div style={{border:`1px solid ${COLORS.border}`, borderRadius:8, padding:10}}>
-                                <div style={{fontWeight:700, marginBottom:6}}>Headline</div>
-                                <div style={{fontSize:13, color:COLORS.text}}>Replace this with your rich HTML content…</div>
-                              </div>
-                              <div style={{display:"flex", justifyContent:"center"}}>
-                                <button style={{...btnPrimary, borderRadius:999}}>Primary CTA</button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <Textarea placeholder="Write your message…" value={activeEditorStep.body} onChange={(v)=>{
+                    <Labeled
+                      label={
+                        activeEditorStep.type==="Email"
+                          ? "Email body"
+                          : "SMS body"
+                      }
+                      required
+                    >
+                      <Textarea
+                        placeholder="Write your message…"
+                        value={activeEditorStep.body}
+                        onChange={(v)=>{
                           updateStep(activeEditorStep.id,{body:v});
                           if (campaignName.trim()) autoSave();
-                        }}/>
-                      )}
+                        }}
+                      />
+                      {activeEditorStep.type==="Email" && <FormattingToolbar />}
                     </Labeled>
 
-                    <div style={{display:"flex", justifyContent:"space-between", marginTop:10}}>
+                    <div
+                      style={{
+                        display:"flex",
+                        justifyContent:"space-between",
+                        marginTop:10
+                      }}
+                    >
                       <button style={btnGhost} onClick={goBack}>Back</button>
                       <div style={{display:"flex", gap:6}}>
-                        <button style={btnPrimary} onClick={()=>setActiveStep(3)}>Next</button>
+                        <button
+                          style={{...btnPrimary, textAlign:"center"}}
+                          onClick={()=>setActiveStep(3)}
+                        >
+                          Next
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -1412,7 +1543,7 @@
                     step={activeEditorStep}
                     subject={activeEditorStep.subject}
                     onClose={()=>setPreviewOpen(false)}
-                    onSendTest={()=>{ alert("Test sent to your account email (demo)."); setPreviewOpen(false); }}
+                    onSendTest={()=>{}}
                   />
                 )}
               </Panel>
@@ -1421,73 +1552,131 @@
             {activeStep===3 && (
               <Panel title="Review & Analytics">
                 {/* Analytics row directly under the wizard */}
-                <AnalyticsRow steps={steps} audienceCount={audienceCount} />
-
-                <div style={{marginTop:8}}>
-                  <button style={btnGhost} onClick={()=>setActiveStep(2)}>
-                    Adjust messages & follow-ups
-                  </button>
-                </div>
+                <AnalyticsRow
+                  steps={steps}
+                  audienceCount={audienceCount}
+                  selectedMetric={selectedMetric}
+                  onSelectMetric={setSelectedMetric}
+                />
 
                 {/* Summary below analytics */}
                 <div style={{marginTop:14}}>
-                  <div style={{border:`1px solid ${COLORS.border}`, borderRadius:12, padding:10, background:COLORS.panelAlt, display:"grid", gap:8}}>
-                    <Row label="Campaign name" value={campaignName||"—"} />
-                    <Row label="Purpose" value={campaignPurpose === "Operational" ? "Operational (payments, forms, schedule)" : campaignPurpose} />
+                  <div
+                    style={{
+                      border:`1px solid ${COLORS.border}`,
+                      borderRadius:12,
+                      padding:10,
+                      background:COLORS.panelAlt,
+                      display:"grid",
+                      gap:8
+                    }}
+                  >
+                    <Row label="Campaign Name" value={campaignName||"—"} />
                     <Row label="From" value={fromSender} />
-                    <Row label="Audience" value={
-                      audienceSegments.length
-                        ? `${audienceCount.toLocaleString()} · ${audienceSegments.join(", ")}`
-                        : "—"
-                    } />
+                    <Row
+                      label="Audience"
+                      value={
+                        audienceSegments.length
+                          ? `${audienceCount.toLocaleString()} · ${audienceSegments.join(", ")}`
+                          : "—"
+                      }
+                    />
                     {audienceSegments.length > 0 && (
                       <div>
-                        <div style={{color:COLORS.subtext, fontSize:12, marginBottom:4}}>Selected audiences</div>
+                        <div
+                          style={{
+                            color:COLORS.subtext,
+                            fontSize:12,
+                            marginBottom:4,
+                            textAlign:"left"
+                          }}
+                        >
+                          Selected audiences
+                        </div>
                         <div style={{display:"flex", gap:6, flexWrap:"wrap"}}>
                           {audienceSegments.map(seg => (
-                            <span key={seg} style={badge("rgba(148,163,184,0.1)", COLORS.text)}>{seg}</span>
+                            <span
+                              key={seg}
+                              style={badge("rgba(148,163,184,0.1)", COLORS.text)}
+                            >
+                              {seg}
+                            </span>
                           ))}
                         </div>
                       </div>
                     )}
-
                     <div>
-                      <div style={{color:COLORS.subtext, fontSize:12, marginBottom:4}}>Smart Switch</div>
-                      <div style={{fontSize:13}}>
-                        {smartSwitchEnabled ? (
-                          <>
-                            <div>Watching: {smartSwitchProgram}</div>
-                            <div>
-                              Behavior: {smartSwitchMode === "stopThisCampaign"
-                                ? "Stop remaining marketing steps for this campaign once a family enrolls."
-                                : "Move enrolled families into the onboarding flow and stop this campaign for them."}
-                            </div>
-                          </>
-                        ) : (
-                          "Off — this campaign will continue regardless of enrollment changes."
-                        )}
+                      <div
+                        style={{
+                          color:COLORS.subtext,
+                          fontSize:12,
+                          marginBottom:4,
+                          textAlign:"left"
+                        }}
+                      >
+                        Steps
                       </div>
-                    </div>
-
-                    <div>
-                      <div style={{color:COLORS.subtext, fontSize:12, marginBottom:4}}>Steps</div>
                       <div style={{display:"grid", gap:6}}>
                         {steps.map((st,i)=>{
-                          const arriveDate = (i===0) ? st.date : (steps[0]?.date ? addDays(steps[0].date, st.daysOffset||0) : "");
-                          const timeText = st.useRecoTime ? `${st.time || recommendTimeFor({type: st.type})} (recommended)` : ((i===0 ? normalizeTime(st.time) : (st.time || "09:00")));
+                          const arriveDate = (i===0)
+                            ? st.date
+                            : (steps[0]?.date ? addDays(steps[0].date, st.daysOffset||0) : "");
+                          const timeText = st.useRecoTime
+                            ? `${st.time || recommendTimeFor({type: st.type})} (recommended)`
+                            : (i===0 ? normalizeTime(st.time) : (st.time || "09:00"));
                           return (
-                            <div key={st.id} style={{border:`1px solid ${COLORS.border}`, borderRadius:10, padding:8, background:COLORS.panel}}>
-                              <div style={{display:"flex", alignItems:"center", gap:6, marginBottom:4}}>
-                                <span style={badge("rgba(37,99,235,0.12)", COLORS.primary)}>Step {i+1}</span>
-                                <span style={badge("rgba(148,163,184,0.12)", COLORS.subtext)}>{st.type}</span>
+                            <div
+                              key={st.id}
+                              style={{
+                                border:`1px solid ${COLORS.border}`,
+                                borderRadius:10,
+                                padding:8,
+                                background:COLORS.panel
+                              }}
+                            >
+                              <div
+                                style={{
+                                  display:"flex",
+                                  alignItems:"center",
+                                  gap:6,
+                                  marginBottom:4
+                                }}
+                              >
+                                <span
+                                  style={tagStatic("rgba(37,99,235,0.18)", COLORS.text)}
+                                >
+                                  Step {i+1}
+                                </span>
+                                <span
+                                  style={tagStatic("rgba(148,163,184,0.12)", COLORS.subtext)}
+                                >
+                                  {st.type}
+                                </span>
                               </div>
-                              <div style={{display:"grid", gap:3, fontSize:13}}>
-                                <div style={{display:"flex", gap:12, alignItems:"center"}}>
+                              <div
+                                style={{
+                                  display:"grid",
+                                  gap:3,
+                                  fontSize:13,
+                                  textAlign:"left"
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    display:"flex",
+                                    gap:12,
+                                    alignItems:"center"
+                                  }}
+                                >
                                   <strong>Send on:</strong>
                                   <span>{arriveDate || "No date"}</span>
                                   <span>{timeText}</span>
                                 </div>
-                                {st.type==="Email" && <div><strong>Subject:</strong> {st.subject || "—"}</div>}
+                                {st.type==="Email" && (
+                                  <div>
+                                    <strong>Subject:</strong> {st.subject || "—"}
+                                  </div>
+                                )}
                                 <div>
                                   <strong>Body:</strong> {st.body ? st.body : "—"}
                                 </div>
@@ -1504,11 +1693,45 @@
                     </div>
                   </div>
 
-                  <div style={{display:"flex", justifyContent:"space-between", marginTop:10}}>
-                    <button style={btnGhost} onClick={()=>setActiveStep(2)}>Back</button>
-                    <button style={{...btnPrimary, opacity:canLaunch?1:.6}} disabled={!canLaunch} onClick={handleLaunch}>Launch</button>
+                  <div
+                    style={{
+                      display:"flex",
+                      justifyContent:"space-between",
+                      marginTop:10
+                    }}
+                  >
+                    <button
+                      style={btnGhost}
+                      onClick={()=>setActiveStep(2)}
+                    >
+                      Back
+                    </button>
+                    <button
+                      style={{
+                        ...btnPrimary,
+                        opacity:canLaunch?1:.6,
+                        textAlign:"center"
+                      }}
+                      disabled={!canLaunch}
+                      onClick={()=>setShowLaunchConfirm(true)}
+                    >
+                      Launch
+                    </button>
                   </div>
                 </div>
+
+                {showLaunchConfirm && (
+                  <ConfirmDialog
+                    title="Launch Campaign?"
+                    body="This will send messages according to the schedule you set. You can undo from the banner after launch."
+                    confirmLabel="Launch Campaign"
+                    onConfirm={()=>{
+                      setShowLaunchConfirm(false);
+                      handleLaunch();
+                    }}
+                    onCancel={()=>setShowLaunchConfirm(false)}
+                  />
+                )}
               </Panel>
             )}
           </div>
@@ -1517,70 +1740,244 @@
     }
 
     /* -------------------------- Review & Analytics UI ------------------------ */
-    function MetricCard({ label, value, sub }) {
+    function MetricCard({ label, value, sub, active, onClick, color }) {
       return (
-        <div style={{flex:"1 1 160px", border:`1px solid ${COLORS.border}`, borderRadius:10, background:COLORS.panel, padding:"10px 12px"}}>
-          <div style={{fontSize:11, color:COLORS.subtext, textTransform:"uppercase", letterSpacing:".03em", marginBottom:6}}>{label}</div>
-          <div style={{fontSize:18, fontWeight:800}}>{value}</div>
-          {sub && <div style={{fontSize:12, color:COLORS.subtext, marginTop:4}}>{sub}</div>}
+        <button
+          type="button"
+          onClick={onClick}
+          style={{
+            flex:"1 1 160px",
+            border:`1px solid ${active ? color || COLORS.primary : COLORS.border}`,
+            borderRadius:10,
+            background: active ? "rgba(86,201,254,0.08)" : COLORS.panel,
+            padding:"10px 12px",
+            cursor:"pointer",
+            textAlign:"left"
+          }}
+        >
+          <div
+            style={{
+              height:3,
+              borderRadius:999,
+              background:color || COLORS.primary,
+              marginBottom:6,
+              opacity: active ? 1 : 0.6
+            }}
+          />
+          <div
+            style={{
+              fontSize:11,
+              color:COLORS.subtext,
+              textTransform:"uppercase",
+              letterSpacing:".03em",
+              marginBottom:6,
+              textAlign:"left"
+            }}
+          >
+            {label}
+          </div>
+          <div style={{fontSize:18, fontWeight:800, textAlign:"left"}}>{value}</div>
+          {sub && (
+            <div
+              style={{
+                fontSize:12,
+                color:COLORS.subtext,
+                marginTop:4,
+                textAlign:"left"
+              }}
+            >
+              {sub}
+            </div>
+          )}
+        </button>
+      );
+    }
+
+    function MetricDetail({ metric, delivered }) {
+      let title = metric;
+      let body = "";
+      if (metric === "Delivered") {
+        body = `Estimated number of emails or SMS successfully delivered based on your selected audience of ${delivered.toLocaleString()} contacts.`;
+      } else if (metric === "Open Rate") {
+        body = "Percentage of delivered messages that were opened at least once. Use this to see if your subject lines and timing are working.";
+      } else if (metric === "Click Rate") {
+        body = "Percentage of delivered messages that received at least one click. This helps you understand if your content and calls-to-action are compelling.";
+      } else if (metric === "Unsubscribe") {
+        body = "Percentage of recipients who unsubscribed from your messages. A spike here can indicate messaging fatigue or misaligned expectations.";
+      } else if (metric === "Spam") {
+        body = "Percentage of recipients who marked your emails as spam. Keep this number low to protect deliverability and trust.";
+      }
+
+      return (
+        <div
+          style={{
+            marginTop:8,
+            border:`1px dashed ${COLORS.border}`,
+            borderRadius:10,
+            padding:"8px 10px",
+            background:COLORS.panelAlt,
+            textAlign:"left"
+          }}
+        >
+          <div
+            style={{
+              fontSize:12,
+              fontWeight:600,
+              marginBottom:4,
+              textAlign:"left"
+            }}
+          >
+            {title} details
+          </div>
+          <div
+            style={{
+              fontSize:12,
+              color:COLORS.subtext,
+              textAlign:"left"
+            }}
+          >
+            {body}
+          </div>
         </div>
       );
     }
-    function AnalyticsRow({ steps, audienceCount }) {
-      // Simple demo numbers (replace with real once wired to backend)
+
+    function AnalyticsRow({ audienceCount, selectedMetric, onSelectMetric }) {
+      // Simple demo numbers
       const delivered = audienceCount;
       const openRate = 0.36;
       const clickRate = 0.042;
-      const onTimePaymentsRate = 0.82;
-      const newEnrollments = Math.round(audienceCount * 0.08);
+      const unsubRate = 0.002;
+      const spamRate = 0.0002;
 
       return (
-        <div style={{display:"flex", gap:10, flexWrap:"wrap"}}>
-          <MetricCard label="Delivered" value={delivered.toLocaleString()} />
-          <MetricCard label="Open rate" value={(openRate*100).toFixed(1) + "%"} sub="vs. last 30 days: +2.1%" />
-          <MetricCard label="Click rate" value={(clickRate*100).toFixed(1) + "%"} sub="vs. last 30 days: -0.3%" />
-          <MetricCard label="On-time payments" value={(onTimePaymentsRate*100).toFixed(0) + "%"} sub="Families who paid by due date (demo)" />
-          <MetricCard label="New enrollments" value={newEnrollments} sub="Attributed to this campaign (demo)" />
-        </div>
+        <>
+          <div style={{display:"flex", gap:10, flexWrap:"wrap"}}>
+            <MetricCard
+              label="Delivered"
+              value={delivered.toLocaleString()}
+              active={selectedMetric==="Delivered"}
+              color={BRAND.mint}
+              onClick={()=>onSelectMetric("Delivered")}
+            />
+            <MetricCard
+              label="Open Rate"
+              value={(openRate*100).toFixed(1) + "%"}
+              sub="vs. last 30 days: +2.1%"
+              active={selectedMetric==="Open Rate"}
+              color={BRAND.blue}
+              onClick={()=>onSelectMetric("Open Rate")}
+            />
+            <MetricCard
+              label="Click Rate"
+              value={(clickRate*100).toFixed(1) + "%"}
+              sub="vs. last 30 days: -0.3%"
+              active={selectedMetric==="Click Rate"}
+              color={BRAND.purple}
+              onClick={()=>onSelectMetric("Click Rate")}
+            />
+            <MetricCard
+              label="Unsubscribe"
+              value={(unsubRate*100).toFixed(2) + "%"}
+              active={selectedMetric==="Unsubscribe"}
+              color={BRAND.yellow}
+              onClick={()=>onSelectMetric("Unsubscribe")}
+            />
+            <MetricCard
+              label="Spam"
+              value={(spamRate*100).toFixed(2) + "%"}
+              active={selectedMetric==="Spam"}
+              color={BRAND.red}
+              onClick={()=>onSelectMetric("Spam")}
+            />
+          </div>
+          <MetricDetail
+            metric={selectedMetric}
+            delivered={delivered}
+          />
+        </>
       );
     }
 
     /* -------------------------- Shared subcomponents ------------------------- */
     function Stepper({ activeStep, onStepClick }){
+      const progress = (activeStep + 1) / (STEPS.length || 1);
+
       return (
-        <div role="navigation" aria-label="Creation steps"
-             style={{display:"flex", gap:0, flexWrap:"nowrap", borderBottom:`1px solid ${COLORS.border}`}}>
-          {STEPS.map((label, idx)=>{
-            const active = idx===activeStep;
-            return (
-              <button
-                key={label}
-                onClick={()=>onStepClick(idx)}
-                style={{
-                  appearance:"none",
-                  border:"none",
-                  background:"transparent",
-                  padding:"10px 16px",
-                  fontWeight:700,
-                  fontSize:"13px",
-                  color: active ? COLORS.primary : COLORS.text,
-                  borderBottom: `2px solid ${active ? COLORS.primary : "transparent"}`,
-                  marginBottom:-1,
-                  cursor:"pointer"
-                }}
-                aria-current={active?"step":undefined}
-              >
-                {label}
-              </button>
-            );
-          })}
+        <div style={{marginBottom:4}}>
+          <div
+            role="navigation"
+            aria-label="Creation steps"
+            style={{display:"flex", gap:0, flexWrap:"nowrap"}}
+          >
+            {STEPS.map((label, idx)=>{
+              const active = idx===activeStep;
+              const completed = idx < activeStep;
+              return (
+                <button
+                  key={label}
+                  onClick={()=>onStepClick(idx)}
+                  style={{
+                    flex:1,
+                    appearance:"none",
+                    border:"none",
+                    borderBottom: `${WIZARD_LINE}px solid ${active ? COLORS.primary : "transparent"}`,
+                    background: active ? COLORS.panel : "transparent",
+                    padding:"10px 16px",
+                    fontWeight:700,
+                    fontSize:"13px",
+                    color: active
+                      ? COLORS.primary
+                      : (completed ? COLORS.subtext : COLORS.text),
+                    cursor:"pointer",
+                    textAlign:"left",
+                    borderRadius:"10px 10px 0 0"
+                  }}
+                  aria-current={active?"step":undefined}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+          <div
+            style={{
+              position:"relative",
+              height:WIZARD_LINE,
+              borderRadius:999,
+              background:"#e5e7eb",
+              overflow:"hidden"
+            }}
+          >
+            <div
+              style={{
+                position:"absolute",
+                left:0,
+                top:0,
+                bottom:0,
+                width:`${progress*100}%`,
+                background:COLORS.primary
+              }}
+            />
+          </div>
         </div>
       );
     }
+
     function Panel({ title, children }){
       return (
-        <div style={{border:`1px solid ${COLORS.border}`, borderRadius:12, background:COLORS.panel, padding:14, marginTop:10}} role="region" aria-label={title}>
-          <h2 style={{marginTop:0, fontSize:16}}>{title}</h2>
+        <div
+          style={{
+            border:`1px solid ${COLORS.border}`,
+            borderRadius:12,
+            background:COLORS.panel,
+            padding:14,
+            marginTop:10
+          }}
+          role="region"
+          aria-label={title}
+        >
+          <h2 style={{marginTop:0, fontSize:16, textAlign:"left"}}>{title}</h2>
           {children}
         </div>
       );
@@ -1588,11 +1985,24 @@
     function Labeled({ label, required, hint, inline, children }){
       return (
         <div style={{marginBottom:10}}>
-          <div style={{display:inline?"inline-flex":"flex", alignItems:"baseline", gap:6, marginBottom:4}}>
+          <div
+            style={{
+              display:inline?"inline-flex":"flex",
+              alignItems:"baseline",
+              gap:6,
+              marginBottom:4,
+              textAlign:"left"
+            }}
+          >
             <label style={{fontWeight:600, fontSize:13}}>
-              {label} {required && <span style={badge("rgba(220,38,38,0.12)", COLORS.danger)}>Required</span>}
+              {label}
+              {required && (
+                <span style={{color:COLORS.danger, marginLeft:4}}>*</span>
+              )}
             </label>
-            {hint && <span style={{color:COLORS.subtext, fontSize:12}}>{hint}</span>}
+            {hint && (
+              <span style={{color:COLORS.subtext, fontSize:12}}>{hint}</span>
+            )}
           </div>
           {children}
         </div>
@@ -1605,14 +2015,22 @@
       padding:"8px 10px",
       borderRadius:8,
       width:"100%",
-      fontSize:13
+      fontSize:13,
+      textAlign:"left"
     };
     function Input({ value, onChange, placeholder }){
       const [local, setLocal] = useState(value||"");
       useEffect(()=>setLocal(value||""),[value]);
       return (
-        <input type="text" value={local} placeholder={placeholder} style={inputStyle}
-          onChange={(e)=>{ setLocal(e.target.value); onChange?.(e.target.value); }}
+        <input
+          type="text"
+          value={local}
+          placeholder={placeholder}
+          style={inputStyle}
+          onChange={(e)=>{
+            setLocal(e.target.value);
+            onChange?.(e.target.value);
+          }}
           onFocus={(e)=>{ e.currentTarget.style.outline=focusRing.outline; }}
           onBlur={(e)=>{ e.currentTarget.style.outline="none"; }}
         />
@@ -1622,9 +2040,19 @@
       const [local, setLocal] = useState(value||"");
       useEffect(()=>setLocal(value||""),[value]);
       return (
-        <textarea value={local} placeholder={placeholder} rows={7}
-          style={{...inputStyle, fontFamily:"system-ui, sans-serif", resize:"vertical"}}
-          onChange={(e)=>{ setLocal(e.target.value); onChange?.(e.target.value); }}
+        <textarea
+          value={local}
+          placeholder={placeholder}
+          rows={7}
+          style={{
+            ...inputStyle,
+            fontFamily:"system-ui, sans-serif",
+            resize:"vertical"
+          }}
+          onChange={(e)=>{
+            setLocal(e.target.value);
+            onChange?.(e.target.value);
+          }}
           onFocus={(e)=>{ e.currentTarget.style.outline=focusRing.outline; }}
           onBlur={(e)=>{ e.currentTarget.style.outline="none"; }}
         />
@@ -1634,190 +2062,692 @@
       const Item = ({ v })=>{
         const active = value===v;
         return (
-          <button onClick={()=>onChange(v)}
-            style={{...btnGhost, padding:"4px 8px", borderRadius:999, borderColor:active?COLORS.primary:COLORS.border, color:active?COLORS.primary:COLORS.text, background:active?"rgba(37,99,235,0.1)":COLORS.panelAlt, fontSize:12}}
-            aria-pressed={active}>{v}</button>
+          <button
+            onClick={()=>onChange(v)}
+            style={{
+              ...btnGhost,
+              padding:"4px 8px",
+              borderRadius:999,
+              borderColor:active?COLORS.primary:COLORS.border,
+              color:active?COLORS.primary:COLORS.text,
+              background:active?"rgba(37,99,235,0.10)":COLORS.panelAlt,
+              fontSize:12,
+              textAlign:"left"
+            }}
+            aria-pressed={active}
+          >
+            {v}
+          </button>
         );
       };
-      return <div role="group" aria-label="Message type" style={{display:"flex", gap:4}}><Item v="Email" /> <Item v="SMS" /></div>;
+      return (
+        <div
+          role="group"
+          aria-label="Message type"
+          style={{display:"flex", gap:4, textAlign:"left"}}
+        >
+          <Item v="Email" />
+          <Item v="SMS" />
+        </div>
+      );
     }
     function Row({ label, value }){
       return (
-        <div style={{display:"grid", gridTemplateColumns:"160px 1fr", gap:6}}>
+        <div
+          style={{
+            display:"grid",
+            gridTemplateColumns:"160px 1fr",
+            gap:6,
+            textAlign:"left"
+          }}
+        >
           <div style={{color:COLORS.subtext, fontSize:12}}>{label}</div>
           <div style={{fontSize:13}}>{value}</div>
         </div>
       );
     }
 
-    function AudiencePanel({ id, onClose, onApply, initialSelected=[] }){
-      const [tab, setTab] = useState("BeAKid Audiences");
+    // Click-to-open info dot with tooltip bubble
+// Click-to-open info dot with wider, more readable tooltip
+function InfoDot({ title }) {
+  const [open, setOpen] = React.useState(false);
+  const ref = React.useRef(null);
+
+  React.useEffect(() => {
+    const handler = (e) => {
+      if (!ref.current) return;
+      if (!ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  return (
+    <span
+      ref={ref}
+      style={{
+        position: "relative",
+        display: "inline-flex",
+        alignItems: "center"
+      }}
+    >
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-label={title}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: 16,
+          height: 16,
+          borderRadius: "999px",
+          border: `1px solid ${COLORS.border}`,
+          background: COLORS.panelAlt,
+          color: COLORS.subtext,
+          fontSize: 11,
+          cursor: "pointer",
+          padding: 0
+        }}
+      >
+        ?
+      </button>
+
+      {open && (
+        <div
+          role="tooltip"
+          style={{
+            position: "absolute",
+            top: "130%",
+            left: "50%",
+            transform: "translateX(-50%)",
+            width: 260,
+            padding: "10px 12px",
+            borderRadius: 10,
+            background: COLORS.panel,
+            border: `1px solid ${COLORS.border}`,
+            boxShadow: "0 10px 25px rgba(15,23,42,0.18)",
+            fontSize: 12,
+            lineHeight: 1.5,
+            color: COLORS.text,
+            zIndex: 100
+          }}
+        >
+          {title}
+        </div>
+      )}
+    </span>
+  );
+}
+
+    function AudienceSelectorInline({ onClose, onApply, initialSelected=[] }){
+      const [source, setSource] = useState("roster");
       const [selected, setSelected] = useState(initialSelected);
       const [manual, setManual] = useState("");
+      const [rosterFilter, setRosterFilter] = useState("All Roster");
 
-      useEffect(()=>{ const onEsc=(e)=> e.key==="Escape" && onClose(); document.addEventListener("keydown", onEsc); return ()=>document.removeEventListener("keydown", onEsc);},[onClose]);
+      const sourceOptions = [
+        { id:"roster", label:"Use BeAKid Roster" },
+        { id:"excel", label:"Upload From Excel" },
+        { id:"sheets", label:"Upload From Google Sheets" },
+        { id:"manual", label:"Add Manual Emails" },
+      ];
+
       const addSegment = (seg)=> setSelected(p=> p.includes(seg)? p : [...p, seg]);
       const removeSegment = (seg)=> setSelected(p=> p.filter(s=>s!==seg));
       const parseManual = ()=>{
-        const raw = manual.replace(/\s+/g," ").replace(/[\n;]/g,",").split(",").map(s=>s.trim()).filter(Boolean);
+        const raw = manual
+          .replace(/\s+/g," ")
+          .replace(/[\n;]/g,",")
+          .split(",")
+          .map(s=>s.trim())
+          .filter(Boolean);
         const emails = Array.from(new Set(raw));
         const valid = emails.filter(e=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
         const invalid = emails.filter(e=>!valid.includes(e));
         alert(`Parsed ${emails.length} entries.\nValid: ${valid.length}\nInvalid dropped: ${invalid.length}`);
-        addSegment(`Manual list (${valid.length})`);
+        if (valid.length) addSegment(`Manual List (${valid.length})`);
       };
       const segmentsDemo = [
-        "All enrolled families",
-        "Past-due payments (all programs)",
-        "After-school · Monday · Class A",
-        "Summer Camp · Prospects",
-        "Waitlist — Summer Camp",
-        "Families missing forms"
+        "All Contacts",
+        "Class A",
+        "Class A / Session A1",
+        "Class A / Session A2",
+        "Class B",
+        "Class C / Session C1"
       ];
 
       return (
-        <aside id={id} role="dialog" aria-modal="true" aria-label="Select audience"
-          style={{position:"fixed", right:0, top:0, bottom:0, width:400, background:COLORS.panel, borderLeft:`1px solid ${COLORS.border}`, padding:14, boxShadow:"-16px 0 32px rgba(15,23,42,0.12)", zIndex:100}}>
-          <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
-            <h3 style={{margin:0, fontSize:15}}>Select audience</h3>
-            <button style={btnGhost} onClick={onClose} aria-label="Close audience panel">✕</button>
+        <div
+          id="audience-selector"
+          style={{
+            marginTop:10,
+            border:`1px solid ${COLORS.border}`,
+            borderRadius:10,
+            padding:10,
+            background:COLORS.panelAlt,
+            textAlign:"left"
+          }}
+        >
+          <div
+            style={{
+              display:"flex",
+              justifyContent:"space-between",
+              alignItems:"center",
+              marginBottom:8
+            }}
+          >
+            <h3 style={{margin:0, fontSize:14, textAlign:"left"}}>
+              Choose Audience Source
+            </h3>
+            <button style={btnGhost} onClick={onClose} aria-label="Close audience selection">
+              ✕
+            </button>
           </div>
 
-          <div style={{display:"flex", gap:6, marginTop:10}}>
-            {["BeAKid Audiences","Excel","Google Sheets","Manual"].map(t=>{
-              const active = t===tab;
-              return (
-                <button key={t} onClick={()=>setTab(t)}
-                  style={{...btnGhost, padding:"5px 9px", borderRadius:999, borderColor:active?COLORS.primary:COLORS.border, color:active?COLORS.primary:COLORS.text, background:active?"rgba(37,99,235,0.1)":COLORS.panelAlt, fontSize:12}}
-                  aria-pressed={active}>{t}</button>
-              );
-            })}
+          <div style={{marginBottom:8}}>
+            <label
+              style={{
+                display:"block",
+                fontSize:12,
+                color:COLORS.subtext,
+                marginBottom:4,
+                textAlign:"left"
+              }}
+            >
+              Source
+            </label>
+            <select
+              value={source}
+              onChange={e=>setSource(e.target.value)}
+              style={inputStyle}
+            >
+              {sourceOptions.map(opt=>(
+                <option key={opt.id} value={opt.id}>{opt.label}</option>
+              ))}
+            </select>
           </div>
+
+          {source==="roster" && (
+            <div style={{marginTop:8}}>
+              <div
+                style={{
+                  fontSize:12,
+                  color:COLORS.subtext,
+                  marginBottom:4,
+                  textAlign:"left"
+                }}
+              >
+                Filter roster and add segments:
+              </div>
+              <div style={{marginBottom:6}}>
+                <select
+                  value={rosterFilter}
+                  onChange={e=>setRosterFilter(e.target.value)}
+                  style={inputStyle}
+                >
+                  <option>All Roster</option>
+                  <option>Enrolled Families</option>
+                  <option>Waitlist</option>
+                  <option>Summer-Only</option>
+                </select>
+              </div>
+              <div style={{display:"grid", gap:6}}>
+                {segmentsDemo.map(s=>(
+                  <button
+                    key={s}
+                    onClick={()=>addSegment(s)}
+                    style={{
+                      ...btnGhost,
+                      justifyContent:"space-between",
+                      display:"flex",
+                      padding:"8px 9px",
+                      background:COLORS.panel,
+                      fontSize:13,
+                      cursor:"pointer"
+                    }}
+                    onMouseEnter={(e)=>{ e.currentTarget.style.backgroundColor = COLORS.optionHoverBg; }}
+                    onMouseLeave={(e)=>{ e.currentTarget.style.backgroundColor = COLORS.panel; }}
+                  >
+                    <span>{s}</span>
+                    <span style={{color:COLORS.subtext}}>Add</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {source==="excel" && (
+            <div style={{marginTop:8}}>
+              <div
+                style={{
+                  fontSize:12,
+                  color:COLORS.subtext,
+                  marginBottom:4,
+                  textAlign:"left"
+                }}
+              >
+                Upload an Excel file with parent emails (stub for prototype).
+              </div>
+              <button style={btnGhost}>Choose Excel File…</button>
+            </div>
+          )}
+
+          {source==="sheets" && (
+            <div style={{marginTop:8}}>
+              <div
+                style={{
+                  fontSize:12,
+                  color:COLORS.subtext,
+                  marginBottom:4,
+                  textAlign:"left"
+                }}
+              >
+                Connect a Google Sheet with your roster (stub for prototype).
+              </div>
+              <button style={btnGhost}>Connect Google Sheets…</button>
+            </div>
+          )}
+
+          {source==="manual" && (
+            <div style={{marginTop:8}}>
+              <div
+                style={{
+                  fontSize:12,
+                  color:COLORS.subtext,
+                  marginBottom:4,
+                  textAlign:"left"
+                }}
+              >
+                Paste emails. We’ll clean duplicates.
+              </div>
+              <Textarea
+                value={manual}
+                onChange={setManual}
+                placeholder="email1@example.com, email2@example.com …"
+              />
+              <button
+                style={{...btnGhost, marginTop:6}}
+                onClick={parseManual}
+              >
+                Validate &amp; Add
+              </button>
+            </div>
+          )}
 
           <div style={{marginTop:10}}>
-            {tab==="BeAKid Audiences" && (
-              <div>
-                <p style={{color:COLORS.subtext, marginTop:0, fontSize:12}}>Filter by roster data, then click to add classes/sessions.</p>
-
-                <div style={{border:`1px solid ${COLORS.border}`, borderRadius:8, padding:8, marginBottom:8}}>
-                  <div style={{fontSize:12, color:COLORS.subtext, marginBottom:6}}>Roster filters (demo)</div>
-                  <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:6}}>
-                    <select style={{...inputStyle, fontSize:12}}>
-                      <option>Any program</option>
-                      <option>After-school</option>
-                      <option>Summer camp</option>
-                    </select>
-                    <select style={{...inputStyle, fontSize:12}}>
-                      <option>Any location</option>
-                      <option>Main campus</option>
-                      <option>Downtown</option>
-                    </select>
-                    <select style={{...inputStyle, fontSize:12}}>
-                      <option>Enrollment: All</option>
-                      <option>Enrollment: Enrolled</option>
-                      <option>Enrollment: Prospects</option>
-                    </select>
-                    <select style={{...inputStyle, fontSize:12}}>
-                      <option>Payment: All</option>
-                      <option>Payment: Paid</option>
-                      <option>Payment: Past due</option>
-                    </select>
-                  </div>
-                  <div style={{fontSize:11, color:COLORS.subtext, marginTop:6}}>
-                    Filters are for prototype only; final product will read live data from the BeAKid roster.
-                  </div>
-                </div>
-
-                <div style={{display:"grid", gap:6}}>
-                  {segmentsDemo.map(s=>(
-                    <button key={s} onClick={()=>addSegment(s)} style={{...btnGhost, justifyContent:"space-between", display:"flex", padding:"8px 9px", background:COLORS.panelAlt, fontSize:13}}>
-                      <span>{s}</span><span style={{color:COLORS.subtext}}>→</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-            {tab==="Excel" && <p style={{color:COLORS.subtext, fontSize:12}}>Upload an Excel file (stub).</p>}
-            {tab==="Google Sheets" && <p style={{color:COLORS.subtext, fontSize:12}}>Connect Google Sheets (stub).</p>}
-            {tab==="Manual" && (
-              <div>
-                <p style={{color:COLORS.subtext, marginTop:0, fontSize:12}}>Paste emails. We’ll clean duplicates.</p>
-                <Textarea value={manual} onChange={setManual} placeholder="email1@example.com, email2@example.com …" />
-                <button style={{...btnGhost, marginTop:6}} onClick={parseManual}>Validate & add</button>
-              </div>
-            )}
-          </div>
-
-          <div style={{marginTop:10}}>
-            <div style={{color:COLORS.subtext, fontSize:12, marginBottom:4}}>Selected</div>
+            <div
+              style={{
+                color:COLORS.subtext,
+                fontSize:12,
+                marginBottom:4,
+                textAlign:"left"
+              }}
+            >
+              Selected
+            </div>
             {selected.length===0 ? (
-              <div style={{border:`1px dashed ${COLORS.border}`, borderRadius:10, padding:10, color:COLORS.subtext, fontSize:12}}>Nothing selected yet.</div>
+              <div
+                style={{
+                  border:`1px dashed ${COLORS.border}`,
+                  borderRadius:10,
+                  padding:10,
+                  color:COLORS.subtext,
+                  fontSize:12,
+                  textAlign:"left"
+                }}
+              >
+                Nothing selected yet.
+              </div>
             ) : (
               <div style={{display:"flex", gap:6, flexWrap:"wrap"}}>
                 {selected.map(s=>(
-                  <span key={s} style={badge("rgba(148,163,184,0.1)", COLORS.text)}>
+                  <span
+                    key={s}
+                    style={badge("rgba(148,163,184,0.1)", COLORS.text)}
+                  >
                     {s}
-                    <button onClick={()=>removeSegment(s)} aria-label={`Remove ${s}`} style={{background:"transparent", border:"none", color:COLORS.subtext, marginLeft:6, cursor:"pointer"}}>×</button>
+                    <button
+                      onClick={()=>removeSegment(s)}
+                      aria-label={`Remove ${s}`}
+                      style={{
+                        background:"transparent",
+                        border:"none",
+                        color:COLORS.subtext,
+                        marginLeft:6,
+                        cursor:"pointer"
+                      }}
+                    >
+                      ×
+                    </button>
                   </span>
                 ))}
               </div>
             )}
           </div>
 
-          <div style={{position:"absolute", bottom:14, left:14, right:14, display:"flex", justifyContent:"space-between"}}>
+          <div
+            style={{
+              display:"flex",
+              justifyContent:"space-between",
+              marginTop:10
+            }}
+          >
             <button style={btnGhost} onClick={onClose}>Cancel</button>
-            <button style={{...btnPrimary, opacity:selected.length?1:.6}} disabled={!selected.length} onClick={()=>{
-              onApply(selected);
-            }}>Apply</button>
+            <button
+              style={{
+                ...btnPrimary,
+                opacity:selected.length?1:.6,
+                textAlign:"center"
+              }}
+              disabled={!selected.length}
+              onClick={()=>onApply(selected)}
+            >
+              Apply Audience
+            </button>
           </div>
-        </aside>
+        </div>
       );
     }
 
     function PreviewOverlay({ step, subject, onClose, onSendTest }){
       const ref = useRef(null);
+      const [showConfirm, setShowConfirm] = useState(false);
+      const [hasSent, setHasSent] = useState(false);
+      const [toastVisible, setToastVisible] = useState(false);
+
       useEffect(()=>{ ref.current?.focus(); },[]);
+      const handleConfirmSend = () => {
+        onSendTest?.();
+        setHasSent(true);
+        setShowConfirm(false);
+        setToastVisible(true);
+      };
+      const handleUndo = () => {
+        setHasSent(false);
+        setToastVisible(false);
+      };
+
       return (
-        <div role="dialog" aria-modal="true" aria-label="Preview & Test" tabIndex={-1} ref={ref} onKeyDown={(e)=>e.key==="Escape"&&onClose()}
-          style={{position:"fixed", inset:0, background:"rgba(15,23,42,0.45)", display:"grid", placeItems:"center", zIndex:200}}>
-          <div style={{width:"min(650px, 90vw)", maxHeight:"80vh", overflow:"auto", background:COLORS.panel, border:`1px solid ${COLORS.border}`, borderRadius:12, padding:14}}>
-            <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
-              <h3 style={{margin:0}}>Preview</h3>
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Preview & Test"
+          tabIndex={-1}
+          ref={ref}
+          onKeyDown={(e)=>e.key==="Escape"&&onClose()}
+          style={{
+            position:"fixed",
+            inset:0,
+            background:"rgba(15,23,42,0.45)",
+            display:"grid",
+            placeItems:"center",
+            zIndex:200
+          }}
+        >
+          <div
+            style={{
+              width:"min(650px, 90vw)",
+              maxHeight:"80vh",
+              overflow:"auto",
+              background:COLORS.panel,
+              border:`1px solid ${COLORS.border}`,
+              borderRadius:12,
+              padding:14,
+              textAlign:"left",
+              position:"relative"
+            }}
+          >
+            <div
+              style={{
+                display:"flex",
+                justifyContent:"space-between",
+                alignItems:"center"
+              }}
+            >
+              <h3 style={{margin:0, textAlign:"left"}}>Preview</h3>
               <button style={btnGhost} onClick={onClose}>✕</button>
             </div>
 
-            <div style={{borderTop:`1px solid ${COLORS.border}`, marginTop:8, paddingTop:8}}>
-              <div style={{color:COLORS.subtext, marginBottom:6, fontSize:12}}>{step.type} preview</div>
+            <div
+              style={{
+                borderTop:`1px solid ${COLORS.border}`,
+                marginTop:8,
+                paddingTop:8
+              }}
+            >
+              <div
+                style={{
+                  color:COLORS.subtext,
+                  marginBottom:6,
+                  fontSize:12,
+                  textAlign:"left"
+                }}
+              >
+                {step.type} Preview
+              </div>
 
               {step.type==="Email" && (
-                <div style={{border:`1px solid ${COLORS.border}`, borderRadius:10, padding:10, background:COLORS.panelAlt}}>
-                  <div style={{marginBottom:6}}><strong>Subject:</strong> {subject || "(no subject)"}</div>
-                  <div style={{background:"#ffffff", padding:10, borderRadius:8, border:`1px solid ${COLORS.border}`, whiteSpace:"pre-wrap", fontSize:13}}>
+                <div
+                  style={{
+                    border:`1px solid ${COLORS.border}`,
+                    borderRadius:10,
+                    padding:10,
+                    background:COLORS.panelAlt,
+                    textAlign:"left"
+                  }}
+                >
+                  <div style={{marginBottom:6}}>
+                    <strong>Subject:</strong> {subject || "(no subject)"}
+                  </div>
+                  <div
+                    style={{
+                      background:"#ffffff",
+                      padding:10,
+                      borderRadius:8,
+                      border:`1px solid ${COLORS.border}`,
+                      whiteSpace:"pre-wrap",
+                      fontSize:13,
+                      textAlign:"left"
+                    }}
+                  >
                     {step.body || "(empty)"}
                   </div>
                 </div>
               )}
               {step.type==="SMS" && (
-                <div style={{border:`1px solid ${COLORS.border}`, borderRadius:10, padding:10, background:COLORS.panelAlt}}>
-                  <div style={{marginBottom:6}}><strong>SMS body</strong></div>
-                  <div style={{whiteSpace:"pre-wrap", fontSize:13}}>{step.body || "(empty)"}</div>
+                <div
+                  style={{
+                    border:`1px solid ${COLORS.border}`,
+                    borderRadius:10,
+                    padding:10,
+                    background:COLORS.panelAlt,
+                    textAlign:"left"
+                  }}
+                >
+                  <div style={{marginBottom:6}}>
+                    <strong>SMS body</strong>
+                  </div>
+                  <div
+                    style={{
+                      whiteSpace:"pre-wrap",
+                      fontSize:13,
+                      textAlign:"left"
+                    }}
+                  >
+                    {step.body || "(empty)"}
+                  </div>
                 </div>
               )}
             </div>
 
-            <div style={{display:"flex", justifyContent:"space-between", marginTop:10}}>
-              <button style={btnGhost} onClick={onClose}>Back to edit</button>
-              <button style={btnPrimary} onClick={onSendTest}>Send test</button>
+            {showConfirm && (
+              <div
+                style={{
+                  marginTop:10,
+                  border:`1px solid ${COLORS.border}`,
+                  borderRadius:10,
+                  padding:10,
+                  background:COLORS.panelAlt,
+                  textAlign:"left"
+                }}
+              >
+                <div style={{fontSize:13, marginBottom:6, textAlign:"left"}}>
+                  Send a test SMS to your account email?
+                </div>
+                <div style={{display:"flex", justifyContent:"flex-end", gap:8}}>
+                  <button style={btnGhost} onClick={()=>setShowConfirm(false)}>Cancel</button>
+                  <button style={btnPrimary} onClick={handleConfirmSend}>Send Test</button>
+                </div>
+              </div>
+            )}
+
+            {/* Bottom-center toast for Preview, matching Launch pattern */}
+            {toastVisible && (
+              <div
+                style={{
+                  position:"fixed",
+                  left:"50%",
+                  transform:"translateX(-50%)",
+                  bottom:16,
+                  background:COLORS.panel,
+                  borderRadius:999,
+                  border:`1px solid ${COLORS.border}`,
+                  boxShadow:"0 10px 35px rgba(15,23,42,0.18)",
+                  padding:"8px 16px",
+                  display:"flex",
+                  alignItems:"center",
+                  gap:10,
+                  fontSize:13,
+                  zIndex:210
+                }}
+              >
+                <span style={{textAlign:"left"}}>Test sent to your email.</span>
+                <button
+                  style={{...btnGhost, padding:"4px 8px"}}
+                  onClick={handleUndo}
+                >
+                  Undo
+                </button>
+                <button
+                  style={{...btnGhost, padding:"4px 8px"}}
+                  onClick={()=>setToastVisible(false)}
+                >
+                  Dismiss
+                </button>
+              </div>
+            )}
+
+            <div
+              style={{
+                display:"flex",
+                justifyContent:"space-between",
+                marginTop:10
+              }}
+            >
+              <button style={btnGhost} onClick={onClose}>Back to Edit</button>
+              {!hasSent && !showConfirm && (
+                <button style={btnPrimary} onClick={()=>setShowConfirm(true)}>Send Test</button>
+              )}
             </div>
           </div>
         </div>
       );
     }
+
     function FooterNav({ onBack, onNext, nextLabel="Next", nextDisabled }){
       return (
-        <div style={{display:"flex", justifyContent:"space-between", marginTop:10}}>
+        <div
+          style={{
+            display:"flex",
+            justifyContent:"space-between",
+            marginTop:10
+          }}
+        >
           <button style={btnGhost} onClick={onBack}>Back</button>
-          <button style={{...btnPrimary, opacity:nextDisabled?.valueOf()?0.6:1}} disabled={nextDisabled} onClick={onNext}>{nextLabel}</button>
+          <button
+            style={{
+              ...btnPrimary,
+              opacity:nextDisabled?.valueOf()?0.6:1,
+              textAlign:"center"
+            }}
+            disabled={nextDisabled}
+            onClick={onNext}
+          >
+            {nextLabel}
+          </button>
+        </div>
+      );
+    }
+
+    function FormattingToolbar(){
+      const btnStyle = {
+        ...btnGhost,
+        padding:"4px 6px",
+        fontSize:11,
+        borderRadius:6
+      };
+      return (
+        <div
+          style={{
+            marginTop:6,
+            borderTop:`1px solid ${COLORS.border}`,
+            paddingTop:6,
+            display:"flex",
+            gap:4,
+            flexWrap:"wrap",
+            textAlign:"left"
+          }}
+        >
+          <button type="button" style={btnStyle}><strong>B</strong></button>
+          <button type="button" style={btnStyle}><em>I</em></button>
+          <button type="button" style={btnStyle}>• List</button>
+          <button type="button" style={btnStyle}>Link</button>
+          <button type="button" style={btnStyle}>Personalize</button>
+        </div>
+      );
+    }
+
+    function ConfirmDialog({ title, body, confirmLabel, onConfirm, onCancel }) {
+      const ref = useRef(null);
+      useEffect(()=>{ ref.current?.focus(); },[]);
+      return (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={title}
+          tabIndex={-1}
+          ref={ref}
+          onKeyDown={(e)=>e.key==="Escape"&&onCancel()}
+          style={{
+            position:"fixed",
+            inset:0,
+            background:"rgba(15,23,42,0.45)",
+            display:"grid",
+            placeItems:"center",
+            zIndex:300
+          }}
+        >
+          <div
+            style={{
+              width:"min(420px, 90vw)",
+              background:COLORS.panel,
+              border:`1px solid ${COLORS.border}`,
+              borderRadius:12,
+              padding:14,
+              textAlign:"left",
+              boxShadow:"0 18px 45px rgba(15,23,42,0.25)"
+            }}
+          >
+            <h3 style={{marginTop:0, marginBottom:6, textAlign:"left"}}>{title}</h3>
+            <p style={{marginTop:0, marginBottom:12, fontSize:13, color:COLORS.subtext, textAlign:"left"}}>
+              {body}
+            </p>
+            <div style={{display:"flex", justifyContent:"flex-end", gap:8}}>
+              <button style={btnGhost} onClick={onCancel}>Cancel</button>
+              <button style={btnPrimary} onClick={onConfirm}>{confirmLabel}</button>
+            </div>
+          </div>
         </div>
       );
     }
