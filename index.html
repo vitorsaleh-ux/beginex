@@ -609,15 +609,22 @@
         </div>
       );
     }
-    const formatAudienceCell = (data) => {
-      if (typeof data.audienceCount === "number" && Array.isArray(data.audienceLabels)) {
-        const labels = data.audienceLabels.filter(l => l && l.toLowerCase() !== "parents");
-        if (!labels.length || !data.audienceCount) return "—";
-        const labelStr = labels.length > 3 ? `${labels.slice(0,3).join(", ")} +${labels.length-3}` : labels.join(", ");
-        return `${data.audienceCount.toLocaleString()} · ${labelStr}`;
-      }
-      return "—";
-    };
+   // Simplified audience cell: focus on count + segment count
+const formatAudienceCell = (data) => {
+  if (typeof data.audienceCount === "number" && Array.isArray(data.audienceLabels)) {
+    const count = data.audienceCount || 0;
+    const labels = data.audienceLabels.filter(Boolean);
+    if (!count) return "—";
+    if (!labels.length) return count.toLocaleString();
+
+    // Keep things short on the dashboard
+    if (labels.length === 1) {
+      return `${count.toLocaleString()} · ${labels[0]}`;
+    }
+    return `${count.toLocaleString()} · ${labels.length} segments`;
+  }
+  return "—";
+};
     function CampaignTableRow({ data, onOpen, onDelete, onDuplicate, onTogglePause, onComposeOneClick, onOpenAnalytics }){
       const [open, setOpen] = useState(false);
       const menuRef = useRef(null);
