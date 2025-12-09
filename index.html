@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>SendIQ.io — Full Campaign Tool (Light)</title>
+  <title>SendIQdotio — Full Campaign Tool (Light)</title>
   
   <!-- Google Fonts: Poppins -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -319,7 +319,7 @@
     };
 
     /* --------------------------------- App ----------------------------------- */
-    function SendIQ.ioApp() {
+    function SendIQdotioApp() {
       const [route, setRoute] = useState({ page:"dashboard", campaignId:null, step:0 });
       const [campaigns, setCampaigns] = useState(initialCampaigns);
       const [draftId, setDraftId] = useState(null);
@@ -530,7 +530,7 @@
               style={{height:28, width:"auto"}}
             />
             <div style={{fontWeight:800, letterSpacing:.2, fontSize:15, textAlign:"left"}} aria-label="Product name">
-              SendIQ.io
+              SendIQdotio
             </div>
           </div>
         </div>
@@ -3093,7 +3093,7 @@
 
     /* ------------------------------- Mount App ------------------------------- */
     const root = ReactDOM.createRoot(document.getElementById("root"));
-    root.render(<SendIQ.ioApp />);
+    root.render(<SendIQdotioApp />);
   </script>
 </body>
 </html>
