@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>BeAKampaign — Full Campaign Tool (Light)</title>
+  <title>SendIQ.io — Full Campaign Tool (Light)</title>
   
   <!-- Google Fonts: Poppins -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -16,11 +16,22 @@
       margin:0;
       background:#f5f5f7;
       color:#0f172a;
-      /* Updated font stack to Poppins first */
       font-family: 'Poppins', system-ui, -apple-system, Segoe UI, Roboto, Inter, Helvetica, Arial, sans-serif;
     }
     *{box-sizing:border-box}
     button{font:inherit}
+
+    /* Compose layout responsive fix so recommended time text doesn’t fall out */
+    .compose-layout{
+      display:grid;
+      grid-template-columns:260px 1fr;
+      gap:14px;
+    }
+    @media (max-width: 960px){
+      .compose-layout{
+        grid-template-columns:1fr;
+      }
+    }
   </style>
 </head>
 <body>
@@ -299,21 +310,20 @@
     ];
 
     const STATUS_STYLES = {
-      "Draft":      tagStatic("rgba(148,163,184,0.26)", "#1f2937"),       // slate
-      "Active":     tagStatic("rgba(37,99,235,0.20)", "#1d4ed8"),         // blue
-      "Scheduled":  tagStatic("rgba(169,99,255,0.22)", "#6b21a8"),        // purple
-      "Paused":     tagStatic("rgba(253,224,171,0.95)", "#92400e"),       // amber
-      "Sent":       tagStatic("rgba(22,163,74,0.20)", "#15803d"),         // green
-      "Completed":  tagStatic("rgba(121,249,219,0.32)", "#047857"),       // mint
+      "Draft":      tagStatic("rgba(148,163,184,0.26)", "#1f2937"),
+      "Active":     tagStatic("rgba(37,99,235,0.20)", "#1d4ed8"),
+      "Scheduled":  tagStatic("rgba(169,99,255,0.22)", "#6b21a8"),
+      "Paused":     tagStatic("rgba(253,224,171,0.95)", "#92400e"),
+      "Sent":       tagStatic("rgba(22,163,74,0.20)", "#15803d"),
+      "Completed":  tagStatic("rgba(121,249,219,0.32)", "#047857"),
     };
 
     /* --------------------------------- App ----------------------------------- */
-    function BeAKampaignApp() {
+    function SendIQ.ioApp() {
       const [route, setRoute] = useState({ page:"dashboard", campaignId:null, step:0 });
       const [campaigns, setCampaigns] = useState(initialCampaigns);
       const [draftId, setDraftId] = useState(null);
 
-      // Global toast for "Launch — Undo"
       const [toast, setToast] = useState(null); // { type: "launch", campaignId }
 
       const startNew = () => {
@@ -403,6 +413,7 @@
           prev.map(c => c.id === id ? { ...c, ...partial } : c)
         );
       };
+
       const handleLaunchedCampaign = (newCampaign) => {
         setCampaigns(prev => {
           const exists = prev.some(c => c.id === newCampaign.id);
@@ -512,23 +523,20 @@
     function TopBar(){
       return (
         <div style={{borderBottom:`1px solid ${COLORS.border}`, background:COLORS.panel}} role="banner">
-          <div style={{maxWidth:1200, margin:"0 auto", padding:"14px 24px", display:"flex", alignItems:"center", gap:10}}>
-            <div
-              aria-hidden
-              style={{
-                width:26,
-                height:26,
-                borderRadius:8,
-                background:`linear-gradient(135deg, ${BRAND.blue}, ${BRAND.purple}, ${BRAND.mint})`
-              }}
+          <div style={{maxWidth:1200, margin:"0 auto", padding:"10px 24px", display:"flex", alignItems:"center", gap:10}}>
+            <img
+              src="https://beakid.com/blog/wp-content/uploads/2021/11/logo.png"
+              alt="BeAKid logo"
+              style={{height:28, width:"auto"}}
             />
             <div style={{fontWeight:800, letterSpacing:.2, fontSize:15, textAlign:"left"}} aria-label="Product name">
-              BeAKampaign
+              SendIQ.io
             </div>
           </div>
         </div>
       );
     }
+
     function Sidebar({ current, onNav }){
       const link = (label, page)=>(
         <button
@@ -587,6 +595,7 @@
         </section>
       );
     }
+
     function CampaignTableHeader(){
       const th = {
         padding:"10px 12px",
@@ -598,33 +607,24 @@
         textAlign:"left"
       };
       return (
-        <div role="row" style={{display:"grid", gridTemplateColumns:"1.4fr 1.4fr 0.8fr 1fr 1fr 0.6fr 48px", background:COLORS.panelAlt}}>
+        <div
+          role="row"
+          style={{
+            display:"grid",
+            gridTemplateColumns:"1.5fr 0.8fr 1fr 1fr 0.6fr 48px",
+            background:COLORS.panelAlt
+          }}
+        >
           <div role="columnheader" style={th}>Campaign Name</div>
-          <div role="columnheader" style={th}>Audience</div>
+          <div role="columnheader" style={th}>Audience Size</div>
           <div role="columnheader" style={th}>Status</div>
           <div role="columnheader" style={th}>Opens / Clicks</div>
           <div role="columnheader" style={th}>Send Time</div>
-          <div role="columnheader" style={th}>Analytics</div>
           <div role="columnheader" style={th} aria-label="Actions">⋮</div>
         </div>
       );
     }
-   // Simplified audience cell: focus on count + segment count
-const formatAudienceCell = (data) => {
-  if (typeof data.audienceCount === "number" && Array.isArray(data.audienceLabels)) {
-    const count = data.audienceCount || 0;
-    const labels = data.audienceLabels.filter(Boolean);
-    if (!count) return "—";
-    if (!labels.length) return count.toLocaleString();
 
-    // Keep things short on the dashboard
-    if (labels.length === 1) {
-      return `${count.toLocaleString()} · ${labels[0]}`;
-    }
-    return `${count.toLocaleString()} · ${labels.length} segments`;
-  }
-  return "—";
-};
     function CampaignTableRow({ data, onOpen, onDelete, onDuplicate, onTogglePause, onComposeOneClick, onOpenAnalytics }){
       const [open, setOpen] = useState(false);
       const menuRef = useRef(null);
@@ -661,7 +661,7 @@ const formatAudienceCell = (data) => {
           role="row"
           style={{
             display:"grid",
-            gridTemplateColumns:"1.4fr 1.4fr 0.8fr 1fr 1fr 0.6fr 48px",
+            gridTemplateColumns:"1.5fr 0.8fr 1fr 1fr 0.6fr 48px",
             borderBottom:`1px solid ${COLORS.border}`,
             alignItems:"center",
             background: isUnder ? COLORS.rowWarnBg : "transparent"
@@ -701,7 +701,9 @@ const formatAudienceCell = (data) => {
             )}
           </div>
           <div role="cell" style={{padding:"10px 12px", color:COLORS.subtext, fontSize:12, textAlign:"left"}}>
-            {formatAudienceCell(data)}
+            {typeof data.audienceCount === "number" && data.audienceCount > 0
+              ? data.audienceCount.toLocaleString()
+              : "—"}
           </div>
           <div role="cell" style={{padding:"10px 12px", textAlign:"left"}}>
             <span style={statusChip}>{computedStatus}</span>
@@ -713,12 +715,6 @@ const formatAudienceCell = (data) => {
             {data.sendTime}
           </div>
 
-          {/* Analytics column */}
-          <div role="cell" style={{padding:"10px 12px", textAlign:"left"}}>
-            <button style={{...btnPrimary, padding:"6px 12px", textAlign:"center"}} onClick={onOpenAnalytics}>View</button>
-          </div>
-
-          {/* Actions */}
           <div role="cell" style={{padding:"10px 6px", position:"relative", textAlign:"left"}}>
             <button
               ref={buttonRef}
@@ -772,6 +768,7 @@ const formatAudienceCell = (data) => {
         </div>
       );
     }
+
     function MenuItem({ label, onClick, danger }){
       return (
         <button
@@ -796,7 +793,6 @@ const formatAudienceCell = (data) => {
         </button>
       );
     }
-
     /* ----------------------------- Creation Flow ----------------------------- */
     const STEPS = ["Create","Audience","Compose & Schedule","Review & Analytics"];
 
@@ -807,6 +803,7 @@ const formatAudienceCell = (data) => {
       const day = String(d.getDate(), 10).padStart(2, '0');
       return `${year}-${month}-${day}`;
     };
+
     const mapCampaignToSteps = (campaign) => {
       const mainStep = {
         id: "s1",
@@ -830,6 +827,313 @@ const formatAudienceCell = (data) => {
       }));
       return [mainStep, ...sequenceSteps];
     };
+
+    function Stepper({ activeStep, onStepClick }){
+      const progress = (activeStep + 1) / (STEPS.length || 1);
+
+      return (
+        <div style={{marginBottom:4}}>
+          <div
+            role="navigation"
+            aria-label="Creation steps"
+            style={{display:"flex", gap:0, flexWrap:"nowrap"}}
+          >
+            {STEPS.map((label, idx)=>{
+              const active = idx===activeStep;
+              const completed = idx < activeStep;
+              return (
+                <button
+                  key={label}
+                  onClick={()=>onStepClick(idx)}
+                  style={{
+                    flex:1,
+                    appearance:"none",
+                    border:"none",
+                    background: active ? COLORS.panel : "transparent",
+                    padding:"10px 16px",
+                    fontWeight:700,
+                    fontSize:"13px",
+                    color: active
+                      ? COLORS.primary
+                      : (completed ? COLORS.subtext : COLORS.text),
+                    cursor:"pointer",
+                    textAlign:"left",
+                    borderRadius:"10px 10px 0 0"
+                  }}
+                  aria-current={active?"step":undefined}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+          <div
+            style={{
+              position:"relative",
+              height:3,
+              borderRadius:999,
+              background:"#e5e7eb",
+              overflow:"hidden"
+            }}
+          >
+            <div
+              style={{
+                position:"absolute",
+                left:0,
+                top:0,
+                bottom:0,
+                width:`${progress*100}%`,
+                background:COLORS.primary
+              }}
+            />
+          </div>
+        </div>
+      );
+    }
+
+    function Panel({ title, children }){
+      return (
+        <div
+          style={{
+            border:`1px solid ${COLORS.border}`,
+            borderRadius:12,
+            background:COLORS.panel,
+            padding:14,
+            marginTop:10
+          }}
+          role="region"
+          aria-label={title}
+        >
+          <h2 style={{marginTop:0, fontSize:16, textAlign:"left"}}>{title}</h2>
+          {children}
+        </div>
+      );
+    }
+
+    function Labeled({ label, required, hint, inline, children }){
+      return (
+        <div style={{marginBottom:10}}>
+          <div
+            style={{
+              display:inline?"inline-flex":"flex",
+              alignItems:"baseline",
+              gap:6,
+              marginBottom:4,
+              textAlign:"left"
+            }}
+          >
+            <label style={{fontWeight:600, fontSize:13}}>
+              {label}
+              {required && (
+                <span style={{color:COLORS.danger, marginLeft:4}}>*</span>
+              )}
+            </label>
+            {hint && (
+              <span style={{color:COLORS.subtext, fontSize:12}}>{hint}</span>
+            )}
+          </div>
+          {children}
+        </div>
+      );
+    }
+
+    const inputStyle = {
+      background:COLORS.panelAlt,
+      border:`1px solid ${COLORS.border}`,
+      color:COLORS.text,
+      padding:"8px 10px",
+      borderRadius:8,
+      width:"100%",
+      fontSize:13,
+      textAlign:"left"
+    };
+
+    function Input({ value, onChange, placeholder }){
+      const [local, setLocal] = useState(value||"");
+      useEffect(()=>setLocal(value||""),[value]);
+      return (
+        <input
+          type="text"
+          value={local}
+          placeholder={placeholder}
+          style={inputStyle}
+          onChange={(e)=>{
+            setLocal(e.target.value);
+            onChange?.(e.target.value);
+          }}
+          onFocus={(e)=>{ e.currentTarget.style.outline=focusRing.outline; }}
+          onBlur={(e)=>{ e.currentTarget.style.outline="none"; }}
+        />
+      );
+    }
+
+    function Textarea({ value, onChange, placeholder }){
+      const [local, setLocal] = useState(value||"");
+      useEffect(()=>setLocal(value||""),[value]);
+      return (
+        <textarea
+          value={local}
+          placeholder={placeholder}
+          rows={7}
+          style={{
+            ...inputStyle,
+            fontFamily:"inherit",
+            resize:"vertical"
+          }}
+          onChange={(e)=>{
+            setLocal(e.target.value);
+            onChange?.(e.target.value);
+          }}
+          onFocus={(e)=>{ e.currentTarget.style.outline=focusRing.outline; }}
+          onBlur={(e)=>{ e.currentTarget.style.outline="none"; }}
+        />
+      );
+    }
+
+    function TypeToggle({ value, onChange }){
+      const Item = ({ v })=>{
+        const active = value===v;
+        return (
+          <button
+            onClick={()=>onChange(v)}
+            style={{
+              ...btnGhost,
+              padding:"4px 8px",
+              borderRadius:999,
+              borderColor:active?COLORS.primary:COLORS.border,
+              color:active?COLORS.primary:COLORS.text,
+              background:active?"rgba(37,99,235,0.10)":COLORS.panelAlt,
+              fontSize:12,
+              textAlign:"left"
+            }}
+            aria-pressed={active}
+          >
+            {v}
+          </button>
+        );
+      };
+      return (
+        <div
+          role="group"
+          aria-label="Message type"
+          style={{display:"flex", gap:4, textAlign:"left"}}
+        >
+          <Item v="Email" />
+          <Item v="SMS" />
+        </div>
+      );
+    }
+
+    function Row({ label, value }){
+      return (
+        <div
+          style={{
+            display:"grid",
+            gridTemplateColumns:"160px 1fr",
+            gap:6,
+            textAlign:"left"
+          }}
+        >
+          <div style={{color:COLORS.subtext, fontSize:12}}>{label}</div>
+          <div style={{fontSize:13}}>{value}</div>
+        </div>
+      );
+    }
+
+    function InfoDot({ title }) {
+      const [open, setOpen] = useState(false);
+      const btnRef = useRef(null);
+
+      useEffect(() => {
+        if (!open) return;
+        const handleClick = (e) => {
+          if (!btnRef.current) return;
+          if (!btnRef.current.contains(e.target)) {
+            setOpen(false);
+          }
+        };
+        document.addEventListener("mousedown", handleClick);
+        return () => document.removeEventListener("mousedown", handleClick);
+      }, [open]);
+
+      return (
+        <span style={{position:"relative", display:"inline-flex"}}>
+          <button
+            type="button"
+            ref={btnRef}
+            onClick={()=>setOpen(o=>!o)}
+            aria-label={title}
+            aria-expanded={open}
+            style={{
+              display:"inline-flex",
+              alignItems:"center",
+              justifyContent:"center",
+              width:18,
+              height:18,
+              borderRadius:"999px",
+              border:`1px solid ${COLORS.border}`,
+              background:COLORS.panelAlt,
+              color:COLORS.subtext,
+              fontSize:11,
+              cursor:"pointer",
+              padding:0
+            }}
+          >
+            ?
+          </button>
+          {open && (
+            <div
+              style={{
+                position:"absolute",
+                top:"120%",
+                left:"50%",
+                transform:"translateX(-50%)",
+                minWidth:220,
+                maxWidth:280,
+                padding:"8px 10px",
+                borderRadius:8,
+                background:COLORS.panel,
+                border:`1px solid ${COLORS.border}`,
+                boxShadow:"0 8px 20px rgba(15,23,42,0.18)",
+                fontSize:12,
+                color:COLORS.text,
+                textAlign:"left",
+                lineHeight:1.4,
+                whiteSpace:"normal",
+                zIndex:1200
+              }}
+            >
+              {title}
+            </div>
+          )}
+        </span>
+      );
+    }
+
+    function FooterNav({ onBack, onNext, nextLabel="Next", nextDisabled }){
+      return (
+        <div
+          style={{
+            display:"flex",
+            justifyContent:"space-between",
+            marginTop:10
+          }}
+        >
+          <button style={btnGhost} onClick={onBack}>Back</button>
+          <button
+            style={{
+              ...btnPrimary,
+              opacity:nextDisabled?.valueOf()?0.6:1,
+              textAlign:"center"
+            }}
+            disabled={nextDisabled}
+            onClick={onNext}
+          >
+            {nextLabel}
+          </button>
+        </div>
+      );
+    }
 
     function CreationFlow({
       onBackToDashboard,
@@ -871,7 +1175,13 @@ const formatAudienceCell = (data) => {
       const [steps, setSteps] = useState(initialSteps);
       const [activeMsgStepId, setActiveMsgStepId] = useState(initialSteps[0].id);
       const [previewOpen, setPreviewOpen] = useState(false);
-      const [smartSwitchOn, setSmartSwitchOn] = useState(true);
+
+      // Rename + behavior: Auto-stop after key action (formerly Smart Switch)
+      const [autoStopOn, setAutoStopOn] = useState(true);
+      const [autoStopKeyAction, setAutoStopKeyAction] = useState(
+        "When a family enrolls for this offering"
+      );
+
       const [selectedMetric, setSelectedMetric] = useState("Open Rate");
       const [showLaunchConfirm, setShowLaunchConfirm] = useState(false);
 
@@ -969,6 +1279,7 @@ const formatAudienceCell = (data) => {
       };
 
       const activeEditorStep = steps.find(s=>s.id===activeMsgStepId) || steps[steps.length-1];
+
       const autoSave = (changed = {}) => {
         if (!campaignName.trim()) return;
         const baseDraft = {
@@ -982,6 +1293,8 @@ const formatAudienceCell = (data) => {
           audienceLabels: audienceSegments,
           campaignGoal,
           operationalTemplate,
+          autoStopOn,
+          autoStopKeyAction,
           sequences: steps.slice(1).map(st=>({
             delay: typeof st.daysOffset === "number" ? `${st.daysOffset}d` : (st.date || ""),
             condition: "Everyone",
@@ -997,6 +1310,7 @@ const formatAudienceCell = (data) => {
         }
         setLastSaved(new Date());
       };
+
       const handleLaunch = ()=>{
         if (!canLaunch) return;
         const mainStep = steps[0];
@@ -1066,21 +1380,21 @@ const formatAudienceCell = (data) => {
 
                 <Labeled
                   label="What is this campaign for?"
-                  hint="We’ll tune the flow to must-read ops or broader marketing."
+                  hint="We’ll tune this flow for operations or promotion."
                 >
                   <div style={{display:"flex", gap:8, flexWrap:"wrap"}}>
                     {[
                       {
                         id:"Operational",
-                        label:"Operational (payments, forms, schedule)"
+                        label:"Operational (Payments, Forms, Schedules)"
                       },
                       {
                         id:"Marketing",
-                        label:"Marketing / promotion"
+                        label:"Marketing & Promotion"
                       },
                       {
                         id:"Announcement",
-                        label:"Announcement / update"
+                        label:"Announcements & Updates"
                       }
                     ].map(opt=>{
                       const active = campaignGoal === opt.id;
@@ -1111,61 +1425,63 @@ const formatAudienceCell = (data) => {
                 </Labeled>
 
                 {campaignGoal === "Operational" && (
-                  <Labeled
-                    label="Recommended operational flow"
-                    hint="Choose a template to prefill Step 1 with language for must-read messages."
-                  >
-                    <div style={{display:"flex", gap:8, flexWrap:"wrap"}}>
-                      {[
-                        {
-                          id:"Payment & Billing",
-                          label:"Payment & Billing",
-                          sub:"Due / past-due reminders and confirmations"
-                        },
-                        {
-                          id:"Forms & Waivers",
-                          label:"Forms & Waivers",
-                          sub:"Collect required forms before kids attend"
-                        },
-                        {
-                          id:"Schedule & Logistics",
-                          label:"Schedule & Logistics",
-                          sub:"Share schedule changes and logistics clearly"
-                        }
-                      ].map(opt=>{
-                        const active = operationalTemplate === opt.id;
-                        return (
-                          <button
-                            key={opt.id}
-                            type="button"
-                            onClick={()=>{
-                              setOperationalTemplate(opt.id);
-                              if (campaignName.trim()) autoSave({ operationalTemplate: opt.id });
-                            }}
-                            style={{
-                              ...chipSelectable(active),
-                              flexDirection:"column",
-                              alignItems:"flex-start",
-                              minWidth:190
-                            }}
-                          >
-                            <span style={{fontSize:13, fontWeight:600}}>
-                              {opt.label}
-                            </span>
-                            <span
+                  <Panel title="Recommended operational flows">
+                    <Labeled
+                      label="Pick a starting template"
+                      hint="You can still edit the language in the next step."
+                    >
+                      <div style={{display:"flex", gap:8, flexWrap:"wrap"}}>
+                        {[
+                          {
+                            id:"Payment & Billing",
+                            label:"Payment & Billing",
+                            sub:"Due / past-due reminders and confirmations"
+                          },
+                          {
+                            id:"Forms & Waivers",
+                            label:"Forms & Waivers",
+                            sub:"Collect required forms before kids attend"
+                          },
+                          {
+                            id:"Schedule & Logistics",
+                            label:"Schedule & Logistics",
+                            sub:"Schedule changes, pickups, and daily details"
+                          }
+                        ].map(opt=>{
+                          const active = operationalTemplate === opt.id;
+                          return (
+                            <button
+                              key={opt.id}
+                              type="button"
+                              onClick={()=>{
+                                setOperationalTemplate(opt.id);
+                                if (campaignName.trim()) autoSave({ operationalTemplate: opt.id });
+                              }}
                               style={{
-                                fontSize:11,
-                                color:COLORS.subtext,
-                                marginTop:2
+                                ...chipSelectable(active),
+                                flexDirection:"column",
+                                alignItems:"flex-start",
+                                minWidth:190
                               }}
                             >
-                              {opt.sub}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </Labeled>
+                              <span style={{fontSize:13, fontWeight:600}}>
+                                {opt.label}
+                              </span>
+                              <span
+                                style={{
+                                  fontSize:11,
+                                  color:COLORS.subtext,
+                                  marginTop:2
+                                }}
+                              >
+                                {opt.sub}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </Labeled>
+                  </Panel>
                 )}
 
                 <FooterNav
@@ -1191,11 +1507,11 @@ const formatAudienceCell = (data) => {
                 </Labeled>
 
                 <Labeled
-                  label="Select Audience"
+                  label="Select audience"
                   required
                   hint={
                     audienceSegments.length
-                      ? `Multiple segments — total ${audienceCount.toLocaleString()}`
+                      ? `Multiple segments — total ${audienceCount.toLocaleString()} contacts`
                       : ""
                   }
                 >
@@ -1269,7 +1585,7 @@ const formatAudienceCell = (data) => {
             {/* COMPOSE & SCHEDULE STEP */}
             {activeStep===2 && (
               <Panel title="Compose & Schedule">
-                <div style={{display:"grid", gridTemplateColumns:"260px 1fr", gap:14}}>
+                <div className="compose-layout">
                   {/* Steps list */}
                   <div
                     style={{
@@ -1289,7 +1605,7 @@ const formatAudienceCell = (data) => {
                     >
                       <div style={{display:"flex", alignItems:"center", gap:6}}>
                         <div style={{fontWeight:700, fontSize:14, textAlign:"left"}}>Steps</div>
-                        <InfoDot title="Use steps to automate must-read operational messages (for example, 3 days before payment is due, day-of reminder, and past-due SMS) so you don’t have to create a new campaign every time." />
+                        <InfoDot title="Use steps to automate must-read messages (for example, 3 days before payment is due, day-of reminder, and past-due SMS) so you don’t have to create a new campaign every time." />
                       </div>
                       <button
                         style={btnGhost}
@@ -1302,33 +1618,54 @@ const formatAudienceCell = (data) => {
                       </button>
                     </div>
 
+                    {/* Auto-stop after key action (campaign-level) */}
                     <div style={{marginTop:4, marginBottom:10}}>
                       <label
                         style={{
                           display:"flex",
-                          alignItems:"flex-start",
-                          gap:8,
+                          flexDirection:"column",
+                          gap:6,
                           fontSize:12,
                           textAlign:"left"
                         }}
                       >
-                        <input
-                          type="checkbox"
-                          checked={smartSwitchOn}
-                          onChange={e=>setSmartSwitchOn(e.target.checked)}
-                          style={{marginTop:2}}
-                        />
-                        <span style={{display:"inline-flex", alignItems:"center", gap:6}}>
-                          <span style={{fontWeight:600}}>Smart Switch</span>
-                          <InfoDot title="Automatically stop follow-ups once a family enrolls or takes the key action, and move them into the right operational flow." />
-                          <span
-                            style={{
-                              ...tagStatic("rgba(121,249,219,0.25)", "#047857")
+                        <span style={{display:"flex", alignItems:"center", gap:8}}>
+                          <input
+                            type="checkbox"
+                            checked={autoStopOn}
+                            onChange={e=>{
+                              setAutoStopOn(e.target.checked);
+                              if (campaignName.trim()) autoSave({ autoStopOn: e.target.checked });
                             }}
-                          >
-                            Beta
+                            style={{marginTop:0}}
+                          />
+                          <span style={{display:"inline-flex", alignItems:"center", gap:6}}>
+                            <span style={{fontWeight:600}}>Auto-stop after key action</span>
+                            <InfoDot title="When a family completes the key action (for example, enrollment or payment), we’ll stop sending follow-ups to them for this campaign." />
+                            <span
+                              style={{
+                                ...tagStatic("rgba(121,249,219,0.25)", "#047857")
+                              }}
+                            >
+                              Beta
+                            </span>
                           </span>
                         </span>
+                        {autoStopOn && (
+                          <select
+                            value={autoStopKeyAction}
+                            onChange={e=>{
+                              setAutoStopKeyAction(e.target.value);
+                              if (campaignName.trim()) autoSave({ autoStopKeyAction: e.target.value });
+                            }}
+                            style={{...inputStyle}}
+                          >
+                            <option>When a family enrolls for this offering</option>
+                            <option>When payment is completed</option>
+                            <option>When required form is submitted</option>
+                            <option>When family confirms attendance</option>
+                          </select>
+                        )}
                       </label>
                     </div>
 
@@ -1337,21 +1674,23 @@ const formatAudienceCell = (data) => {
                       const arriveDate = (idx===0)
                         ? st.date
                         : (baseDate ? addDays(baseDate, st.daysOffset||0) : "");
-                      const stepPill = isExpanded
-                        ? tagStatic("rgba(37,99,235,0.16)", COLORS.text)
-                        : tagStatic("rgba(148,163,184,0.25)", "#334155");
+
+                      const stepPillActive = tagStatic("rgba(37,99,235,0.18)", "#1d4ed8");
+                      const stepPillCollapsed = tagStatic("rgba(148,163,184,0.20)", "#111827");
+
                       return (
                         <div
                           key={st.id}
                           style={{
-                            border:`1px solid ${COLORS.border}`,
+                            border:`1px solid ${isExpanded ? COLORS.primary : COLORS.border}`,
                             borderRadius:10,
-                            background:COLORS.panel,
+                            background: isExpanded ? COLORS.panel : "#f8fafc",
                             padding:10,
-                            marginBottom:10
+                            marginBottom:10,
+                            boxShadow: isExpanded ? "0 0 0 1px rgba(37,99,235,0.06)" : "none"
                           }}
                         >
-                          {/* Header row (condensed view) */}
+                          {/* Header row */}
                           <div
                             style={{
                               display:"flex",
@@ -1370,29 +1709,33 @@ const formatAudienceCell = (data) => {
                                 flexWrap:"wrap"
                               }}
                             >
-                              <span style={stepPill}>Step {idx+1}</span>
+                              <span style={isExpanded ? stepPillActive : stepPillCollapsed}>
+                                Step {idx+1}
+                              </span>
                               {!isExpanded && (
-                                <span
-                                  style={tagStatic("rgba(148,163,184,0.15)", COLORS.subtext)}
-                                >
-                                  {st.type}
-                                </span>
-                              )}
-                              {!isExpanded && arriveDate && (
-                                <span
-                                  style={{
-                                    fontSize:11,
-                                    color:COLORS.subtext,
-                                    textAlign:"left"
-                                  }}
-                                >
-                                  {arriveDate}
-                                </span>
+                                <>
+                                  <span
+                                    style={tagStatic("rgba(148,163,184,0.15)", COLORS.subtext)}
+                                  >
+                                    {st.type}
+                                  </span>
+                                  {arriveDate && (
+                                    <span
+                                      style={{
+                                        fontSize:11,
+                                        color:COLORS.subtext,
+                                        textAlign:"left"
+                                      }}
+                                    >
+                                      {arriveDate}
+                                    </span>
+                                  )}
+                                </>
                               )}
                             </div>
                             {!isExpanded && steps.length>1 && (
                               <button
-                                title="Remove Step"
+                                title="Remove step"
                                 onClick={(e)=>{
                                   e.stopPropagation();
                                   removeStep(st.id);
@@ -1482,7 +1825,8 @@ const formatAudienceCell = (data) => {
                                         fontSize:11,
                                         color:COLORS.subtext,
                                         marginLeft:26,
-                                        textAlign:"left"
+                                        textAlign:"left",
+                                        whiteSpace:"normal"
                                       }}
                                     >
                                       Based on past opens and clicks{" "}
@@ -1492,7 +1836,7 @@ const formatAudienceCell = (data) => {
                                 </div>
                               ) : (
                                 <div style={{display:"grid", gap:10}}>
-                                  <Labeled label="Send This Message In" inline>
+                                  <Labeled label="Send this message in" inline>
                                     <div
                                       style={{
                                         display:"grid",
@@ -1518,7 +1862,7 @@ const formatAudienceCell = (data) => {
                                           textAlign:"left"
                                         }}
                                       >
-                                        days
+                                        days after Step 1
                                       </span>
                                     </div>
                                   </Labeled>
@@ -1554,7 +1898,8 @@ const formatAudienceCell = (data) => {
                                         fontSize:11,
                                         color:COLORS.subtext,
                                         marginLeft:26,
-                                        textAlign:"left"
+                                        textAlign:"left",
+                                        whiteSpace:"normal"
                                       }}
                                     >
                                       Based on past opens and clicks{" "}
@@ -1562,20 +1907,23 @@ const formatAudienceCell = (data) => {
                                     </div>
                                   </div>
 
-                                  <Labeled label="Auto-stop rule">
-                                    <select
-                                      value={st.autoStopRule || "None"}
-                                      onChange={e=>{
-                                        updateStep(st.id, { autoStopRule: e.target.value });
-                                        if (campaignName.trim()) autoSave();
-                                      }}
-                                      style={{...inputStyle}}
-                                    >
-                                      <option value="None">None</option>
-                                      <option value="Stop If Opened">Stop If Opened</option>
-                                      <option value="Stop If Clicked">Stop If Clicked</option>
-                                    </select>
-                                  </Labeled>
+                                  {/* Per-step auto-stop only if campaign-level auto-stop is OFF */}
+                                  {!autoStopOn && (
+                                    <Labeled label="Auto-stop rule">
+                                      <select
+                                        value={st.autoStopRule || "None"}
+                                        onChange={e=>{
+                                          updateStep(st.id, { autoStopRule: e.target.value });
+                                          if (campaignName.trim()) autoSave();
+                                        }}
+                                        style={{...inputStyle}}
+                                      >
+                                        <option value="None">None</option>
+                                        <option value="Stop If Opened">Stop if opened</option>
+                                        <option value="Stop If Clicked">Stop if clicked</option>
+                                      </select>
+                                    </Labeled>
+                                  )}
                                 </div>
                               )}
 
@@ -1740,6 +2088,16 @@ const formatAudienceCell = (data) => {
                         </div>
                       </div>
                     )}
+
+                    <Row
+                      label="Auto-stop after key action"
+                      value={
+                        autoStopOn
+                          ? autoStopKeyAction
+                          : "Off (follow-up steps use their own rules)"
+                      }
+                    />
+
                     <div>
                       <div
                         style={{
@@ -1800,7 +2158,8 @@ const formatAudienceCell = (data) => {
                                   style={{
                                     display:"flex",
                                     gap:12,
-                                    alignItems:"center"
+                                    alignItems:"center",
+                                    flexWrap:"wrap"
                                   }}
                                 >
                                   <strong>Send on:</strong>
@@ -1815,7 +2174,7 @@ const formatAudienceCell = (data) => {
                                 <div>
                                   <strong>Body:</strong> {st.body ? st.body : "—"}
                                 </div>
-                                {i>0 && (
+                                {i>0 && !autoStopOn && (
                                   <div>
                                     <strong>Auto-stop:</strong> {st.autoStopRule || "None"}
                                   </div>
@@ -1857,7 +2216,7 @@ const formatAudienceCell = (data) => {
 
                 {showLaunchConfirm && (
                   <ConfirmDialog
-                    title="Launch Campaign?"
+                    title="Launch campaign?"
                     body="This will send messages according to the schedule you set. You can undo from the banner after launch."
                     confirmLabel="Launch Campaign"
                     onConfirm={()=>{
@@ -2032,299 +2391,24 @@ const formatAudienceCell = (data) => {
         </>
       );
     }
-
-    /* -------------------------- Shared subcomponents ------------------------- */
-    function Stepper({ activeStep, onStepClick }){
-      const progress = (activeStep + 1) / (STEPS.length || 1);
-
-      return (
-        <div style={{marginBottom:4}}>
-          <div
-            role="navigation"
-            aria-label="Creation steps"
-            style={{display:"flex", gap:0, flexWrap:"nowrap"}}
-          >
-            {STEPS.map((label, idx)=>{
-              const active = idx===activeStep;
-              const completed = idx < activeStep;
-              return (
-                <button
-                  key={label}
-                  onClick={()=>onStepClick(idx)}
-                  style={{
-                    flex:1,
-                    appearance:"none",
-                    border:"none",
-                    background: active ? COLORS.panel : "transparent",
-                    padding:"10px 16px",
-                    fontWeight:700,
-                    fontSize:"13px",
-                    color: active
-                      ? COLORS.primary
-                      : (completed ? COLORS.subtext : COLORS.text),
-                    cursor:"pointer",
-                    textAlign:"left",
-                    borderRadius:"10px 10px 0 0"
-                  }}
-                  aria-current={active?"step":undefined}
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-          <div
-            style={{
-              position:"relative",
-              height:3,
-              borderRadius:999,
-              background:"#e5e7eb",
-              overflow:"hidden"
-            }}
-          >
-            <div
-              style={{
-                position:"absolute",
-                left:0,
-                top:0,
-                bottom:0,
-                width:`${progress*100}%`,
-                background:COLORS.primary
-              }}
-            />
-          </div>
-        </div>
-      );
-    }
-
-    function Panel({ title, children }){
-      return (
-        <div
-          style={{
-            border:`1px solid ${COLORS.border}`,
-            borderRadius:12,
-            background:COLORS.panel,
-            padding:14,
-            marginTop:10
-          }}
-          role="region"
-          aria-label={title}
-        >
-          <h2 style={{marginTop:0, fontSize:16, textAlign:"left"}}>{title}</h2>
-          {children}
-        </div>
-      );
-    }
-    function Labeled({ label, required, hint, inline, children }){
-      return (
-        <div style={{marginBottom:10}}>
-          <div
-            style={{
-              display:inline?"inline-flex":"flex",
-              alignItems:"baseline",
-              gap:6,
-              marginBottom:4,
-              textAlign:"left"
-            }}
-          >
-            <label style={{fontWeight:600, fontSize:13}}>
-              {label}
-              {required && (
-                <span style={{color:COLORS.danger, marginLeft:4}}>*</span>
-              )}
-            </label>
-            {hint && (
-              <span style={{color:COLORS.subtext, fontSize:12}}>{hint}</span>
-            )}
-          </div>
-          {children}
-        </div>
-      );
-    }
-    const inputStyle = {
-      background:COLORS.panelAlt,
-      border:`1px solid ${COLORS.border}`,
-      color:COLORS.text,
-      padding:"8px 10px",
-      borderRadius:8,
-      width:"100%",
-      fontSize:13,
-      textAlign:"left"
-    };
-    function Input({ value, onChange, placeholder }){
-      const [local, setLocal] = useState(value||"");
-      useEffect(()=>setLocal(value||""),[value]);
-      return (
-        <input
-          type="text"
-          value={local}
-          placeholder={placeholder}
-          style={inputStyle}
-          onChange={(e)=>{
-            setLocal(e.target.value);
-            onChange?.(e.target.value);
-          }}
-          onFocus={(e)=>{ e.currentTarget.style.outline=focusRing.outline; }}
-          onBlur={(e)=>{ e.currentTarget.style.outline="none"; }}
-        />
-      );
-    }
-    function Textarea({ value, onChange, placeholder }){
-      const [local, setLocal] = useState(value||"");
-      useEffect(()=>setLocal(value||""),[value]);
-      return (
-        <textarea
-          value={local}
-          placeholder={placeholder}
-          rows={7}
-          style={{
-            ...inputStyle,
-            fontFamily:"inherit",
-            resize:"vertical"
-          }}
-          onChange={(e)=>{
-            setLocal(e.target.value);
-            onChange?.(e.target.value);
-          }}
-          onFocus={(e)=>{ e.currentTarget.style.outline=focusRing.outline; }}
-          onBlur={(e)=>{ e.currentTarget.style.outline="none"; }}
-        />
-      );
-    }
-    function TypeToggle({ value, onChange }){
-      const Item = ({ v })=>{
-        const active = value===v;
-        return (
-          <button
-            onClick={()=>onChange(v)}
-            style={{
-              ...btnGhost,
-              padding:"4px 8px",
-              borderRadius:999,
-              borderColor:active?COLORS.primary:COLORS.border,
-              color:active?COLORS.primary:COLORS.text,
-              background:active?"rgba(37,99,235,0.10)":COLORS.panelAlt,
-              fontSize:12,
-              textAlign:"left"
-            }}
-            aria-pressed={active}
-          >
-            {v}
-          </button>
-        );
-      };
-      return (
-        <div
-          role="group"
-          aria-label="Message type"
-          style={{display:"flex", gap:4, textAlign:"left"}}
-        >
-          <Item v="Email" />
-          <Item v="SMS" />
-        </div>
-      );
-    }
-    function Row({ label, value }){
-      return (
-        <div
-          style={{
-            display:"grid",
-            gridTemplateColumns:"160px 1fr",
-            gap:6,
-            textAlign:"left"
-          }}
-        >
-          <div style={{color:COLORS.subtext, fontSize:12}}>{label}</div>
-          <div style={{fontSize:13}}>{value}</div>
-        </div>
-      );
-    }
-
-    function InfoDot({ title }) {
-      const [open, setOpen] = useState(false);
-      const btnRef = useRef(null);
-
-      useEffect(() => {
-        if (!open) return;
-        const handleClick = (e) => {
-          if (!btnRef.current) return;
-          if (!btnRef.current.contains(e.target)) {
-            setOpen(false);
-          }
-        };
-        document.addEventListener("mousedown", handleClick);
-        return () => document.removeEventListener("mousedown", handleClick);
-      }, [open]);
-
-      return (
-        <span style={{position:"relative", display:"inline-flex"}}>
-          <button
-            type="button"
-            ref={btnRef}
-            onClick={()=>setOpen(o=>!o)}
-            aria-label={title}
-            aria-expanded={open}
-            style={{
-              display:"inline-flex",
-              alignItems:"center",
-              justifyContent:"center",
-              width:18,
-              height:18,
-              borderRadius:"999px",
-              border:`1px solid ${COLORS.border}`,
-              background:COLORS.panelAlt,
-              color:COLORS.subtext,
-              fontSize:11,
-              cursor:"pointer",
-              padding:0
-            }}
-          >
-            ?
-          </button>
-          {open && (
-            <div
-              style={{
-                position:"absolute",
-                top:"120%",
-                left:"50%",
-                transform:"translateX(-50%)",
-                minWidth:220,
-                maxWidth:280,
-                padding:"8px 10px",
-                borderRadius:8,
-                background:COLORS.panel,
-                border:`1px solid ${COLORS.border}`,
-                boxShadow:"0 8px 20px rgba(15,23,42,0.18)",
-                fontSize:12,
-                color:COLORS.text,
-                textAlign:"left",
-                lineHeight:1.4,
-                whiteSpace:"normal",
-                zIndex:1200
-              }}
-            >
-              {title}
-            </div>
-          )}
-        </span>
-      );
-    }
-
     function AudienceSelectorInline({ onClose, onApply, initialSelected=[] }){
       const [source, setSource] = useState("roster");
       const [selected, setSelected] = useState(initialSelected);
       const [manual, setManual] = useState("");
       const [rosterFilter, setRosterFilter] = useState("All Roster");
+      const [detailSegment, setDetailSegment] = useState(null);
+      const [detailSearch, setDetailSearch] = useState("");
 
       const sourceOptions = [
         { id:"roster", label:"Use BeAKid Roster" },
         { id:"excel", label:"Upload From Excel" },
         { id:"sheets", label:"Upload From Google Sheets" },
-        { id:"manual", label:"Add Manual Emails" },
+        { id:"manual", label:"Upload Manually" },
       ];
 
       const addSegment = (seg)=> setSelected(p=> p.includes(seg)? p : [...p, seg]);
       const removeSegment = (seg)=> setSelected(p=> p.filter(s=>s!==seg));
+
       const parseManual = ()=>{
         const raw = manual
           .replace(/\s+/g," ")
@@ -2338,6 +2422,7 @@ const formatAudienceCell = (data) => {
         alert(`Parsed ${emails.length} entries.\nValid: ${valid.length}\nInvalid dropped: ${invalid.length}`);
         if (valid.length) addSegment(`Manual List (${valid.length})`);
       };
+
       const segmentsDemo = [
         "All Contacts",
         "Class A",
@@ -2346,6 +2431,24 @@ const formatAudienceCell = (data) => {
         "Class B",
         "Class C / Session C1"
       ];
+
+      // Simple mock data to illustrate “view details”
+      const MOCK_CONTACTS = [
+        { name:"Alex Rivera", relation:"Parent", email:"alex@example.com" },
+        { name:"Jamie Chen", relation:"Parent", email:"jamie@example.com" },
+        { name:"Taylor Singh", relation:"Guardian", email:"taylor@example.com" },
+        { name:"Jordan Lee", relation:"Parent", email:"jordan@example.com" },
+      ];
+
+      const filteredContacts = MOCK_CONTACTS.filter(c=>{
+        if (!detailSearch.trim()) return true;
+        const q = detailSearch.toLowerCase();
+        return (
+          c.name.toLowerCase().includes(q) ||
+          c.relation.toLowerCase().includes(q) ||
+          c.email.toLowerCase().includes(q)
+        );
+      });
 
       return (
         <div
@@ -2368,7 +2471,7 @@ const formatAudienceCell = (data) => {
             }}
           >
             <h3 style={{margin:0, fontSize:14, textAlign:"left"}}>
-              Choose Audience Source
+              Choose audience source
             </h3>
             <button style={btnGhost} onClick={onClose} aria-label="Close audience selection">
               ✕
@@ -2424,26 +2527,158 @@ const formatAudienceCell = (data) => {
               </div>
               <div style={{display:"grid", gap:6}}>
                 {segmentsDemo.map(s=>(
-                  <button
+                  <div
                     key={s}
-                    onClick={()=>addSegment(s)}
                     style={{
-                      ...btnGhost,
-                      justifyContent:"space-between",
                       display:"flex",
-                      padding:"8px 9px",
-                      background:COLORS.panel,
-                      fontSize:13,
-                      cursor:"pointer"
+                      gap:6,
+                      alignItems:"center"
                     }}
-                    onMouseEnter={(e)=>{ e.currentTarget.style.backgroundColor = COLORS.optionHoverBg; }}
-                    onMouseLeave={(e)=>{ e.currentTarget.style.backgroundColor = COLORS.panel; }}
                   >
-                    <span>{s}</span>
-                    <span style={{color:COLORS.subtext}}>Add</span>
-                  </button>
+                    <button
+                      onClick={()=>addSegment(s)}
+                      style={{
+                        ...btnGhost,
+                        justifyContent:"space-between",
+                        flex:1,
+                        padding:"8px 9px",
+                        background:COLORS.panel,
+                        fontSize:13,
+                        cursor:"pointer"
+                      }}
+                      onMouseEnter={(e)=>{ e.currentTarget.style.backgroundColor = COLORS.optionHoverBg; }}
+                      onMouseLeave={(e)=>{ e.currentTarget.style.backgroundColor = COLORS.panel; }}
+                    >
+                      <span>{s}</span>
+                      <span style={{color:COLORS.subtext}}>Add</span>
+                    </button>
+                    <button
+                      type="button"
+                      style={{
+                        ...btnGhost,
+                        padding:"4px 6px",
+                        fontSize:11
+                      }}
+                      onClick={()=>setDetailSegment(s)}
+                    >
+                      View
+                    </button>
+                  </div>
                 ))}
               </div>
+
+              {detailSegment && (
+                <div
+                  style={{
+                    marginTop:10,
+                    border:`1px solid ${COLORS.border}`,
+                    borderRadius:10,
+                    padding:8,
+                    background:COLORS.panel
+                  }}
+                >
+                  <div
+                    style={{
+                      display:"flex",
+                      justifyContent:"space-between",
+                      alignItems:"center",
+                      marginBottom:6
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize:12,
+                        fontWeight:600,
+                        textAlign:"left"
+                      }}
+                    >
+                      {detailSegment} — sample contacts
+                    </div>
+                    <button
+                      style={{...btnGhost, padding:"2px 6px", fontSize:11}}
+                      onClick={()=>{
+                        setDetailSegment(null);
+                        setDetailSearch("");
+                      }}
+                    >
+                      Close
+                    </button>
+                  </div>
+                  <div style={{marginBottom:6}}>
+                    <input
+                      type="text"
+                      placeholder="Search by name, relation, email…"
+                      value={detailSearch}
+                      onChange={e=>setDetailSearch(e.target.value)}
+                      style={{...inputStyle, fontSize:12}}
+                    />
+                  </div>
+                  <div
+                    style={{
+                      maxHeight:160,
+                      overflow:"auto",
+                      borderRadius:8,
+                      border:`1px solid ${COLORS.border}`
+                    }}
+                  >
+                    <table
+                      style={{
+                        width:"100%",
+                        borderCollapse:"collapse",
+                        fontSize:12
+                      }}
+                    >
+                      <thead>
+                        <tr style={{background:COLORS.panelAlt}}>
+                          <th style={{padding:"6px 8px", textAlign:"left"}}>
+                            <input type="checkbox" aria-label="Select all (demo only)" />
+                          </th>
+                          <th style={{padding:"6px 8px", textAlign:"left"}}>Name</th>
+                          <th style={{padding:"6px 8px", textAlign:"left"}}>Relation</th>
+                          <th style={{padding:"6px 8px", textAlign:"left"}}>Email</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredContacts.map(c=>(
+                          <tr key={c.email}>
+                            <td style={{padding:"4px 8px"}}>
+                              <input type="checkbox" />
+                            </td>
+                            <td style={{padding:"4px 8px"}}>{c.name}</td>
+                            <td style={{padding:"4px 8px"}}>{c.relation}</td>
+                            <td style={{padding:"4px 8px"}}>{c.email}</td>
+                          </tr>
+                        ))}
+                        {filteredContacts.length===0 && (
+                          <tr>
+                            <td
+                              colSpan={4}
+                              style={{
+                                padding:"6px 8px",
+                                color:COLORS.subtext,
+                                fontStyle:"italic",
+                                textAlign:"left"
+                              }}
+                            >
+                              No matches for this search (demo data).
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div
+                    style={{
+                      marginTop:6,
+                      fontSize:11,
+                      color:COLORS.subtext,
+                      textAlign:"left"
+                    }}
+                  >
+                    Prototype note: checkboxes are for show only. In a live product you’d be able to fine-tune exactly who’s included.
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -2457,7 +2692,7 @@ const formatAudienceCell = (data) => {
                   textAlign:"left"
                 }}
               >
-                Upload an Excel file with parent emails (stub for prototype).
+                Upload an Excel file with parent emails (prototype only — file upload not wired).
               </div>
               <button style={btnGhost}>Choose Excel File…</button>
             </div>
@@ -2473,7 +2708,7 @@ const formatAudienceCell = (data) => {
                   textAlign:"left"
                 }}
               >
-                Connect a Google Sheet with your roster (stub for prototype).
+                Connect a Google Sheet with your roster (prototype only).
               </div>
               <button style={btnGhost}>Connect Google Sheets…</button>
             </div>
@@ -2723,7 +2958,7 @@ const formatAudienceCell = (data) => {
                 }}
               >
                 <div style={{fontSize:13, marginBottom:6, textAlign:"left"}}>
-                  Send a test SMS to your account email?
+                  Send a test to your account email? (prototype only)
                 </div>
                 <div style={{display:"flex", justifyContent:"flex-end", gap:8}}>
                   <button style={btnGhost} onClick={()=>setShowConfirm(false)}>Cancel</button>
@@ -2751,7 +2986,7 @@ const formatAudienceCell = (data) => {
                   zIndex:210
                 }}
               >
-                <span style={{textAlign:"left"}}>Test sent to your email.</span>
+                <span style={{textAlign:"left"}}>Test sent to your email (demo).</span>
                 <button
                   style={{...btnGhost, padding:"4px 8px"}}
                   onClick={handleUndo}
@@ -2774,37 +3009,12 @@ const formatAudienceCell = (data) => {
                 marginTop:10
               }}
             >
-              <button style={btnGhost} onClick={onClose}>Back to Edit</button>
+              <button style={btnGhost} onClick={onClose}>Back to edit</button>
               {!hasSent && !showConfirm && (
                 <button style={btnPrimary} onClick={()=>setShowConfirm(true)}>Send Test</button>
               )}
             </div>
           </div>
-        </div>
-      );
-    }
-
-    function FooterNav({ onBack, onNext, nextLabel="Next", nextDisabled }){
-      return (
-        <div
-          style={{
-            display:"flex",
-            justifyContent:"space-between",
-            marginTop:10
-          }}
-        >
-          <button style={btnGhost} onClick={onBack}>Back</button>
-          <button
-            style={{
-              ...btnPrimary,
-              opacity:nextDisabled?.valueOf()?0.6:1,
-              textAlign:"center"
-            }}
-            disabled={nextDisabled}
-            onClick={onNext}
-          >
-            {nextLabel}
-          </button>
         </div>
       );
     }
@@ -2883,7 +3093,7 @@ const formatAudienceCell = (data) => {
 
     /* ------------------------------- Mount App ------------------------------- */
     const root = ReactDOM.createRoot(document.getElementById("root"));
-    root.render(<BeAKampaignApp />);
+    root.render(<SendIQ.ioApp />);
   </script>
 </body>
 </html>
