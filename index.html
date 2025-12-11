@@ -1,3099 +1,1523 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>SendIQdotio — Full Campaign Tool (Light)</title>
-  
-  <!-- Google Fonts: Poppins -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-
-  <style>
-    html,body,#root{height:100%}
-    body{
-      margin:0;
-      background:#f5f5f7;
-      color:#0f172a;
-      font-family: 'Poppins', system-ui, -apple-system, Segoe UI, Roboto, Inter, Helvetica, Arial, sans-serif;
-    }
-    *{box-sizing:border-box}
-    button{font:inherit}
-
-    /* Compose layout responsive fix so recommended time text doesn’t fall out */
-    .compose-layout{
-      display:grid;
-      grid-template-columns:260px 1fr;
-      gap:14px;
-    }
-    @media (max-width: 960px){
-      .compose-layout{
-        grid-template-columns:1fr;
-      }
-    }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>SendIQdotio — Full Campaign Tool (Data Table Update)</title>
+<!-- Google Fonts: Poppins -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+html,body,#root{height:100%}
+body{
+margin:0;
+background:#f5f5f7;
+color:#0f172a;
+font-family: 'Poppins', system-ui, -apple-system, Segoe UI, Roboto, Inter, Helvetica, Arial, sans-serif;
+}
+*{box-sizing:border-box}
+button{font:inherit}
+/* Compose layout responsive fix so recommended time text doesn’t fall out */
+.compose-layout{
+display:grid;
+grid-template-columns:260px 1fr;
+gap:14px;
+}
+@media (max-width: 960px){
+.compose-layout{
+grid-template-columns:1fr;
+}
+}
+</style>
 </head>
 <body>
-  <div id="root"></div>
+<div id="root"></div>
+<!-- React + ReactDOM (production) -->
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<!-- Babel for inline JSX (for the prototype) -->
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script type="text/babel">
+const { useEffect, useMemo, useRef, useState } = React;
 
-  <!-- React + ReactDOM (production) -->
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <!-- Babel for inline JSX (for the prototype) -->
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+/* -------------------------- Brand & Theme Tokens ------------------------- */
+const BRAND = {
+  red:   "#e93a3b",
+  purple:"#a963ff",
+  yellow:"rgba(249,201,0,0.65)",
+  blue:  "#56c9fe",
+  mint:  "#79f9db"
+};
+const COLORS = {
+  bg: "#f5f5f7",
+  panel: "#ffffff",
+  panelAlt: "#f9fafb",
+  text: "#0f172a",
+  subtext: "#6b7280",
+  interactive: "#2563eb",
+  interactiveText: "#ffffff",
+  primary: "#2563eb",
+  primaryText: "#ffffff",
+  danger: BRAND.red,
+  warning: "#f59e0b",
+  success: "#15803d",
+  border: "#e5e7eb",
+  focus: BRAND.purple,
+  rowWarnBg: "rgba(233,58,59,0.08)",
+  optionHoverBg: "rgba(86,201,254,0.12)"
+};
+const focusRing = { outline: `2px solid ${COLORS.focus}`, outlineOffset: "2px" };
+const btnBase = {
+  padding:"7px 11px",
+  borderRadius:6,
+  border:`1px solid ${COLORS.border}`,
+  fontWeight:600,
+  fontSize:"13px",
+  lineHeight:1.25,
+  cursor:"pointer",
+  background:COLORS.panelAlt,
+  color:COLORS.text,
+  textAlign:"left"
+};
+const btnPrimary = {
+  ...btnBase,
+  background:COLORS.primary,
+  color:COLORS.primaryText,
+  borderColor:COLORS.primary
+};
+const btnGhost = {
+  ...btnBase,
+  background:"transparent"
+};
+const badge = (bg, fg) => ({
+  display:"inline-block",
+  padding:"2px 8px",
+  borderRadius:999,
+  background:bg,
+  color:fg,
+  fontSize:12,
+  textAlign:"left"
+});
+const chipSelectable = (active) => ({
+  display:"inline-flex",
+  alignItems:"center",
+  padding:"4px 10px",
+  borderRadius:999,
+  border:`1px solid ${active ? COLORS.primary : COLORS.border}`,
+  background: active ? "rgba(37,99,235,0.10)" : COLORS.panelAlt,
+  fontSize:12,
+  cursor:"pointer",
+  textAlign:"left"
+});
+const tagStatic = (bg, fg) => ({
+  display:"inline-block",
+  padding:"2px 8px",
+  borderRadius:999,
+  background:bg,
+  color:fg,
+  fontSize:11,
+  textAlign:"left"
+});
+const normalizeTime = (t) => t && t.trim() ? t : "09:00";
 
-  <script type="text/babel">
-    const { useEffect, useMemo, useRef, useState } = React;
+/* ----------------------- KPI + Underperforming rules --------------------- */
+const KPI = {
+  minDelivered: 200,
+  email: { ctrWeak: 0.012, ctorWeak: 0.08, unsubRed: 0.005, spamRed: 0.0005, cooldownH: 72 },
+  sms:   { ctrWeak: 0.12,  replyWeak: 0.02, unsubRed: 0.01,   cooldownH: 24 }
+};
+function hoursSince(dateISO) {
+  if (!dateISO) return Infinity;
+  const last = new Date(dateISO);
+  const now = new Date();
+  return (now - last) / 36e5;
+}
+function isCompleted(c) {
+  if (!c || !c.lastSendAt) return false;
+  if (c.status === "Draft") return false;
+  const h = (c.channel === "SMS") ? KPI.sms.cooldownH : KPI.email.cooldownH;
+  return !c.hasFutureSteps && hoursSince(c.lastSendAt) >= h;
+}
+function eligible(c) {
+  const min = Math.max(KPI.minDelivered, Math.ceil(0.02 * (c.audienceCount || 0)));
+  return (c.delivered || 0) >= min;
+}
+function underperforming(c) {
+  if (!isCompleted(c) || !eligible(c)) return false;
+  const goal = c.goal || "Engagement";
+  if (goal === "Informational") {
+    return (c.unsubRate || 0) >= KPI.email.unsubRed || (c.spamRate || 0) >= KPI.email.spamRed;
+  }
+  return c.channel === 'SMS' 
+    ? (c.ctr || 0) < KPI.sms.ctrWeak
+    : ((c.ctr || 0) < KPI.email.ctrWeak) || ((c.ctor ?? 1) < KPI.email.ctorWeak);
+}
+function buildUnderperfTooltip(c) {
+  const parts = [];
+  if (c.channel === "SMS") {
+     if ((c.ctr || 0) < KPI.sms.ctrWeak) parts.push(`CTR ${(c.ctr*100||0).toFixed(1)}% (< ${(KPI.sms.ctrWeak*100).toFixed(1)}% target)`);
+     if ((c.unsubRate || 0) >= KPI.sms.unsubRed) parts.push(`Unsub ${(c.unsubRate*100).toFixed(2)}% (high)`);
+  } else {
+     if ((c.ctr || 0) < KPI.email.ctrWeak) parts.push(`CTR ${(c.ctr*100||0).toFixed(1)}% (< ${(KPI.email.ctrWeak*100).toFixed(1)}% target)`);
+     if ((c.ctor ?? 1) < KPI.email.ctorWeak) parts.push(`CTOR ${((c.ctor||0)*100).toFixed(1)}% (< ${(KPI.email.ctorWeak*100).toFixed(0)}% target)`);
+     if ((c.unsubRate || 0) >= KPI.email.unsubRed) parts.push(`Unsub ${(c.unsubRate*100).toFixed(2)}% (high)`);
+  }
+  return `Underperforming — ${parts.join("; ") || "below target"}. Click to revise.`;
+}
 
-    /* -------------------------- Brand & Theme Tokens ------------------------- */
-    const BRAND = {
-      red:   "#e93a3b",
-      purple:"#a963ff",
-      yellow:"rgba(249,201,0,0.65)",
-      blue:  "#56c9fe",
-      mint:  "#79f9db"
+/* ---------------------- Helpers for scheduling/AI time ------------------- */
+const addDays = (yyyyMmDd, n=0) => {
+  if (!yyyyMmDd) return "";
+  const d = new Date(yyyyMmDd+"T00:00:00");
+  d.setDate(d.getDate() + Number(n||0));
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate(), 10).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+};
+const parseDelayDays = (txt) => {
+  if (!txt) return 0;
+  const m = String(txt).match(/(\d+)\s*d/i);
+  return m ? parseInt(m[5],10) : 0;
+};
+function recommendTimeFor({ type, audienceSegments=[] }) {
+  if (type === "SMS") return "17:00";
+  const seed = audienceSegments.join("|").length % 5;
+  const slots = ["09:00","10:30","11:15","14:00","16:45"];
+  return slots[seed];
+}
+
+/* ------------------------ Campaign data (home list) ---------------------- */
+const initialCampaigns = [
+  {
+    id: 1,
+    name: "Weekly Update 10/25",
+    subject: "Your Weekly Class Update: New Features Inside",
+    audience: "—",
+    audienceCount: 1742,
+    audienceLabels: ["All Contacts"],
+    status: "Sent",
+    sendTime: "Oct 25, 10:00 AM",
+    opens: 540,
+    clicks: 12,
+    sequences: [],
+    editable: false,
+    channel: "Email",
+    goal: "Engagement",
+    delivered: 1700,
+    ctr: 12/1700,
+    ctor: 0.08,
+    unsubRate: 0.001,
+    spamRate: 0.0001,
+    conversionRate: 0.0,
+    convTarget: null,
+    lastSendAt: "2025-10-25T10:00:00-04:00",
+    hasFutureSteps: false
+  },
+  {
+    id: 2,
+    name: "Registration Reminder P1",
+    subject: "Don't Miss Out! Registration Closes Tomorrow",
+    audience: "—",
+    audienceCount: 1742,
+    audienceLabels: ["Class A","Class B"],
+    status: "Scheduled",
+    sendTime: "Nov 10, 3:00 PM",
+    opens: "-",
+    clicks: "-",
+    sequences: [
+      { delay: "3d", condition: "Non-openers", messageType: "SMS" },
+      { delay: "7d", condition: "Everyone", messageType: "Email" },
+    ],
+    editable: true,
+    channel: "Email",
+    goal: "Engagement",
+    delivered: 0,
+    ctr: 0,
+    ctor: 0,
+    unsubRate: 0,
+    spamRate: 0,
+    lastSendAt: "2025-11-10T15:00:00-05:00",
+    hasFutureSteps: true
+  },
+  {
+    id: 3,
+    name: "Summer Camp P1",
+    subject: "Summer Camp Early Bird Discount",
+    audience: "—",
+    audienceCount: 3200,
+    audienceLabels: ["Leads"],
+    status: "Active",
+    sendTime: "Sent 2 days ago",
+    opens: 600,
+    clicks: 80,
+    sequences: [],
+    editable: true,
+    channel: "Email",
+    goal: "Engagement",
+    delivered: 2900,
+    ctr: 80/2900,
+    ctor: 0.12,
+    unsubRate: 0.001,
+    spamRate: 0.0001,
+    lastSendAt: "2025-11-10T12:00:00-05:00",
+    hasFutureSteps: false
+  },
+  {
+    id: 4,
+    name: "Mid-Campaign Test",
+    subject: "Paused Mid-Campaign Test",
+    audience: "—",
+    audienceCount: 1010,
+    audienceLabels: ["Leads","Session C1"],
+    status: "Paused",
+    sendTime: "Paused • Nov 1",
+    opens: 100,
+    clicks: 11,
+    sequences: [
+       { delay: "3d", condition: "Non-openers", messageType: "Email" },
+    ],
+    editable: true,
+    channel: "Email",
+    goal: "Engagement",
+    delivered: 900,
+    ctr: 11/900,
+    ctor: 0.11,
+    unsubRate: 0.001,
+    spamRate: 0.0001,
+    lastSendAt: "2025-11-01T09:00:00-04:00",
+    hasFutureSteps: true
+  },
+];
+
+const STATUS_STYLES = {
+  "Draft":      tagStatic("rgba(148,163,184,0.26)", "#1f2937"),
+  "Active":     tagStatic("rgba(37,99,235,0.20)", "#1d4ed8"),
+  "Scheduled":  tagStatic("rgba(169,99,255,0.22)", "#6b21a8"),
+  "Paused":     tagStatic("rgba(253,224,171,0.95)", "#92400e"),
+  "Sent":       tagStatic("rgba(22,163,74,0.20)", "#15803d"),
+  "Completed":  tagStatic("rgba(121,249,219,0.32)", "#047857"),
+};
+
+/* --------------------------------- App ----------------------------------- */
+function SendIQdotioApp() {
+  const [route, setRoute] = useState({ page:"dashboard", campaignId:null, step:0 });
+  const [campaigns, setCampaigns] = useState(initialCampaigns);
+  const [draftId, setDraftId] = useState(null);
+  const [toast, setToast] = useState(null); // { type: "launch", campaignId }
+
+  const startNew = () => {
+    setRoute({ page:"create", campaignId:"new", step:0 });
+    setDraftId(null);
+  };
+  const openCampaign = (id) => {
+    setRoute({ page:"create", campaignId:id||"new", step:0 });
+    setDraftId(id);
+  };
+  const openCampaignCompose = (id) => {
+    setRoute({ page:"create", campaignId:id||"new", step:2 });
+    setDraftId(id);
+  };
+  const openAnalytics = (id) => setRoute({ page:"create", campaignId:id, step:3 });
+  
+  const deleteCampaign = (id) => setCampaigns(p=>p.filter(c=>c.id!==id));
+  const duplicateCampaign = (id) => {
+    const orig = campaigns.find(c=>c.id===id); if(!orig) return;
+    const copy = {
+      ...orig,
+      id: Date.now(),
+      name: `(Copy) ${orig.name}`,
+      status: "Draft",
+      sendTime: "—",
+      opens: "-",
+      clicks: "-",
+      sequences: orig.sequences || [],
+      editable: true,
+      lastSendAt: null,
+      hasFutureSteps: false,
+      delivered: 0,
+      ctr: 0,
+      ctor: 0,
+      unsubRate: 0,
+      spamRate: 0
     };
-
-    const COLORS = {
-      bg: "#f5f5f7",
-      panel: "#ffffff",
-      panelAlt: "#f9fafb",
-      text: "#0f172a",
-      subtext: "#6b7280",
-      interactive: "#2563eb",
-      interactiveText: "#ffffff",
-      primary: "#2563eb",
-      primaryText: "#ffffff",
-      danger: BRAND.red,
-      warning: "#f59e0b",
-      success: "#15803d",
-      border: "#e5e7eb",
-      focus: BRAND.purple,
-      rowWarnBg: "rgba(233,58,59,0.08)",
-      optionHoverBg: "rgba(86,201,254,0.12)"
-    };
-
-    const focusRing = { outline: `2px solid ${COLORS.focus}`, outlineOffset: "2px" };
-
-    const btnBase = {
-      padding:"7px 11px",
-      borderRadius:6,
-      border:`1px solid ${COLORS.border}`,
-      fontWeight:600,
-      fontSize:"13px",
-      lineHeight:1.25,
-      cursor:"pointer",
-      background:COLORS.panelAlt,
-      color:COLORS.text,
-      textAlign:"left"
-    };
-    const btnPrimary = {
-      ...btnBase,
-      background:COLORS.primary,
-      color:COLORS.primaryText,
-      borderColor:COLORS.primary
-    };
-    const btnGhost = {
-      ...btnBase,
-      background:"transparent"
-    };
-    const badge = (bg, fg) => ({
-      display:"inline-block",
-      padding:"2px 8px",
-      borderRadius:999,
-      background:bg,
-      color:fg,
-      fontSize:12,
-      textAlign:"left"
-    });
-    const chipSelectable = (active) => ({
-      display:"inline-flex",
-      alignItems:"center",
-      padding:"4px 10px",
-      borderRadius:999,
-      border:`1px solid ${active ? COLORS.primary : COLORS.border}`,
-      background: active ? "rgba(37,99,235,0.10)" : COLORS.panelAlt,
-      fontSize:12,
-      cursor:"pointer",
-      textAlign:"left"
-    });
-    const tagStatic = (bg, fg) => ({
-      display:"inline-block",
-      padding:"2px 8px",
-      borderRadius:999,
-      background:bg,
-      color:fg,
-      fontSize:11,
-      textAlign:"left"
-    });
-
-    const normalizeTime = (t) => t && t.trim() ? t : "09:00";
-
-    /* ----------------------- KPI + Underperforming rules --------------------- */
-    const KPI = {
-      minDelivered: 200,
-      email: { ctrWeak: 0.012, ctorWeak: 0.08, unsubRed: 0.005, spamRed: 0.0005, cooldownH: 72 },
-      sms:   { ctrWeak: 0.12,  replyWeak: 0.02, unsubRed: 0.01,   cooldownH: 24 }
-    };
-
-    function hoursSince(dateISO) {
-      if (!dateISO) return Infinity;
-      const last = new Date(dateISO);
-      const now = new Date();
-      return (now - last) / 36e5;
-    }
-    function isCompleted(c) {
-      if (!c || !c.lastSendAt) return false;
-      if (c.status === "Draft") return false;
-      const h = (c.channel === "SMS") ? KPI.sms.cooldownH : KPI.email.cooldownH;
-      return !c.hasFutureSteps && hoursSince(c.lastSendAt) >= h;
-    }
-    function eligible(c) {
-      const min = Math.max(KPI.minDelivered, Math.ceil(0.02 * (c.audienceCount || 0)));
-      return (c.delivered || 0) >= min;
-    }
-    function underperforming(c) {
-      if (!isCompleted(c) || !eligible(c)) return false;
-      const goal = c.goal || "Engagement";
-      if (goal === "Informational") {
-        return (c.unsubRate || 0) >= KPI.email.unsubRed || (c.spamRate || 0) >= KPI.email.spamRed;
+    setCampaigns(p=>[copy, ...p]);
+  };
+  const togglePause = (id) => {
+    setCampaigns(prev => prev.map(c => {
+      if (c.id !== id) return c;
+      if (c.status === "Paused") return { ...c, status: "Active" };
+      if (c.status === "Active" || c.status === "Scheduled") {
+        return { ...c, status: "Paused", sendTime: `Paused • ${new Date().toLocaleString()}` };
       }
-      if (goal === "Conversion") {
-        const convMiss = (c.convTarget != null) && ((c.conversionRate || 0) < c.convTarget);
-        const weakEng = c.channel === 'SMS'
-          ? (c.ctr || 0) < KPI.sms.ctrWeak
-          : ((c.ctr || 0) < KPI.email.ctrWeak) || ((c.ctor ?? 1) < KPI.email.ctorWeak);
-        return convMiss && weakEng;
-      }
-      return c.channel === 'SMS'
-        ? (c.ctr || 0) < KPI.sms.ctrWeak
-        : ((c.ctr || 0) < KPI.email.ctrWeak) || ((c.ctor ?? 1) < KPI.email.ctorWeak);
-    }
-    function buildUnderperfTooltip(c) {
-      const parts = [];
-      if (c.channel === "SMS") {
-        if ((c.ctr || 0) < KPI.sms.ctrWeak) parts.push(`CTR ${(c.ctr*100||0).toFixed(1)}% (< ${(KPI.sms.ctrWeak*100).toFixed(1)}% target)`);
-        if ((c.unsubRate || 0) >= KPI.sms.unsubRed) parts.push(`Unsub ${(c.unsubRate*100).toFixed(2)}% (high)`);
-      } else {
-        if ((c.ctr || 0) < KPI.email.ctrWeak) parts.push(`CTR ${(c.ctr*100||0).toFixed(1)}% (< ${(KPI.email.ctrWeak*100).toFixed(1)}% target)`);
-        if ((c.ctor ?? 1) < KPI.email.ctorWeak) parts.push(`CTOR ${((c.ctor||0)*100).toFixed(1)}% (< ${(KPI.email.ctorWeak*100).toFixed(0)}% target)`);
-        if ((c.unsubRate || 0) >= KPI.email.unsubRed) parts.push(`Unsub ${(c.unsubRate*100).toFixed(2)}% (high)`);
-        if ((c.spamRate || 0) >= KPI.email.spamRed) parts.push(`Spam ${(c.spamRate*100).toFixed(2)}% (high)`);
-      }
-      return `Underperforming — ${parts.join("; ") || "below target"}. Click to revise.`;
-    }
+      return c;
+    }));
+  };
 
-    /* ---------------------- Helpers for scheduling/AI time ------------------- */
-    const addDays = (yyyyMmDd, n=0) => {
-      if (!yyyyMmDd) return "";
-      const d = new Date(yyyyMmDd+"T00:00:00");
-      d.setDate(d.getDate() + Number(n||0));
-      const y = d.getFullYear();
-      const m = String(d.getMonth()+1).padStart(2,'0');
-      const day = String(d.getDate(), 10).padStart(2,'0');
-      return `${y}-${m}-${day}`;
-    };
-    const parseDelayDays = (txt) => {
-      if (!txt) return 0;
-      const m = String(txt).match(/(\d+)\s*d/i);
-      return m ? parseInt(m[1],10) : 0;
-    };
-    function recommendTimeFor({ type, audienceSegments=[] }) {
-      if (type === "SMS") return "17:00";
-      const seed = audienceSegments.join("|").length % 5;
-      const slots = ["09:00","10:30","11:15","14:00","16:45"];
-      return slots[seed];
-    }
-
-    /* ------------------------ Campaign data (home list) ---------------------- */
-    const initialCampaigns = [
-      {
-        id: 1,
-        name: "Weekly Update 10/25",
-        subject: "Your Weekly Class Update: New Features Inside",
-        audience: "—",
-        audienceCount: 1742,
-        audienceLabels: ["All Contacts"],
-        status: "Sent",
-        sendTime: "Oct 25, 10:00 AM",
-        opens: 540,
-        clicks: 12,
-        sequences: [],
-        editable: false,
-        channel: "Email",
-        goal: "Engagement",
-        delivered: 1700,
-        ctr: 12/1700,
-        ctor: 0.08,
-        unsubRate: 0.001,
-        spamRate: 0.0001,
-        conversionRate: 0.0,
-        convTarget: null,
-        lastSendAt: "2025-10-25T10:00:00-04:00",
-        hasFutureSteps: false
-      },
-      {
-        id: 2,
-        name: "Registration Reminder P1",
-        subject: "Don't Miss Out! Registration Closes Tomorrow",
-        audience: "—",
-        audienceCount: 1742,
-        audienceLabels: ["Class A","Class B"],
-        status: "Scheduled",
-        sendTime: "Nov 10, 3:00 PM",
+  const ensureDraft = (partial) => {
+    let createdId = draftId;
+    if (!draftId) {
+      createdId = Date.now();
+      const newDraft = {
+        id: createdId,
+        name: partial.name || "Untitled Campaign",
+        subject: partial.subject || "(no subject)",
+        audience: partial.audience || "—",
+        audienceCount: partial.audienceCount || 0,
+        audienceLabels: partial.audienceLabels || [],
+        status: "Draft",
+        sendTime: "Auto-saved",
         opens: "-",
         clicks: "-",
-        sequences: [
-          { delay: "3d", condition: "Non-openers", messageType: "SMS" },
-          { delay: "7d", condition: "Everyone", messageType: "Email" },
-        ],
+        sequences: partial.sequences || [],
         editable: true,
-        channel: "Email",
-        goal: "Engagement",
+        lastSendAt: null,
+        hasFutureSteps: false,
         delivered: 0,
         ctr: 0,
         ctor: 0,
         unsubRate: 0,
-        spamRate: 0,
-        lastSendAt: "2025-11-10T15:00:00-05:00",
-        hasFutureSteps: true
-      },
-      {
-        id: 3,
-        name: "Summer Camp P1",
-        subject: "Summer Camp Early Bird Discount",
-        audience: "—",
-        audienceCount: 3200,
-        audienceLabels: ["Leads"],
-        status: "Active",
-        sendTime: "Sent 2 days ago",
-        opens: 600,
-        clicks: 80,
-        sequences: [],
-        editable: true,
-        channel: "Email",
-        goal: "Engagement",
-        delivered: 2900,
-        ctr: 80/2900,
-        ctor: 0.12,
-        unsubRate: 0.001,
-        spamRate: 0.0001,
-        lastSendAt: "2025-11-10T12:00:00-05:00",
-        hasFutureSteps: false
-      },
-      {
-        id: 4,
-        name: "Mid-Campaign Test",
-        subject: "Paused Mid-Campaign Test",
-        audience: "—",
-        audienceCount: 1010,
-        audienceLabels: ["Leads","Session C1"],
-        status: "Paused",
-        sendTime: "Paused • Nov 1",
-        opens: 100,
-        clicks: 11,
-        sequences: [
-          { delay: "3d", condition: "Non-openers", messageType: "Email" },
-        ],
-        editable: true,
-        channel: "Email",
-        goal: "Engagement",
-        delivered: 900,
-        ctr: 11/900,
-        ctor: 0.11,
-        unsubRate: 0.001,
-        spamRate: 0.0001,
-        lastSendAt: "2025-11-01T09:00:00-04:00",
-        hasFutureSteps: true
-      },
-    ];
-
-    const STATUS_STYLES = {
-      "Draft":      tagStatic("rgba(148,163,184,0.26)", "#1f2937"),
-      "Active":     tagStatic("rgba(37,99,235,0.20)", "#1d4ed8"),
-      "Scheduled":  tagStatic("rgba(169,99,255,0.22)", "#6b21a8"),
-      "Paused":     tagStatic("rgba(253,224,171,0.95)", "#92400e"),
-      "Sent":       tagStatic("rgba(22,163,74,0.20)", "#15803d"),
-      "Completed":  tagStatic("rgba(121,249,219,0.32)", "#047857"),
-    };
-
-    /* --------------------------------- App ----------------------------------- */
-    function SendIQdotioApp() {
-      const [route, setRoute] = useState({ page:"dashboard", campaignId:null, step:0 });
-      const [campaigns, setCampaigns] = useState(initialCampaigns);
-      const [draftId, setDraftId] = useState(null);
-
-      const [toast, setToast] = useState(null); // { type: "launch", campaignId }
-
-      const startNew = () => {
-        setRoute({ page:"create", campaignId:"new", step:0 });
-        setDraftId(null);
+        spamRate: 0
       };
-      const openCampaign = (id) => {
-        setRoute({ page:"create", campaignId:id||"new", step:0 });
-        setDraftId(id);
-      };
-      const openCampaignCompose = (id) => {
-        setRoute({ page:"create", campaignId:id||"new", step:2 });
-        setDraftId(id);
-      };
-      const openAnalytics = (id) => setRoute({ page:"create", campaignId:id, step:3 });
+      setCampaigns(prev => [newDraft, ...prev]);
+      setDraftId(createdId);
+    } else {
+      setCampaigns(prev =>
+        prev.map(c => c.id === draftId ? { ...c, ...partial } : c)
+      );
+    }
+    return createdId;
+  };
 
-      const deleteCampaign = (id) => setCampaigns(p=>p.filter(c=>c.id!==id));
-      const duplicateCampaign = (id) => {
-        const orig = campaigns.find(c=>c.id===id); if(!orig) return;
-        const copy = {
-          ...orig,
-          id: Date.now(),
-          name: `(Copy) ${orig.name}`,
-          status: "Draft",
-          sendTime: "—",
-          opens: "-",
-          clicks: "-",
-          sequences: orig.sequences || [],
-          editable: true,
-          lastSendAt: null,
-          hasFutureSteps: false,
-          delivered: 0,
-          ctr: 0,
-          ctor: 0,
-          unsubRate: 0,
-          spamRate: 0
-        };
-        setCampaigns(p=>[copy, ...p]);
-      };
-      const togglePause = (id) => {
-        setCampaigns(prev => prev.map(c => {
-          if (c.id !== id) return c;
-          if (c.status === "Paused") return { ...c, status: "Active" };
-          if (c.status === "Active" || c.status === "Scheduled") {
-            return { ...c, status: "Paused", sendTime: `Paused • ${new Date().toLocaleString()}` };
-          }
-          return c;
-        }));
-      };
+  const updateDraft = (id, partial) => {
+    setCampaigns(prev =>
+      prev.map(c => c.id === id ? { ...c, ...partial } : c)
+    );
+  };
 
-      const ensureDraft = (partial) => {
-        let createdId = draftId;
-        if (!draftId) {
-          createdId = Date.now();
-          const newDraft = {
-            id: createdId,
-            name: partial.name || "Untitled Campaign",
-            subject: partial.subject || "(no subject)",
-            audience: partial.audience || "—",
-            audienceCount: partial.audienceCount || 0,
-            audienceLabels: partial.audienceLabels || [],
-            status: "Draft",
-            sendTime: "Auto-saved",
-            opens: "-",
-            clicks: "-",
-            sequences: partial.sequences || [],
-            editable: true,
-            lastSendAt: null,
-            hasFutureSteps: false,
-            delivered: 0,
-            ctr: 0,
-            ctor: 0,
-            unsubRate: 0,
-            spamRate: 0
-          };
-          setCampaigns(prev => [newDraft, ...prev]);
-          setDraftId(createdId);
-        } else {
-          setCampaigns(prev =>
-            prev.map(c => c.id === draftId ? { ...c, ...partial } : c)
-          );
-        }
-        return createdId;
-      };
-      const updateDraft = (id, partial) => {
-        setCampaigns(prev =>
-          prev.map(c => c.id === id ? { ...c, ...partial } : c)
-        );
-      };
+  const handleLaunchedCampaign = (newCampaign) => {
+    setCampaigns(prev => {
+      const exists = prev.some(c => c.id === newCampaign.id);
+      if (exists) {
+        return prev.map(c => c.id === newCampaign.id ? newCampaign : c);
+      }
+      return [newCampaign, ...prev];
+    });
+    setDraftId(null);
+    setToast({ type:"launch", campaignId:newCampaign.id });
+    setRoute({ page:"dashboard", campaignId:null, step:0 });
+  };
 
-      const handleLaunchedCampaign = (newCampaign) => {
-        setCampaigns(prev => {
-          const exists = prev.some(c => c.id === newCampaign.id);
-          if (exists) {
-            return prev.map(c => c.id === newCampaign.id ? newCampaign : c);
-          }
-          return [newCampaign, ...prev];
-        });
-        setDraftId(null);
-        setToast({ type:"launch", campaignId:newCampaign.id });
-        setRoute({ page:"dashboard", campaignId:null, step:0 });
-      };
+  const undoLaunch = () => {
+    if (!toast || toast.type !== "launch") return;
+    const id = toast.campaignId;
+    setCampaigns(prev =>
+      prev.map(c =>
+        c.id === id ? { ...c, status:"Draft", sendTime:"—" } : c
+      )
+    );
+    setToast(null);
+  };
 
-      const undoLaunch = () => {
-        if (!toast || toast.type !== "launch") return;
-        const id = toast.campaignId;
-        setCampaigns(prev =>
-          prev.map(c =>
-            c.id === id ? { ...c, status:"Draft", sendTime:"—" } : c
-          )
-        );
-        setToast(null);
-      };
+  const backToDashboard = () => setRoute({ page:"dashboard", campaignId:null, step:0 });
 
-      const backToDashboard = () => setRoute({ page:"dashboard", campaignId:null, step:0 });
+  const currentCampaign = route.campaignId && typeof route.campaignId === "number"
+    ? campaigns.find(c=>c.id===route.campaignId) || null
+    : null;
 
-      const currentCampaign = route.campaignId && typeof route.campaignId === "number"
-        ? campaigns.find(c=>c.id===route.campaignId) || null
-        : null;
-
-      return (
-        <div style={{minHeight:"100vh", background:COLORS.bg, color:COLORS.text}}>
-          <TopBar />
-          <div style={{display:"flex", maxWidth:1200, margin:"0 auto"}}>
-            <Sidebar current={route.page} onNav={setRoute} />
-            <main style={{flex:1, padding:24}}>
-              {route.page==="dashboard" && (
-                <CampaignsDashboard
-                  campaigns={campaigns}
-                  onStartNew={startNew}
-                  onOpen={openCampaign}
-                  onDelete={deleteCampaign}
-                  onDuplicate={duplicateCampaign}
-                  onTogglePause={togglePause}
-                  onComposeOneClick={openCampaignCompose}
-                  onOpenAnalytics={openAnalytics}
-                />
-              )}
-              {route.page==="create" && (
-                <CreationFlow
-                  onBackToDashboard={backToDashboard}
-                  onLaunched={handleLaunchedCampaign}
-                  onEnsureDraft={ensureDraft}
-                  onUpdateDraft={updateDraft}
-                  draftId={draftId}
-                  currentCampaign={currentCampaign}
-                  initialStep={route.step || 0}
-                />
-              )}
-              {route.page==="settings" && (
-                <div style={{fontSize:14, color:COLORS.subtext, textAlign:"left"}}>
-                  Settings placeholder.
-                </div>
-              )}
-            </main>
-          </div>
-
-          {toast && toast.type==="launch" && (
-            <div
-              style={{
-                position:"fixed",
-                left:"50%",
-                transform:"translateX(-50%)",
-                bottom:16,
-                background:COLORS.panel,
-                borderRadius:999,
-                border:`1px solid ${COLORS.border}`,
-                boxShadow:"0 10px 35px rgba(15,23,42,0.18)",
-                padding:"8px 16px",
-                display:"flex",
-                alignItems:"center",
-                gap:10,
-                fontSize:13,
-                zIndex:1100
-              }}
-            >
-              <span style={{textAlign:"left"}}>Campaign launched.</span>
-              <button
-                style={{...btnGhost, padding:"4px 8px"}}
-                onClick={undoLaunch}
-              >
-                Undo
-              </button>
-              <button
-                style={{...btnGhost, padding:"4px 8px"}}
-                onClick={()=>setToast(null)}
-              >
-                Dismiss
-              </button>
+  return (
+    <div style={{minHeight:"100vh", background:COLORS.bg, color:COLORS.text}}>
+      <TopBar />
+      <div style={{display:"flex", maxWidth:1200, margin:"0 auto"}}>
+        <Sidebar current={route.page} onNav={setRoute} />
+        <main style={{flex:1, padding:24}}>
+          {route.page==="dashboard" && (
+            <CampaignsDashboard
+              campaigns={campaigns}
+              onStartNew={startNew}
+              onOpen={openCampaign}
+              onDelete={deleteCampaign}
+              onDuplicate={duplicateCampaign}
+              onTogglePause={togglePause}
+              onComposeOneClick={openCampaignCompose}
+              onOpenAnalytics={openAnalytics}
+            />
+          )}
+          {route.page==="create" && (
+            <CreationFlow
+              onBackToDashboard={backToDashboard}
+              onLaunched={handleLaunchedCampaign}
+              onEnsureDraft={ensureDraft}
+              onUpdateDraft={updateDraft}
+              draftId={draftId}
+              currentCampaign={currentCampaign}
+              initialStep={route.step || 0}
+            />
+          )}
+          {route.page==="settings" && (
+            <div style={{fontSize:14, color:COLORS.subtext, textAlign:"left"}}>
+              Settings placeholder.
             </div>
           )}
-        </div>
-      );
-    }
-
-    /* ------------------------------ Layout bits ------------------------------ */
-    function TopBar(){
-      return (
-        <div style={{borderBottom:`1px solid ${COLORS.border}`, background:COLORS.panel}} role="banner">
-          <div style={{maxWidth:1200, margin:"0 auto", padding:"10px 24px", display:"flex", alignItems:"center", gap:10}}>
-            <img
-              src="https://beakid.com/blog/wp-content/uploads/2021/11/logo.png"
-              alt="BeAKid logo"
-              style={{height:28, width:"auto"}}
-            />
-            <div style={{fontWeight:800, letterSpacing:.2, fontSize:15, textAlign:"left"}} aria-label="Product name">
-              SendIQdotio
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    function Sidebar({ current, onNav }){
-      const link = (label, page)=>(
-        <button
-          onClick={()=>onNav({page, campaignId:null, step:0})}
-          style={{
-            ...btnGhost,
-            width:"100%",
-            textAlign:"left",
-            background: current===page?COLORS.panelAlt:"transparent",
-            borderColor:"transparent",
-            padding:"8px",
-            color:COLORS.text,
-            borderRadius:8
-          }}
-          onFocus={(e)=>e.currentTarget.style.outline=focusRing.outline}
-          onBlur={(e)=>e.currentTarget.style.outline="none"}
-          aria-current={current===page?"page":undefined}
-        >
-          <span>{label}</span>
-        </button>
-      );
-      return (
-        <nav aria-label="Primary" style={{width:200, borderRight:`1px solid ${COLORS.border}`, padding:14, background:COLORS.panel}}>
-          {link("Campaigns","dashboard")}
-          <div aria-hidden style={{height:6}}></div>
-          {link("Settings (Placeholder)","settings")}
-        </nav>
-      );
-    }
-
-    /* -------------------------- Campaigns Dashboard -------------------------- */
-    function CampaignsDashboard({ campaigns, onStartNew, onOpen, onDelete, onDuplicate, onTogglePause, onComposeOneClick, onOpenAnalytics }){
-      return (
-        <section aria-label="Campaign list">
-          <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14}}>
-            <h1 style={{margin:0, fontSize:20, textAlign:"left"}}>Campaigns</h1>
-            <button style={{...btnPrimary, textAlign:"center"}} onClick={onStartNew}>New Campaign</button>
-          </div>
-          <div style={{border:`1px solid ${COLORS.border}`, borderRadius:12, overflow:"hidden", background:COLORS.panel}}>
-            <CampaignTableHeader />
-            <div role="rowgroup">
-              {campaigns.map(c=>(
-                <CampaignTableRow
-                  key={c.id}
-                  data={c}
-                  onOpen={()=>onOpen(c.id)}
-                  onDelete={()=>onDelete(c.id)}
-                  onDuplicate={()=>onDuplicate(c.id)}
-                  onTogglePause={()=>onTogglePause(c.id)}
-                  onComposeOneClick={()=>onComposeOneClick(c.id)}
-                  onOpenAnalytics={()=>onOpenAnalytics(c.id)}
-                />
-              ))}
-            </div>
-          </div>
-        </section>
-      );
-    }
-
-    function CampaignTableHeader(){
-      const th = {
-        padding:"10px 12px",
-        fontSize:11,
-        color:COLORS.subtext,
-        borderBottom:`1px solid ${COLORS.border}`,
-        textTransform:"uppercase",
-        letterSpacing:".03em",
-        textAlign:"left"
-      };
-      return (
-        <div
-          role="row"
-          style={{
-            display:"grid",
-            gridTemplateColumns:"1.5fr 0.8fr 1fr 1fr 0.6fr 48px",
-            background:COLORS.panelAlt
-          }}
-        >
-          <div role="columnheader" style={th}>Campaign Name</div>
-          <div role="columnheader" style={th}>Audience Size</div>
-          <div role="columnheader" style={th}>Status</div>
-          <div role="columnheader" style={th}>Opens / Clicks</div>
-          <div role="columnheader" style={th}>Send Time</div>
-          <div role="columnheader" style={th} aria-label="Actions">⋮</div>
-        </div>
-      );
-    }
-
-    function CampaignTableRow({ data, onOpen, onDelete, onDuplicate, onTogglePause, onComposeOneClick, onOpenAnalytics }){
-      const [open, setOpen] = useState(false);
-      const menuRef = useRef(null);
-      const buttonRef = useRef(null);
-      const [menuPos, setMenuPos] = useState({ top: 0, right: 0 });
-
-      useEffect(()=>{
-        const onDoc = (e)=>{
-          if (!buttonRef.current || !menuRef.current) return;
-          if (!buttonRef.current.contains(e.target) && !menuRef.current.contains(e.target)) {
-             setOpen(false);
-          }
-        };
-        document.addEventListener("mousedown", onDoc);
-        return ()=>document.removeEventListener("mousedown", onDoc);
-      },[]);
-      const handleOpen = () => {
-        if (!open) {
-          const rect = buttonRef.current.getBoundingClientRect();
-          setMenuPos({
-            top: rect.bottom + 5,
-            right: window.innerWidth - rect.right,
-          });
-        }
-        setOpen(s => !s);
-      };
-
-      const isUnder = underperforming(data);
-      const computedStatus = isCompleted(data) ? "Completed" : data.status;
-      const statusChip = STATUS_STYLES[computedStatus] || tagStatic("#e2e8f0", COLORS.text);
-
-      return (
-        <div
-          role="row"
-          style={{
-            display:"grid",
-            gridTemplateColumns:"1.5fr 0.8fr 1fr 1fr 0.6fr 48px",
-            borderBottom:`1px solid ${COLORS.border}`,
-            alignItems:"center",
-            background: isUnder ? COLORS.rowWarnBg : "transparent"
-          }}
-        >
-          <div role="cell" style={{padding:"10px 12px", display:"flex", alignItems:"center", gap:6}}>
-            <button
-              onClick={onOpen}
-              style={{
-                background:"transparent",
-                border:"none",
-                color:COLORS.interactive,
-                textDecoration:"underline",
-                cursor:"pointer",
-                fontWeight:600,
-                fontSize:13,
-                textAlign:"left"
-              }}
-            >
-              {data.name}
-            </button>
-            {isUnder && (
-              <button
-                title={buildUnderperfTooltip(data)}
-                aria-label="Underperforming campaign — click to revise"
-                onClick={onComposeOneClick}
-                style={{
-                  background:"transparent",
-                  border:"none",
-                  cursor:"pointer",
-                  lineHeight:1,
-                  padding:0,
-                  color:COLORS.warning,
-                  fontSize:16
-                }}
-              >⚠️</button>
-            )}
-          </div>
-          <div role="cell" style={{padding:"10px 12px", color:COLORS.subtext, fontSize:12, textAlign:"left"}}>
-            {typeof data.audienceCount === "number" && data.audienceCount > 0
-              ? data.audienceCount.toLocaleString()
-              : "—"}
-          </div>
-          <div role="cell" style={{padding:"10px 12px", textAlign:"left"}}>
-            <span style={statusChip}>{computedStatus}</span>
-          </div>
-          <div role="cell" style={{padding:"10px 12px", color:COLORS.subtext, fontSize:12, textAlign:"left"}}>
-            {data.opens} / {data.clicks}
-          </div>
-          <div role="cell" style={{padding:"10px 12px", color:COLORS.subtext, fontSize:12, textAlign:"left"}}>
-            {data.sendTime}
-          </div>
-
-          <div role="cell" style={{padding:"10px 6px", position:"relative", textAlign:"left"}}>
-            <button
-              ref={buttonRef}
-              onClick={handleOpen}
-              style={{
-                ...btnGhost,
-                width:26,
-                height:26,
-                padding:0,
-                display:"grid",
-                placeItems:"center",
-                ...(isUnder ? { borderColor:COLORS.danger, color:COLORS.danger } : {})
-              }}
-              aria-haspopup="menu"
-              aria-expanded={open}
-            >
-              ⋮
-            </button>
-            {open && (
-              <div
-                role="menu"
-                ref={menuRef}
-                style={{
-                  position:"fixed",
-                  right: menuPos.right,
-                  top: menuPos.top,
-                  background:COLORS.panel,
-                  border:`1px solid ${COLORS.border}`,
-                  borderRadius:10,
-                  minWidth:180,
-                  boxShadow:"0 12px 30px rgba(15,23,42,0.12)",
-                  zIndex:1000
-                }}
-              >
-                {isUnder && (
-                  <MenuItem label="Compose One-Click" onClick={()=>{onComposeOneClick(); setOpen(false);}} />
-                )}
-                <MenuItem label="Open" onClick={()=>{onOpen(); setOpen(false);}} />
-                <MenuItem label="Duplicate" onClick={()=>{onDuplicate(); setOpen(false);}} />
-                {(data.status === "Active" || data.status === "Scheduled" || data.status === "Paused") && (
-                  <MenuItem label={data.status === "Paused" ? "Resume" : "Pause"} onClick={()=>{onTogglePause(); setOpen(false);}} />
-                )}
-                <MenuItem
-                  label="Delete"
-                  danger
-                  onClick={()=>{ if(confirm("Delete campaign?")) onDelete(); setOpen(false); }}
-                />
-              </div>
-            )}
-          </div>
-        </div>
-      );
-    }
-
-    function MenuItem({ label, onClick, danger }){
-      return (
-        <button
-          role="menuitem"
-          onClick={onClick}
-          style={{
-            width:"100%",
-            border:"none",
-            background:"transparent",
-            textAlign:"left",
-            padding:"6px 10px",
-            cursor:"pointer",
-            color: danger?COLORS.danger:COLORS.text,
-            fontSize:13
-          }}
-          onFocus={(e)=>e.currentTarget.style.outline=focusRing.outline}
-          onBlur={(e)=>e.currentTarget.style.outline="none"}
-          onMouseEnter={(e)=>{ e.currentTarget.style.backgroundColor = COLORS.optionHoverBg; }}
-          onMouseLeave={(e)=>{ e.currentTarget.style.backgroundColor = "transparent"; }}
-        >
-          {label}
-        </button>
-      );
-    }
-    /* ----------------------------- Creation Flow ----------------------------- */
-    const STEPS = ["Create","Audience","Compose & Schedule","Review & Analytics"];
-
-    const getTodayDate = () => {
-      const d = new Date();
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate(), 10).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    };
-
-    const mapCampaignToSteps = (campaign) => {
-      const mainStep = {
-        id: "s1",
-        type: "Email",
-        date: getTodayDate(),
-        time: normalizeTime(""),
-        subject: campaign.subject || "",
-        body: `Body content for ${campaign.name} - Step 1.`,
-        autoStopRule: "None",
-        useRecoTime: false
-      };
-      const sequenceSteps = (campaign.sequences || []).map((seq, index) => ({
-        id: `s${index + 2}`,
-        type: seq.messageType,
-        daysOffset: parseDelayDays(seq.delay),
-        time: normalizeTime(""),
-        subject: `Follow-up ${index + 1} for ${campaign.subject}`,
-        body: `Body content for ${campaign.name} - Step ${index + 2}.`,
-        autoStopRule: "Stop If Opened",
-        useRecoTime: false
-      }));
-      return [mainStep, ...sequenceSteps];
-    };
-
-    function Stepper({ activeStep, onStepClick }){
-      const progress = (activeStep + 1) / (STEPS.length || 1);
-
-      return (
-        <div style={{marginBottom:4}}>
-          <div
-            role="navigation"
-            aria-label="Creation steps"
-            style={{display:"flex", gap:0, flexWrap:"nowrap"}}
-          >
-            {STEPS.map((label, idx)=>{
-              const active = idx===activeStep;
-              const completed = idx < activeStep;
-              return (
-                <button
-                  key={label}
-                  onClick={()=>onStepClick(idx)}
-                  style={{
-                    flex:1,
-                    appearance:"none",
-                    border:"none",
-                    background: active ? COLORS.panel : "transparent",
-                    padding:"10px 16px",
-                    fontWeight:700,
-                    fontSize:"13px",
-                    color: active
-                      ? COLORS.primary
-                      : (completed ? COLORS.subtext : COLORS.text),
-                    cursor:"pointer",
-                    textAlign:"left",
-                    borderRadius:"10px 10px 0 0"
-                  }}
-                  aria-current={active?"step":undefined}
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-          <div
-            style={{
-              position:"relative",
-              height:3,
-              borderRadius:999,
-              background:"#e5e7eb",
-              overflow:"hidden"
-            }}
-          >
-            <div
-              style={{
-                position:"absolute",
-                left:0,
-                top:0,
-                bottom:0,
-                width:`${progress*100}%`,
-                background:COLORS.primary
-              }}
-            />
-          </div>
-        </div>
-      );
-    }
-
-    function Panel({ title, children }){
-      return (
+        </main>
+      </div>
+      {toast && toast.type==="launch" && (
         <div
           style={{
-            border:`1px solid ${COLORS.border}`,
-            borderRadius:12,
+            position:"fixed",
+            left:"50%",
+            transform:"translateX(-50%)",
+            bottom:16,
             background:COLORS.panel,
-            padding:14,
-            marginTop:10
-          }}
-          role="region"
-          aria-label={title}
-        >
-          <h2 style={{marginTop:0, fontSize:16, textAlign:"left"}}>{title}</h2>
-          {children}
-        </div>
-      );
-    }
-
-    function Labeled({ label, required, hint, inline, children }){
-      return (
-        <div style={{marginBottom:10}}>
-          <div
-            style={{
-              display:inline?"inline-flex":"flex",
-              alignItems:"baseline",
-              gap:6,
-              marginBottom:4,
-              textAlign:"left"
-            }}
-          >
-            <label style={{fontWeight:600, fontSize:13}}>
-              {label}
-              {required && (
-                <span style={{color:COLORS.danger, marginLeft:4}}>*</span>
-              )}
-            </label>
-            {hint && (
-              <span style={{color:COLORS.subtext, fontSize:12}}>{hint}</span>
-            )}
-          </div>
-          {children}
-        </div>
-      );
-    }
-
-    const inputStyle = {
-      background:COLORS.panelAlt,
-      border:`1px solid ${COLORS.border}`,
-      color:COLORS.text,
-      padding:"8px 10px",
-      borderRadius:8,
-      width:"100%",
-      fontSize:13,
-      textAlign:"left"
-    };
-
-    function Input({ value, onChange, placeholder }){
-      const [local, setLocal] = useState(value||"");
-      useEffect(()=>setLocal(value||""),[value]);
-      return (
-        <input
-          type="text"
-          value={local}
-          placeholder={placeholder}
-          style={inputStyle}
-          onChange={(e)=>{
-            setLocal(e.target.value);
-            onChange?.(e.target.value);
-          }}
-          onFocus={(e)=>{ e.currentTarget.style.outline=focusRing.outline; }}
-          onBlur={(e)=>{ e.currentTarget.style.outline="none"; }}
-        />
-      );
-    }
-
-    function Textarea({ value, onChange, placeholder }){
-      const [local, setLocal] = useState(value||"");
-      useEffect(()=>setLocal(value||""),[value]);
-      return (
-        <textarea
-          value={local}
-          placeholder={placeholder}
-          rows={7}
-          style={{
-            ...inputStyle,
-            fontFamily:"inherit",
-            resize:"vertical"
-          }}
-          onChange={(e)=>{
-            setLocal(e.target.value);
-            onChange?.(e.target.value);
-          }}
-          onFocus={(e)=>{ e.currentTarget.style.outline=focusRing.outline; }}
-          onBlur={(e)=>{ e.currentTarget.style.outline="none"; }}
-        />
-      );
-    }
-
-    function TypeToggle({ value, onChange }){
-      const Item = ({ v })=>{
-        const active = value===v;
-        return (
-          <button
-            onClick={()=>onChange(v)}
-            style={{
-              ...btnGhost,
-              padding:"4px 8px",
-              borderRadius:999,
-              borderColor:active?COLORS.primary:COLORS.border,
-              color:active?COLORS.primary:COLORS.text,
-              background:active?"rgba(37,99,235,0.10)":COLORS.panelAlt,
-              fontSize:12,
-              textAlign:"left"
-            }}
-            aria-pressed={active}
-          >
-            {v}
-          </button>
-        );
-      };
-      return (
-        <div
-          role="group"
-          aria-label="Message type"
-          style={{display:"flex", gap:4, textAlign:"left"}}
-        >
-          <Item v="Email" />
-          <Item v="SMS" />
-        </div>
-      );
-    }
-
-    function Row({ label, value }){
-      return (
-        <div
-          style={{
-            display:"grid",
-            gridTemplateColumns:"160px 1fr",
-            gap:6,
-            textAlign:"left"
-          }}
-        >
-          <div style={{color:COLORS.subtext, fontSize:12}}>{label}</div>
-          <div style={{fontSize:13}}>{value}</div>
-        </div>
-      );
-    }
-
-    function InfoDot({ title }) {
-      const [open, setOpen] = useState(false);
-      const btnRef = useRef(null);
-
-      useEffect(() => {
-        if (!open) return;
-        const handleClick = (e) => {
-          if (!btnRef.current) return;
-          if (!btnRef.current.contains(e.target)) {
-            setOpen(false);
-          }
-        };
-        document.addEventListener("mousedown", handleClick);
-        return () => document.removeEventListener("mousedown", handleClick);
-      }, [open]);
-
-      return (
-        <span style={{position:"relative", display:"inline-flex"}}>
-          <button
-            type="button"
-            ref={btnRef}
-            onClick={()=>setOpen(o=>!o)}
-            aria-label={title}
-            aria-expanded={open}
-            style={{
-              display:"inline-flex",
-              alignItems:"center",
-              justifyContent:"center",
-              width:18,
-              height:18,
-              borderRadius:"999px",
-              border:`1px solid ${COLORS.border}`,
-              background:COLORS.panelAlt,
-              color:COLORS.subtext,
-              fontSize:11,
-              cursor:"pointer",
-              padding:0
-            }}
-          >
-            ?
-          </button>
-          {open && (
-            <div
-              style={{
-                position:"absolute",
-                top:"120%",
-                left:"50%",
-                transform:"translateX(-50%)",
-                minWidth:220,
-                maxWidth:280,
-                padding:"8px 10px",
-                borderRadius:8,
-                background:COLORS.panel,
-                border:`1px solid ${COLORS.border}`,
-                boxShadow:"0 8px 20px rgba(15,23,42,0.18)",
-                fontSize:12,
-                color:COLORS.text,
-                textAlign:"left",
-                lineHeight:1.4,
-                whiteSpace:"normal",
-                zIndex:1200
-              }}
-            >
-              {title}
-            </div>
-          )}
-        </span>
-      );
-    }
-
-    function FooterNav({ onBack, onNext, nextLabel="Next", nextDisabled }){
-      return (
-        <div
-          style={{
+            borderRadius:999,
+            border:`1px solid ${COLORS.border}`,
+            boxShadow:"0 10px 35px rgba(15,23,42,0.18)",
+            padding:"8px 16px",
             display:"flex",
-            justifyContent:"space-between",
-            marginTop:10
+            alignItems:"center",
+            gap:10,
+            fontSize:13,
+            zIndex:1100
           }}
         >
-          <button style={btnGhost} onClick={onBack}>Back</button>
-          <button
-            style={{
-              ...btnPrimary,
-              opacity:nextDisabled?.valueOf()?0.6:1,
-              textAlign:"center"
-            }}
-            disabled={nextDisabled}
-            onClick={onNext}
-          >
-            {nextLabel}
-          </button>
+          <span style={{textAlign:"left"}}>Campaign launched.</span>
+          <button style={{...btnGhost, padding:"4px 8px"}} onClick={undoLaunch}>Undo</button>
+          <button style={{...btnGhost, padding:"4px 8px"}} onClick={()=>setToast(null)}>Dismiss</button>
         </div>
-      );
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------ Layout bits ------------------------------ */
+function TopBar(){
+  return (
+    <div style={{borderBottom:`1px solid ${COLORS.border}`, background:COLORS.panel}} role="banner">
+      <div style={{maxWidth:1200, margin:"0 auto", padding:"10px 24px", display:"flex", alignItems:"center", gap:10}}>
+        <img src="https://beakid.com/blog/wp-content/uploads/2021/11/logo.png" alt="BeAKid logo" style={{height:28, width:"auto"}} />
+        <div style={{fontWeight:800, letterSpacing:.2, fontSize:15, textAlign:"left"}} aria-label="Product name">SendIQdotio</div>
+      </div>
+    </div>
+  );
+}
+function Sidebar({ current, onNav }){
+  const link = (label, page)=>(
+    <button
+      onClick={()=>onNav({page, campaignId:null, step:0})}
+      style={{
+        ...btnGhost,
+        width:"100%",
+        textAlign:"left",
+        background: current===page?COLORS.panelAlt:"transparent",
+        borderColor:"transparent",
+        padding:"8px",
+        color:COLORS.text,
+        borderRadius:8
+      }}
+      onFocus={(e)=>e.currentTarget.style.outline=focusRing.outline}
+      onBlur={(e)=>e.currentTarget.style.outline="none"}
+      aria-current={current===page?"page":undefined}
+    >
+      <span>{label}</span>
+    </button>
+  );
+  return (
+    <nav aria-label="Primary" style={{width:200, borderRight:`1px solid ${COLORS.border}`, padding:14, background:COLORS.panel}}>
+      {link("Campaigns","dashboard")}
+      <div aria-hidden style={{height:6}}></div>
+      {link("Settings (Placeholder)","settings")}
+    </nav>
+  );
+}
+
+/* -------------------------- Campaigns Dashboard -------------------------- */
+function CampaignsDashboard({ campaigns, onStartNew, onOpen, onDelete, onDuplicate, onTogglePause, onComposeOneClick, onOpenAnalytics }){
+  return (
+    <section aria-label="Campaign list">
+      <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14}}>
+        <h1 style={{margin:0, fontSize:20, textAlign:"left"}}>Campaigns</h1>
+        <button style={{...btnPrimary, textAlign:"center"}} onClick={onStartNew}>New Campaign</button>
+      </div>
+      <div style={{border:`1px solid ${COLORS.border}`, borderRadius:12, overflow:"hidden", background:COLORS.panel}}>
+        <CampaignTableHeader />
+        <div role="rowgroup">
+          {campaigns.map(c=>(
+            <CampaignTableRow
+              key={c.id}
+              data={c}
+              onOpen={()=>onOpen(c.id)}
+              onDelete={()=>onDelete(c.id)}
+              onDuplicate={()=>onDuplicate(c.id)}
+              onTogglePause={()=>onTogglePause(c.id)}
+              onComposeOneClick={()=>onComposeOneClick(c.id)}
+              onOpenAnalytics={()=>onOpenAnalytics(c.id)}
+            />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+function CampaignTableHeader(){
+  const th = {
+    padding:"10px 12px",
+    fontSize:11,
+    color:COLORS.subtext,
+    borderBottom:`1px solid ${COLORS.border}`,
+    textTransform:"uppercase",
+    letterSpacing:".03em",
+    textAlign:"left"
+  };
+  return (
+    <div role="row" style={{display:"grid", gridTemplateColumns:"1.5fr 0.8fr 1fr 1fr 0.6fr 48px", background:COLORS.panelAlt}}>
+      <div role="columnheader" style={th}>Campaign Name</div>
+      <div role="columnheader" style={th}>Audience Size</div>
+      <div role="columnheader" style={th}>Status</div>
+      <div role="columnheader" style={th}>Opens / Clicks</div>
+      <div role="columnheader" style={th}>Send Time</div>
+      <div role="columnheader" style={th} aria-label="Actions">⋮</div>
+    </div>
+  );
+}
+function CampaignTableRow({ data, onOpen, onDelete, onDuplicate, onTogglePause, onComposeOneClick, onOpenAnalytics }){
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef(null);
+  const buttonRef = useRef(null);
+  const [menuPos, setMenuPos] = useState({ top: 0, right: 0 });
+
+  useEffect(()=>{
+    const onDoc = (e)=>{
+      if (!buttonRef.current || !menuRef.current) return;
+      if (!buttonRef.current.contains(e.target) && !menuRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDoc);
+    return ()=>document.removeEventListener("mousedown", onDoc);
+  },[]);
+
+  const handleOpen = () => {
+    if (!open) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setMenuPos({
+        top: rect.bottom + 5,
+        right: window.innerWidth - rect.right,
+      });
     }
+    setOpen(s => !s);
+  };
 
-    function CreationFlow({
-      onBackToDashboard,
-      onLaunched,
-      onEnsureDraft,
-      onUpdateDraft,
-      draftId: externalDraftId,
-      currentCampaign,
-      initialStep
-    }){
-      const initialSteps = useMemo(
-        () =>
-          currentCampaign && typeof currentCampaign.id === "number"
-            ? mapCampaignToSteps(currentCampaign)
-            : [{
-                id:"s1",
-                type:"Email",
-                date:getTodayDate(),
-                time:normalizeTime(""),
-                subject:"",
-                body:"",
-                autoStopRule:"None",
-                useRecoTime:false
-              }],
-        [currentCampaign?.id]
-      );
+  const isUnder = underperforming(data);
+  const computedStatus = isCompleted(data) ? "Completed" : data.status;
+  const statusChip = STATUS_STYLES[computedStatus] || tagStatic("#e2e8f0", COLORS.text);
 
-      const [activeStep, setActiveStep] = useState(initialStep || 0);
-      const [campaignName, setCampaignName] = useState(currentCampaign?.name || "");
-      const [campaignGoal, setCampaignGoal] = useState("Operational");
-      const [operationalTemplate, setOperationalTemplate] = useState("");
-      const [fromSender, setFromSender] = useState("info@yourprogram.com");
-      const initialSegments = currentCampaign?.audienceLabels || [];
-      const [audienceSegments, setAudienceSegments] = useState(initialSegments);
-      const [audPanelOpen, setAudPanelOpen] = useState(false);
-      const [lastSaved, setLastSaved] = useState(null);
-      const [internalDraftId, setInternalDraftId] = useState(externalDraftId || null);
-      const [hasLaunched, setHasLaunched] = useState(false);
-      const [steps, setSteps] = useState(initialSteps);
-      const [activeMsgStepId, setActiveMsgStepId] = useState(initialSteps[0].id);
-      const [previewOpen, setPreviewOpen] = useState(false);
-
-      // Rename + behavior: Auto-stop after key action (formerly Smart Switch)
-      const [autoStopOn, setAutoStopOn] = useState(true);
-      const [autoStopKeyAction, setAutoStopKeyAction] = useState(
-        "When a family enrolls for this offering"
-      );
-
-      const [selectedMetric, setSelectedMetric] = useState("Open Rate");
-      const [showLaunchConfirm, setShowLaunchConfirm] = useState(false);
-
-      useEffect(() => {
-        if (typeof currentCampaign?.id === "number") {
-          setCampaignName(currentCampaign.name || "");
-          setAudienceSegments(currentCampaign.audienceLabels || []);
-          const loaded = mapCampaignToSteps(currentCampaign);
-          setSteps(loaded);
-          setActiveMsgStepId(loaded[0].id);
-          setInternalDraftId(currentCampaign.id);
-          setActiveStep(initialStep || 0);
-        } else if (currentCampaign?.campaignId === "new" || currentCampaign === null) {
-          if(campaignName !== "" || audienceSegments.length > 0 || steps.length > 1) {
-            setCampaignName("");
-            setAudienceSegments([]);
-            const defaultSteps = [{
-              id:"s1",
-              type:"Email",
-              date:getTodayDate(),
-              time:normalizeTime(""),
-              subject:"",
-              body:"",
-              autoStopRule:"None",
-              useRecoTime:false
-            }];
-            setSteps(defaultSteps);
-            setActiveMsgStepId(defaultSteps[0].id);
-            setActiveStep(initialStep || 0);
-          }
-          setInternalDraftId(null);
-        }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      }, [currentCampaign?.id, initialStep]);
-
-      const audienceCount = 1500 + audienceSegments.length*10;
-
-      const canLaunch = useMemo(()=>{
-        if(!campaignName.trim()) return false;
-        if(audienceSegments.length===0) return false;
-        if(steps.length===0) return false;
-        for(const st of steps){
-          if(st.id===steps[0].id){
-            if(!st.date) return false;
-            if(st.type==="Email" && !st.subject.trim()) return false;
-          }
-          if(!st.body.trim()) return false;
-        }
-        return true;
-      },[campaignName, audienceSegments, steps]);
-
-      const goNext = ()=>setActiveStep(s=>Math.min(s+1, STEPS.length-1));
-      const goBack = ()=>setActiveStep(s=>Math.max(s-1, 0));
-
-      const addStep = ()=>{
-        const nextId = "s"+Math.random().toString(36).slice(2,7);
-        const newStep = {
-          id:nextId,
-          type:"Email",
-          daysOffset:3,
-          time:"",
-          subject:"",
-          body:"",
-          autoStopRule:"None",
-          useRecoTime:false
-        };
-        setSteps(p=>[...p, newStep]);
-        setActiveMsgStepId(nextId);
-      };
-      const resetSteps = ()=>{
-        const only = {
-          id:"s1",
-          type:"Email",
-          date:getTodayDate(),
-          time:normalizeTime(""),
-          subject:"",
-          body:"",
-          autoStopRule:"None",
-          useRecoTime:false
-        };
-        setSteps([only]);
-        setActiveMsgStepId("s1");
-      };
-      const updateStep = (id, patch)=> setSteps(p=>p.map(s=>s.id===id?{...s, ...patch}:s));
-      const removeStep = (id)=>{
-        setSteps(prev => {
-          if (prev.length <= 1) return prev;
-          const filtered = prev.filter(s=>s.id!==id);
-          if (id === activeMsgStepId) {
-            const last = filtered[filtered.length-1];
-            setActiveMsgStepId(last.id);
-          }
-          return filtered;
-        });
-      };
-
-      const activeEditorStep = steps.find(s=>s.id===activeMsgStepId) || steps[steps.length-1];
-
-      const autoSave = (changed = {}) => {
-        if (!campaignName.trim()) return;
-        const baseDraft = {
-          id: internalDraftId || undefined,
-          name: campaignName,
-          subject: steps[0]?.subject || "(no subject)",
-          audience: audienceSegments.length
-            ? `${audienceCount.toLocaleString()} (${audienceSegments.length>1?"Multiple segments":audienceSegments[0]})`
-            : "—",
-          audienceCount,
-          audienceLabels: audienceSegments,
-          campaignGoal,
-          operationalTemplate,
-          autoStopOn,
-          autoStopKeyAction,
-          sequences: steps.slice(1).map(st=>({
-            delay: typeof st.daysOffset === "number" ? `${st.daysOffset}d` : (st.date || ""),
-            condition: "Everyone",
-            messageType: st.type
-          })),
-          ...changed
-        };
-        if (!internalDraftId) {
-          const newId = onEnsureDraft(baseDraft);
-          setInternalDraftId(newId);
-        } else {
-          onUpdateDraft(internalDraftId, baseDraft);
-        }
-        setLastSaved(new Date());
-      };
-
-      const handleLaunch = ()=>{
-        if (!canLaunch) return;
-        const mainStep = steps[0];
-        const followUps = steps.slice(1).map((st)=>({
-          delay: typeof st.daysOffset === "number" ? `${st.daysOffset}d` : (st.date || ""),
-          condition: "Everyone",
-          messageType: st.type
-        }));
-        const newCampaign = {
-          id: internalDraftId || Date.now(),
-          name: campaignName || "Untitled Campaign",
-          subject: mainStep?.subject || "(no subject)",
-          audience: audienceSegments.length
-            ? `${audienceCount.toLocaleString()} (${audienceSegments.length>1?"Multiple segments":audienceSegments[0]})`
-            : "—",
-          audienceCount,
-          audienceLabels: audienceSegments,
-          status: "Active",
-          sendTime: mainStep?.date ? `${mainStep.date} ${normalizeTime(mainStep.time)}` : "Just launched",
-          opens: "-",
-          clicks: "-",
-          sequences: followUps,
-          editable: true,
-          channel: "Email",
-          goal: "Engagement",
-          delivered: audienceCount,
-          ctr: 0,
-          ctor: 0.1,
-          unsubRate: 0,
-          spamRate: 0,
-          lastSendAt: new Date().toISOString(),
-          hasFutureSteps: followUps.length>0
-        };
-        setHasLaunched(true);
-        onLaunched(newCampaign);
-      };
-
-      const baseDate = steps[0]?.date;
-
-      return (
-        <section aria-label="Create campaign">
-          <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14}}>
-            <button style={btnGhost} onClick={onBackToDashboard}>← Back</button>
-            {lastSaved && (
-              <div style={{fontSize:11, color:COLORS.subtext, textAlign:"left"}}>
-                Auto-saved {lastSaved.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
-              </div>
+  return (
+    <div role="row" style={{display:"grid", gridTemplateColumns:"1.5fr 0.8fr 1fr 1fr 0.6fr 48px", borderBottom:`1px solid ${COLORS.border}`, alignItems:"center", background: isUnder ? COLORS.rowWarnBg : "transparent"}}>
+      <div role="cell" style={{padding:"10px 12px", display:"flex", alignItems:"center", gap:6}}>
+        <button onClick={onOpen} style={{background:"transparent", border:"none", color:COLORS.interactive, textDecoration:"underline", cursor:"pointer", fontWeight:600, fontSize:13, textAlign:"left"}}>
+          {data.name}
+        </button>
+        {isUnder && (
+          <button title={buildUnderperfTooltip(data)} aria-label="Underperforming campaign — click to revise" onClick={onComposeOneClick} style={{background:"transparent", border:"none", cursor:"pointer", lineHeight:1, padding:0, color:COLORS.warning, fontSize:16}}>⚠️</button>
+        )}
+      </div>
+      <div role="cell" style={{padding:"10px 12px", color:COLORS.subtext, fontSize:12, textAlign:"left"}}>
+        {typeof data.audienceCount === "number" && data.audienceCount > 0 ? data.audienceCount.toLocaleString() : "—"}
+      </div>
+      <div role="cell" style={{padding:"10px 12px", textAlign:"left"}}><span style={statusChip}>{computedStatus}</span></div>
+      <div role="cell" style={{padding:"10px 12px", color:COLORS.subtext, fontSize:12, textAlign:"left"}}>{data.opens} / {data.clicks}</div>
+      <div role="cell" style={{padding:"10px 12px", color:COLORS.subtext, fontSize:12, textAlign:"left"}}>{data.sendTime}</div>
+      <div role="cell" style={{padding:"10px 6px", position:"relative", textAlign:"left"}}>
+        <button ref={buttonRef} onClick={handleOpen} style={{...btnGhost, width:26, height:26, padding:0, display:"grid", placeItems:"center", ...(isUnder ? { borderColor:COLORS.danger, color:COLORS.danger } : {})}} aria-haspopup="menu" aria-expanded={open}>⋮</button>
+        {open && (
+          <div role="menu" ref={menuRef} style={{position:"fixed", right: menuPos.right, top: menuPos.top, background:COLORS.panel, border:`1px solid ${COLORS.border}`, borderRadius:10, minWidth:180, boxShadow:"0 12px 30px rgba(15,23,42,0.12)", zIndex:1000}}>
+            {isUnder && <MenuItem label="Compose One-Click" onClick={()=>{onComposeOneClick(); setOpen(false);}} />}
+            <MenuItem label="Open" onClick={()=>{onOpen(); setOpen(false);}} />
+            <MenuItem label="Duplicate" onClick={()=>{onDuplicate(); setOpen(false);}} />
+            {(data.status === "Active" || data.status === "Scheduled" || data.status === "Paused") && (
+              <MenuItem label={data.status === "Paused" ? "Resume" : "Pause"} onClick={()=>{onTogglePause(); setOpen(false);}} />
             )}
+            <MenuItem label="Delete" danger onClick={()=>{ if(confirm("Delete campaign?")) onDelete(); setOpen(false); }} />
           </div>
+        )}
+      </div>
+    </div>
+  );
+}
+function MenuItem({ label, onClick, danger }){
+  return (
+    <button role="menuitem" onClick={onClick} style={{width:"100%", border:"none", background:"transparent", textAlign:"left", padding:"6px 10px", cursor:"pointer", color: danger?COLORS.danger:COLORS.text, fontSize:13}} onFocus={(e)=>e.currentTarget.style.outline=focusRing.outline} onBlur={(e)=>e.currentTarget.style.outline="none"} onMouseEnter={(e)=>{ e.currentTarget.style.backgroundColor = COLORS.optionHoverBg; }} onMouseLeave={(e)=>{ e.currentTarget.style.backgroundColor = "transparent"; }}>
+      {label}
+    </button>
+  );
+}
 
-          <Stepper activeStep={activeStep} onStepClick={setActiveStep} />
+/* ----------------------------- Creation Flow ----------------------------- */
+const STEPS = ["Create","Audience","Compose & Schedule","Review & Analytics"];
+const getTodayDate = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate(), 10).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+const mapCampaignToSteps = (campaign) => {
+  const mainStep = {
+    id: "s1",
+    type: "Email",
+    date: getTodayDate(),
+    time: normalizeTime(""),
+    subject: campaign.subject || "",
+    body: `Body content for ${campaign.name} - Step 1.`,
+    autoStopRule: "None",
+    useRecoTime: false
+  };
+  const sequenceSteps = (campaign.sequences || []).map((seq, index) => ({
+    id: `s${index + 2}`,
+    type: seq.messageType,
+    daysOffset: parseDelayDays(seq.delay),
+    time: normalizeTime(""),
+    subject: `Follow-up ${index + 1} for ${campaign.subject}`,
+    body: `Body content for ${campaign.name} - Step ${index + 2}.`,
+    autoStopRule: "Stop If Opened",
+    useRecoTime: false
+  }));
+  return [mainStep, ...sequenceSteps];
+};
 
-          <div style={{marginTop:14}}>
-            {/* CREATE STEP */}
-            {activeStep===0 && (
-              <Panel title="Create">
-                <Labeled label="Campaign name" required>
-                  <Input
-                    placeholder="e.g., Summer Camp 2026 — Early Bird"
-                    value={campaignName}
-                    onChange={(val)=>{
-                      setCampaignName(val);
-                      if (val.trim()) autoSave({ name: val.trim() });
-                    }}
-                  />
-                </Labeled>
+function Stepper({ activeStep, onStepClick }){
+  const progress = (activeStep + 1) / (STEPS.length || 1);
+  return (
+    <div style={{marginBottom:4}}>
+      <div role="navigation" aria-label="Creation steps" style={{display:"flex", gap:0, flexWrap:"nowrap"}}>
+        {STEPS.map((label, idx)=>{
+          const active = idx===activeStep;
+          const completed = idx < activeStep;
+          return (
+            <button key={label} onClick={()=>onStepClick(idx)} style={{flex:1, appearance:"none", border:"none", background: active ? COLORS.panel : "transparent", padding:"10px 16px", fontWeight:700, fontSize:"13px", color: active ? COLORS.primary : (completed ? COLORS.subtext : COLORS.text), cursor:"pointer", textAlign:"left", borderRadius:"10px 10px 0 0"}} aria-current={active?"step":undefined}>
+              {label}
+            </button>
+          );
+        })}
+      </div>
+      <div style={{position:"relative", height:3, borderRadius:999, background:"#e5e7eb", overflow:"hidden"}}>
+        <div style={{position:"absolute", left:0, top:0, bottom:0, width:`${progress*100}%`, background:COLORS.primary}} />
+      </div>
+    </div>
+  );
+}
 
-                <Labeled
-                  label="What is this campaign for?"
-                  hint="We’ll tune this flow for operations or promotion."
-                >
+function Panel({ title, children }){
+  return (
+    <div style={{border:`1px solid ${COLORS.border}`, borderRadius:12, background:COLORS.panel, padding:14, marginTop:10}} role="region" aria-label={title}>
+      <h2 style={{marginTop:0, fontSize:16, textAlign:"left"}}>{title}</h2>
+      {children}
+    </div>
+  );
+}
+function Labeled({ label, required, hint, inline, children }){
+  return (
+    <div style={{marginBottom:10}}>
+      <div style={{display:inline?"inline-flex":"flex", alignItems:"baseline", gap:6, marginBottom:4, textAlign:"left"}}>
+        <label style={{fontWeight:600, fontSize:13}}>{label}{required && (<span style={{color:COLORS.danger, marginLeft:4}}>*</span>)}</label>
+        {hint && (<span style={{color:COLORS.subtext, fontSize:12}}>{hint}</span>)}
+      </div>
+      {children}
+    </div>
+  );
+}
+const inputStyle = {
+  background:COLORS.panelAlt,
+  border:`1px solid ${COLORS.border}`,
+  color:COLORS.text,
+  padding:"8px 10px",
+  borderRadius:8,
+  width:"100%",
+  fontSize:13,
+  textAlign:"left"
+};
+function Input({ value, onChange, placeholder }){
+  const [local, setLocal] = useState(value||"");
+  useEffect(()=>setLocal(value||""),[value]);
+  return (
+    <input type="text" value={local} placeholder={placeholder} style={inputStyle} onChange={(e)=>{setLocal(e.target.value); onChange?.(e.target.value);}} onFocus={(e)=>{ e.currentTarget.style.outline=focusRing.outline; }} onBlur={(e)=>{ e.currentTarget.style.outline="none"; }} />
+  );
+}
+function Textarea({ value, onChange, placeholder }){
+  const [local, setLocal] = useState(value||"");
+  useEffect(()=>setLocal(value||""),[value]);
+  return (
+    <textarea value={local} placeholder={placeholder} rows={7} style={{...inputStyle, fontFamily:"inherit", resize:"vertical"}} onChange={(e)=>{setLocal(e.target.value); onChange?.(e.target.value);}} onFocus={(e)=>{ e.currentTarget.style.outline=focusRing.outline; }} onBlur={(e)=>{ e.currentTarget.style.outline="none"; }} />
+  );
+}
+function TypeToggle({ value, onChange }){
+  const Item = ({ v })=>{
+    const active = value===v;
+    return (
+      <button onClick={()=>onChange(v)} style={{...btnGhost, padding:"4px 8px", borderRadius:999, borderColor:active?COLORS.primary:COLORS.border, color:active?COLORS.primary:COLORS.text, background:active?"rgba(37,99,235,0.10)":COLORS.panelAlt, fontSize:12, textAlign:"left"}} aria-pressed={active}>
+        {v}
+      </button>
+    );
+  };
+  return (
+    <div role="group" aria-label="Message type" style={{display:"flex", gap:4, textAlign:"left"}}>
+      <Item v="Email" />
+      <Item v="SMS" />
+    </div>
+  );
+}
+function Row({ label, value }){
+  return (
+    <div style={{display:"grid", gridTemplateColumns:"160px 1fr", gap:6, textAlign:"left"}}>
+      <div style={{color:COLORS.subtext, fontSize:12}}>{label}</div>
+      <div style={{fontSize:13}}>{value}</div>
+    </div>
+  );
+}
+function InfoDot({ title }) {
+  const [open, setOpen] = useState(false);
+  const btnRef = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const handleClick = (e) => {
+      if (!btnRef.current) return;
+      if (!btnRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+  return (
+    <span style={{position:"relative", display:"inline-flex"}}>
+      <button type="button" ref={btnRef} onClick={()=>setOpen(o=>!o)} aria-label={title} aria-expanded={open} style={{display:"inline-flex", alignItems:"center", justifyContent:"center", width:18, height:18, borderRadius:"999px", border:`1px solid ${COLORS.border}`, background:COLORS.panelAlt, color:COLORS.subtext, fontSize:11, cursor:"pointer", padding:0}}>?</button>
+      {open && (
+        <div style={{position:"absolute", top:"120%", left:"50%", transform:"translateX(-50%)", minWidth:220, maxWidth:280, padding:"8px 10px", borderRadius:8, background:COLORS.panel, border:`1px solid ${COLORS.border}`, boxShadow:"0 8px 20px rgba(15,23,42,0.18)", fontSize:12, color:COLORS.text, textAlign:"left", lineHeight:1.4, whiteSpace:"normal", zIndex:1200}}>
+          {title}
+        </div>
+      )}
+    </span>
+  );
+}
+function FooterNav({ onBack, onNext, nextLabel="Next", nextDisabled }){
+  return (
+    <div style={{display:"flex", justifyContent:"space-between", marginTop:10}}>
+      <button style={btnGhost} onClick={onBack}>Back</button>
+      <button style={{...btnPrimary, opacity:nextDisabled?.valueOf()?0.6:1, textAlign:"center"}} disabled={nextDisabled} onClick={onNext}>{nextLabel}</button>
+    </div>
+  );
+}
+
+function CreationFlow({ onBackToDashboard, onLaunched, onEnsureDraft, onUpdateDraft, draftId: externalDraftId, currentCampaign, initialStep }){
+  const initialSteps = useMemo(() => 
+    currentCampaign && typeof currentCampaign.id === "number"
+      ? mapCampaignToSteps(currentCampaign)
+      : [{ id:"s1", type:"Email", date:getTodayDate(), time:normalizeTime(""), subject:"", body:"", autoStopRule:"None", useRecoTime:false }],
+    [currentCampaign?.id]
+  );
+  
+  const [activeStep, setActiveStep] = useState(initialStep || 0);
+  const [campaignName, setCampaignName] = useState(currentCampaign?.name || "");
+  const [campaignGoal, setCampaignGoal] = useState("Operational");
+  const [operationalTemplate, setOperationalTemplate] = useState("");
+  const [fromSender, setFromSender] = useState("info@yourprogram.com");
+  const initialSegments = currentCampaign?.audienceLabels || [];
+  const [audienceSegments, setAudienceSegments] = useState(initialSegments);
+  const [audPanelOpen, setAudPanelOpen] = useState(false);
+  const [lastSaved, setLastSaved] = useState(null);
+  const [internalDraftId, setInternalDraftId] = useState(externalDraftId || null);
+  const [hasLaunched, setHasLaunched] = useState(false);
+  const [steps, setSteps] = useState(initialSteps);
+  const [activeMsgStepId, setActiveMsgStepId] = useState(initialSteps.id);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  
+  const [autoStopOn, setAutoStopOn] = useState(true);
+  const [autoStopKeyAction, setAutoStopKeyAction] = useState("When a family enrolls for this offering");
+  const [selectedMetric, setSelectedMetric] = useState("Open Rate");
+  const [showLaunchConfirm, setShowLaunchConfirm] = useState(false);
+
+  useEffect(() => {
+    if (typeof currentCampaign?.id === "number") {
+      setCampaignName(currentCampaign.name || "");
+      setAudienceSegments(currentCampaign.audienceLabels || []);
+      const loaded = mapCampaignToSteps(currentCampaign);
+      setSteps(loaded);
+      setActiveMsgStepId(loaded.id);
+      setInternalDraftId(currentCampaign.id);
+      setActiveStep(initialStep || 0);
+    } else if (currentCampaign?.campaignId === "new" || currentCampaign === null) {
+      if(campaignName !== "" || audienceSegments.length > 0 || steps.length > 1) {
+        setCampaignName("");
+        setAudienceSegments([]);
+        const defaultSteps = [{ id:"s1", type:"Email", date:getTodayDate(), time:normalizeTime(""), subject:"", body:"", autoStopRule:"None", useRecoTime:false }];
+        setSteps(defaultSteps);
+        setActiveMsgStepId(defaultSteps.id);
+        setActiveStep(initialStep || 0);
+      }
+      setInternalDraftId(null);
+    }
+  }, [currentCampaign?.id, initialStep]);
+
+  const audienceCount = 1500 + audienceSegments.length*10;
+  
+  const canLaunch = useMemo(()=>{
+    if(!campaignName.trim()) return false;
+    if(audienceSegments.length===0) return false;
+    if(steps.length===0) return false;
+    for(const st of steps){
+      if(st.id===steps.id){
+        if(!st.date) return false;
+        if(st.type==="Email" && !st.subject.trim()) return false;
+      }
+      if(!st.body.trim()) return false;
+    }
+    return true;
+  },[campaignName, audienceSegments, steps]);
+
+  const goNext = ()=>setActiveStep(s=>Math.min(s+1, STEPS.length-1));
+  const goBack = ()=>setActiveStep(s=>Math.max(s-1, 0));
+
+  const addStep = ()=>{
+    const nextId = "s"+Math.random().toString(36).slice(2,7);
+    const newStep = { id:nextId, type:"Email", daysOffset:3, time:"", subject:"", body:"", autoStopRule:"None", useRecoTime:false };
+    setSteps(p=>[...p, newStep]);
+    setActiveMsgStepId(nextId);
+  };
+  const resetSteps = ()=>{
+    const only = { id:"s1", type:"Email", date:getTodayDate(), time:normalizeTime(""), subject:"", body:"", autoStopRule:"None", useRecoTime:false };
+    setSteps([only]);
+    setActiveMsgStepId("s1");
+  };
+  const updateStep = (id, patch)=> setSteps(p=>p.map(s=>s.id===id?{...s, ...patch}:s));
+  const removeStep = (id)=>{
+    setSteps(prev => {
+      if (prev.length <= 1) return prev;
+      const filtered = prev.filter(s=>s.id!==id);
+      if (id === activeMsgStepId) {
+        const last = filtered[filtered.length-1];
+        setActiveMsgStepId(last.id);
+      }
+      return filtered;
+    });
+  };
+  const activeEditorStep = steps.find(s=>s.id===activeMsgStepId) || steps[steps.length-1];
+
+  const autoSave = (changed = {}) => {
+    if (!campaignName.trim()) return;
+    const baseDraft = {
+      id: internalDraftId || undefined,
+      name: campaignName,
+      subject: steps?.subject || "(no subject)",
+      audience: audienceSegments.length ? `${audienceCount.toLocaleString()} (${audienceSegments.length>1?"Multiple segments":audienceSegments})` : "—",
+      audienceCount,
+      audienceLabels: audienceSegments,
+      campaignGoal,
+      operationalTemplate,
+      autoStopOn,
+      autoStopKeyAction,
+      sequences: steps.slice(1).map(st=>({ delay: typeof st.daysOffset === "number" ? `${st.daysOffset}d` : (st.date || ""), condition: "Everyone", messageType: st.type })),
+      ...changed
+    };
+    if (!internalDraftId) {
+      const newId = onEnsureDraft(baseDraft);
+      setInternalDraftId(newId);
+    } else {
+      onUpdateDraft(internalDraftId, baseDraft);
+    }
+    setLastSaved(new Date());
+  };
+
+  const handleLaunch = ()=>{
+    if (!canLaunch) return;
+    const mainStep = steps;
+    const followUps = steps.slice(1).map((st)=>({ delay: typeof st.daysOffset === "number" ? `${st.daysOffset}d` : (st.date || ""), condition: "Everyone", messageType: st.type }));
+    const newCampaign = {
+      id: internalDraftId || Date.now(),
+      name: campaignName || "Untitled Campaign",
+      subject: mainStep?.subject || "(no subject)",
+      audience: audienceSegments.length ? `${audienceCount.toLocaleString()} (${audienceSegments.length>1?"Multiple segments":audienceSegments})` : "—",
+      audienceCount,
+      audienceLabels: audienceSegments,
+      status: "Active",
+      sendTime: mainStep?.date ? `${mainStep.date} ${normalizeTime(mainStep.time)}` : "Just launched",
+      opens: "-",
+      clicks: "-",
+      sequences: followUps,
+      editable: true,
+      channel: "Email",
+      goal: "Engagement",
+      delivered: audienceCount,
+      ctr: 0,
+      ctor: 0.1,
+      unsubRate: 0,
+      spamRate: 0,
+      lastSendAt: new Date().toISOString(),
+      hasFutureSteps: followUps.length>0
+    };
+    setHasLaunched(true);
+    onLaunched(newCampaign);
+  };
+  const baseDate = steps?.date;
+
+  return (
+    <section aria-label="Create campaign">
+      <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14}}>
+        <button style={btnGhost} onClick={onBackToDashboard}>← Back</button>
+        {lastSaved && <div style={{fontSize:11, color:COLORS.subtext, textAlign:"left"}}>Auto-saved {lastSaved.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</div>}
+      </div>
+      <Stepper activeStep={activeStep} onStepClick={setActiveStep} />
+      <div style={{marginTop:14}}>
+        {activeStep===0 && (
+          <Panel title="Create">
+            <Labeled label="Campaign name" required>
+              <Input placeholder="e.g., Summer Camp 2026 — Early Bird" value={campaignName} onChange={(val)=>{ setCampaignName(val); if (val.trim()) autoSave({ name: val.trim() }); }} />
+            </Labeled>
+            <Labeled label="What is this campaign for?" hint="We’ll tune this flow for operations or promotion.">
+              <div style={{display:"flex", gap:8, flexWrap:"wrap"}}>
+                {[{id:"Operational", label:"Operational (Payments, Forms, Schedules)"}, {id:"Marketing", label:"Marketing & Promotion"}, {id:"Announcement", label:"Announcements & Updates"}].map(opt=>{
+                  const active = campaignGoal === opt.id;
+                  return (
+                    <button key={opt.id} type="button" onClick={()=>{ setCampaignGoal(opt.id); if (opt.id !== "Operational") { setOperationalTemplate(""); } if (campaignName.trim()) { const payload = { campaignGoal: opt.id }; if (opt.id !== "Operational") { payload.operationalTemplate = ""; } autoSave(payload); } }} style={chipSelectable(active)}>
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </Labeled>
+            {campaignGoal === "Operational" && (
+              <Panel title="Recommended operational flows">
+                <Labeled label="Pick a starting template" hint="You can still edit the language in the next step.">
                   <div style={{display:"flex", gap:8, flexWrap:"wrap"}}>
-                    {[
-                      {
-                        id:"Operational",
-                        label:"Operational (Payments, Forms, Schedules)"
-                      },
-                      {
-                        id:"Marketing",
-                        label:"Marketing & Promotion"
-                      },
-                      {
-                        id:"Announcement",
-                        label:"Announcements & Updates"
-                      }
-                    ].map(opt=>{
-                      const active = campaignGoal === opt.id;
+                    {[{id:"Payment & Billing", label:"Payment & Billing", sub:"Due / past-due reminders and confirmations"}, {id:"Forms & Waivers", label:"Forms & Waivers", sub:"Collect required forms before kids attend"}, {id:"Schedule & Logistics", label:"Schedule & Logistics", sub:"Schedule changes, pickups, and daily details"}].map(opt=>{
+                      const active = operationalTemplate === opt.id;
                       return (
-                        <button
-                          key={opt.id}
-                          type="button"
-                          onClick={()=>{
-                            setCampaignGoal(opt.id);
-                            if (opt.id !== "Operational") {
-                              setOperationalTemplate("");
-                            }
-                            if (campaignName.trim()) {
-                              const payload = { campaignGoal: opt.id };
-                              if (opt.id !== "Operational") {
-                                payload.operationalTemplate = "";
-                              }
-                              autoSave(payload);
-                            }
-                          }}
-                          style={chipSelectable(active)}
-                        >
-                          {opt.label}
+                        <button key={opt.id} type="button" onClick={()=>{ setOperationalTemplate(opt.id); if (campaignName.trim()) autoSave({ operationalTemplate: opt.id }); }} style={{...chipSelectable(active), flexDirection:"column", alignItems:"flex-start", minWidth:190}}>
+                          <span style={{fontSize:13, fontWeight:600}}>{opt.label}</span>
+                          <span style={{fontSize:11, color:COLORS.subtext, marginTop:2}}>{opt.sub}</span>
                         </button>
                       );
                     })}
                   </div>
                 </Labeled>
-
-                {campaignGoal === "Operational" && (
-                  <Panel title="Recommended operational flows">
-                    <Labeled
-                      label="Pick a starting template"
-                      hint="You can still edit the language in the next step."
-                    >
-                      <div style={{display:"flex", gap:8, flexWrap:"wrap"}}>
-                        {[
-                          {
-                            id:"Payment & Billing",
-                            label:"Payment & Billing",
-                            sub:"Due / past-due reminders and confirmations"
-                          },
-                          {
-                            id:"Forms & Waivers",
-                            label:"Forms & Waivers",
-                            sub:"Collect required forms before kids attend"
-                          },
-                          {
-                            id:"Schedule & Logistics",
-                            label:"Schedule & Logistics",
-                            sub:"Schedule changes, pickups, and daily details"
-                          }
-                        ].map(opt=>{
-                          const active = operationalTemplate === opt.id;
-                          return (
-                            <button
-                              key={opt.id}
-                              type="button"
-                              onClick={()=>{
-                                setOperationalTemplate(opt.id);
-                                if (campaignName.trim()) autoSave({ operationalTemplate: opt.id });
-                              }}
-                              style={{
-                                ...chipSelectable(active),
-                                flexDirection:"column",
-                                alignItems:"flex-start",
-                                minWidth:190
-                              }}
-                            >
-                              <span style={{fontSize:13, fontWeight:600}}>
-                                {opt.label}
-                              </span>
-                              <span
-                                style={{
-                                  fontSize:11,
-                                  color:COLORS.subtext,
-                                  marginTop:2
-                                }}
-                              >
-                                {opt.sub}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </Labeled>
-                  </Panel>
-                )}
-
-                <FooterNav
-                  onBack={onBackToDashboard}
-                  onNext={goNext}
-                  nextLabel="Next"
-                  nextDisabled={!campaignName.trim()}
-                />
               </Panel>
             )}
-
-            {/* AUDIENCE STEP */}
-            {activeStep===1 && (
-              <Panel title="Audience">
-                <Labeled label="From">
-                  <Input
-                    value={fromSender}
-                    onChange={val=>{
-                      setFromSender(val);
-                      if (campaignName.trim()) autoSave({ from: val });
-                    }}
-                  />
-                </Labeled>
-
-                <Labeled
-                  label="Select audience"
-                  required
-                  hint={
-                    audienceSegments.length
-                      ? `Multiple segments — total ${audienceCount.toLocaleString()} contacts`
-                      : ""
+            <FooterNav onBack={onBackToDashboard} onNext={goNext} nextLabel="Next" nextDisabled={!campaignName.trim()} />
+          </Panel>
+        )}
+        {activeStep===1 && (
+          <Panel title="Audience">
+            <Labeled label="From">
+              <Input value={fromSender} onChange={val=>{ setFromSender(val); if (campaignName.trim()) autoSave({ from: val }); }} />
+            </Labeled>
+            <Labeled label="Select audience" required hint={audienceSegments.length ? `Multiple segments — total ${audienceCount.toLocaleString()} contacts` : ""}>
+              <div style={{display:"flex", alignItems:"center", gap:10, flexWrap:"wrap"}}>
+                <div style={{padding:"8px 10px", borderRadius:10, border:`1px solid ${COLORS.border}`, background:COLORS.panelAlt, minWidth:240, textAlign:"left"}} aria-live="polite">
+                  {audienceSegments.length ? `${audienceCount.toLocaleString()} · ${audienceSegments.length>1 ? "Multiple segments" : audienceSegments}` : "—"}
+                </div>
+                <button style={{...btnPrimary, textAlign:"center"}} onClick={()=>setAudPanelOpen(o=>!o)} aria-controls="audience-selector" aria-expanded={audPanelOpen}>
+                  {audPanelOpen ? "Done" : "Change"}
+                </button>
+              </div>
+            </Labeled>
+            {audienceSegments.length > 0 && (
+              <div style={{display:"flex", gap:6, flexWrap:"wrap", marginBottom:10}}>
+                {audienceSegments.map(seg => (
+                  <span key={seg} style={badge("rgba(148,163,184,0.1)", COLORS.text)}>{seg}</span>
+                ))}
+              </div>
+            )}
+            {audPanelOpen && (
+              <AudienceSelectorInline
+                onClose={()=>setAudPanelOpen(false)}
+                onApply={(segments)=>{
+                  setAudienceSegments(segments);
+                  setAudPanelOpen(false);
+                  if (campaignName.trim()) {
+                    const count = 1500 + segments.length*10;
+                    autoSave({ audience: segments.length ? `${count.toLocaleString()} (${segments.length>1?"Multiple segments":segments})` : "—", audienceCount: count, audienceLabels: segments });
                   }
-                >
-                  <div style={{display:"flex", alignItems:"center", gap:10, flexWrap:"wrap"}}>
-                    <div
-                      style={{
-                        padding:"8px 10px",
-                        borderRadius:10,
-                        border:`1px solid ${COLORS.border}`,
-                        background:COLORS.panelAlt,
-                        minWidth:240,
-                        textAlign:"left"
-                      }}
-                      aria-live="polite"
-                    >
-                      {audienceSegments.length
-                        ? `${audienceCount.toLocaleString()} · ${
-                            audienceSegments.length>1 ? "Multiple segments" : audienceSegments[0]
-                          }`
-                        : "—"}
-                    </div>
-                    <button
-                      style={{...btnPrimary, textAlign:"center"}}
-                      onClick={()=>setAudPanelOpen(o=>!o)}
-                      aria-controls="audience-selector"
-                      aria-expanded={audPanelOpen}
-                    >
-                      {audPanelOpen ? "Done" : "Change"}
-                    </button>
-                  </div>
-                </Labeled>
-
-                {audienceSegments.length > 0 && (
-                  <div style={{display:"flex", gap:6, flexWrap:"wrap", marginBottom:10}}>
-                    {audienceSegments.map(seg => (
-                      <span key={seg} style={badge("rgba(148,163,184,0.1)", COLORS.text)}>{seg}</span>
-                    ))}
-                  </div>
-                )}
-
-                {audPanelOpen && (
-                  <AudienceSelectorInline
-                    onClose={()=>setAudPanelOpen(false)}
-                    onApply={(segments)=>{
-                      setAudienceSegments(segments);
-                      setAudPanelOpen(false);
-                      if (campaignName.trim()) {
-                        const count = 1500 + segments.length*10;
-                        autoSave({
-                          audience: segments.length
-                            ? `${count.toLocaleString()} (${segments.length>1?"Multiple segments":segments[0]})`
-                            : "—",
-                          audienceCount: count,
-                          audienceLabels: segments
-                        });
-                      }
-                    }}
-                    initialSelected={audienceSegments}
-                  />
-                )}
-
-                <FooterNav
-                  onBack={goBack}
-                  onNext={goNext}
-                  nextLabel="Next"
-                  nextDisabled={audienceSegments.length===0}
-                />
-              </Panel>
+                }}
+                initialSelected={audienceSegments}
+              />
             )}
-
-            {/* COMPOSE & SCHEDULE STEP */}
-            {activeStep===2 && (
-              <Panel title="Compose & Schedule">
-                <div className="compose-layout">
-                  {/* Steps list */}
-                  <div
-                    style={{
-                      border:`1px solid ${COLORS.border}`,
-                      borderRadius:12,
-                      background:COLORS.panelAlt,
-                      padding:10
-                    }}
-                  >
-                    <div
-                      style={{
-                        display:"flex",
-                        justifyContent:"space-between",
-                        alignItems:"center",
-                        marginBottom:6
-                      }}
-                    >
-                      <div style={{display:"flex", alignItems:"center", gap:6}}>
-                        <div style={{fontWeight:700, fontSize:14, textAlign:"left"}}>Steps</div>
-                        <InfoDot title="Use steps to automate must-read messages (for example, 3 days before payment is due, day-of reminder, and past-due SMS) so you don’t have to create a new campaign every time." />
-                      </div>
-                      <button
-                        style={btnGhost}
-                        onClick={()=>{
-                          resetSteps();
-                          if (campaignName.trim()) autoSave({ sequences: [] });
-                        }}
-                      >
-                        Reset
-                      </button>
-                    </div>
-
-                    {/* Auto-stop after key action (campaign-level) */}
-                    <div style={{marginTop:4, marginBottom:10}}>
-                      <label
-                        style={{
-                          display:"flex",
-                          flexDirection:"column",
-                          gap:6,
-                          fontSize:12,
-                          textAlign:"left"
-                        }}
-                      >
-                        <span style={{display:"flex", alignItems:"center", gap:8}}>
-                          <input
-                            type="checkbox"
-                            checked={autoStopOn}
-                            onChange={e=>{
-                              setAutoStopOn(e.target.checked);
-                              if (campaignName.trim()) autoSave({ autoStopOn: e.target.checked });
-                            }}
-                            style={{marginTop:0}}
-                          />
-                          <span style={{display:"inline-flex", alignItems:"center", gap:6}}>
-                            <span style={{fontWeight:600}}>Auto-stop after key action</span>
-                            <InfoDot title="When a family completes the key action (for example, enrollment or payment), we’ll stop sending follow-ups to them for this campaign." />
-                            <span
-                              style={{
-                                ...tagStatic("rgba(121,249,219,0.25)", "#047857")
-                              }}
-                            >
-                              Beta
-                            </span>
-                          </span>
-                        </span>
-                        {autoStopOn && (
-                          <select
-                            value={autoStopKeyAction}
-                            onChange={e=>{
-                              setAutoStopKeyAction(e.target.value);
-                              if (campaignName.trim()) autoSave({ autoStopKeyAction: e.target.value });
-                            }}
-                            style={{...inputStyle}}
-                          >
-                            <option>When a family enrolls for this offering</option>
-                            <option>When payment is completed</option>
-                            <option>When required form is submitted</option>
-                            <option>When family confirms attendance</option>
-                          </select>
+            <FooterNav onBack={goBack} onNext={goNext} nextLabel="Next" nextDisabled={audienceSegments.length===0} />
+          </Panel>
+        )}
+        {activeStep===2 && (
+          <Panel title="Compose & Schedule">
+            <div className="compose-layout">
+              <div style={{border:`1px solid ${COLORS.border}`, borderRadius:12, background:COLORS.panelAlt, padding:10}}>
+                <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6}}>
+                  <div style={{display:"flex", alignItems:"center", gap:6}}>
+                    <div style={{fontWeight:700, fontSize:14, textAlign:"left"}}>Steps</div>
+                    <InfoDot title="Use steps to automate must-read messages so you don’t have to create a new campaign every time." />
+                  </div>
+                  <button style={btnGhost} onClick={()=>{ resetSteps(); if (campaignName.trim()) autoSave({ sequences: [] }); }}>Reset</button>
+                </div>
+                <div style={{marginTop:4, marginBottom:10}}>
+                  <label style={{display:"flex", flexDirection:"column", gap:6, fontSize:12, textAlign:"left"}}>
+                    <span style={{display:"flex", alignItems:"center", gap:8}}>
+                      <input type="checkbox" checked={autoStopOn} onChange={e=>{ setAutoStopOn(e.target.checked); if (campaignName.trim()) autoSave({ autoStopOn: e.target.checked }); }} style={{marginTop:0}} />
+                      <span style={{display:"inline-flex", alignItems:"center", gap:6}}>
+                        <span style={{fontWeight:600}}>Auto-stop after key action</span>
+                        <InfoDot title="When a family completes the key action (e.g. enrollment), we’ll stop sending follow-ups." />
+                        <span style={{...tagStatic("rgba(121,249,219,0.25)", "#047857")}}>Beta</span>
+                      </span>
+                    </span>
+                    {autoStopOn && (
+                      <select value={autoStopKeyAction} onChange={e=>{ setAutoStopKeyAction(e.target.value); if (campaignName.trim()) autoSave({ autoStopKeyAction: e.target.value }); }} style={{...inputStyle}}>
+                        <option>When a family enrolls for this offering</option>
+                        <option>When payment is completed</option>
+                        <option>When required form is submitted</option>
+                        <option>When family confirms attendance</option>
+                      </select>
+                    )}
+                  </label>
+                </div>
+                {steps.map((st, idx)=>{
+                  const isExpanded = st.id===activeMsgStepId;
+                  const arriveDate = (idx===0) ? st.date : (baseDate ? addDays(baseDate, st.daysOffset||0) : "");
+                  const stepPillActive = tagStatic("rgba(37,99,235,0.18)", "#1d4ed8");
+                  const stepPillCollapsed = tagStatic("rgba(148,163,184,0.20)", "#111827");
+                  return (
+                    <div key={st.id} style={{border:`1px solid ${isExpanded ? COLORS.primary : COLORS.border}`, borderRadius:10, background: isExpanded ? COLORS.panel : "#f8fafc", padding:10, marginBottom:10, boxShadow: isExpanded ? "0 0 0 1px rgba(37,99,235,0.06)" : "none"}}>
+                      <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", gap:8, cursor: !isExpanded ? "pointer" : "default"}} onClick={()=>{ if (!isExpanded) setActiveMsgStepId(st.id); }}>
+                        <div style={{display:"flex", alignItems:"center", gap:8, flexWrap:"wrap"}}>
+                          <span style={isExpanded ? stepPillActive : stepPillCollapsed}>Step {idx+1}</span>
+                          {!isExpanded && (<><span style={tagStatic("rgba(148,163,184,0.15)", COLORS.subtext)}>{st.type}</span>{arriveDate && (<span style={{fontSize:11, color:COLORS.subtext, textAlign:"left"}}>{arriveDate}</span>)}</>)}
+                        </div>
+                        {!isExpanded && steps.length>1 && (
+                          <button title="Remove step" onClick={(e)=>{ e.stopPropagation(); removeStep(st.id); if (campaignName.trim()) autoSave(); }} style={{...btnGhost, padding:"2px 6px", color:COLORS.subtext}}>×</button>
                         )}
-                      </label>
-                    </div>
-
-                    {steps.map((st, idx)=>{
-                      const isExpanded = st.id===activeMsgStepId;
-                      const arriveDate = (idx===0)
-                        ? st.date
-                        : (baseDate ? addDays(baseDate, st.daysOffset||0) : "");
-
-                      const stepPillActive = tagStatic("rgba(37,99,235,0.18)", "#1d4ed8");
-                      const stepPillCollapsed = tagStatic("rgba(148,163,184,0.20)", "#111827");
-
-                      return (
-                        <div
-                          key={st.id}
-                          style={{
-                            border:`1px solid ${isExpanded ? COLORS.primary : COLORS.border}`,
-                            borderRadius:10,
-                            background: isExpanded ? COLORS.panel : "#f8fafc",
-                            padding:10,
-                            marginBottom:10,
-                            boxShadow: isExpanded ? "0 0 0 1px rgba(37,99,235,0.06)" : "none"
-                          }}
-                        >
-                          {/* Header row */}
-                          <div
-                            style={{
-                              display:"flex",
-                              alignItems:"center",
-                              justifyContent:"space-between",
-                              gap:8,
-                              cursor: !isExpanded ? "pointer" : "default"
-                            }}
-                            onClick={()=>{ if (!isExpanded) setActiveMsgStepId(st.id); }}
-                          >
-                            <div
-                              style={{
-                                display:"flex",
-                                alignItems:"center",
-                                gap:8,
-                                flexWrap:"wrap"
-                              }}
-                            >
-                              <span style={isExpanded ? stepPillActive : stepPillCollapsed}>
-                                Step {idx+1}
-                              </span>
-                              {!isExpanded && (
-                                <>
-                                  <span
-                                    style={tagStatic("rgba(148,163,184,0.15)", COLORS.subtext)}
-                                  >
-                                    {st.type}
-                                  </span>
-                                  {arriveDate && (
-                                    <span
-                                      style={{
-                                        fontSize:11,
-                                        color:COLORS.subtext,
-                                        textAlign:"left"
-                                      }}
-                                    >
-                                      {arriveDate}
-                                    </span>
-                                  )}
-                                </>
-                              )}
+                      </div>
+                      {isExpanded && (
+                        <div style={{marginTop:12, display:"grid", gap:12}}>
+                          <TypeToggle value={st.type} onChange={(v)=>{ updateStep(st.id, {type:v}); if (campaignName.trim()) autoSave(); }} />
+                          {idx===0 ? (
+                            <div style={{display:"grid", gap:10}}>
+                              <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:10}}>
+                                <Labeled label="Date" inline><input type="date" value={st.date} onChange={e=>{ updateStep(st.id,{date:e.target.value}); if (campaignName.trim()) autoSave(); }} style={inputStyle} /></Labeled>
+                                <Labeled label="Time" inline><input type="time" value={st.time} disabled={!!st.useRecoTime} onChange={e=>{ updateStep(st.id,{time:e.target.value}); if (campaignName.trim()) autoSave(); }} style={inputStyle} /></Labeled>
+                              </div>
+                              <div style={{marginTop:2, textAlign:"left"}}>
+                                <label style={{display:"flex", alignItems:"center", gap:8, fontSize:13}}>
+                                  <input type="checkbox" checked={!!st.useRecoTime} onChange={(e)=>{ const checked = e.target.checked; const t = recommendTimeFor({ type: st.type, audienceSegments }); updateStep(st.id, { useRecoTime: checked, time: checked ? t : (st.time||"") }); if (campaignName.trim()) autoSave(); }} />
+                                  <span>Send at recommended time</span>
+                                </label>
+                                <div style={{fontSize:11, color:COLORS.subtext, marginLeft:26, textAlign:"left", whiteSpace:"normal"}}>Based on past opens and clicks {st.useRecoTime && st.time ? `• ${st.time}` : ""}</div>
+                              </div>
                             </div>
-                            {!isExpanded && steps.length>1 && (
-                              <button
-                                title="Remove step"
-                                onClick={(e)=>{
-                                  e.stopPropagation();
-                                  removeStep(st.id);
-                                  if (campaignName.trim()) autoSave();
-                                }}
-                                style={{...btnGhost, padding:"2px 6px", color:COLORS.subtext}}
-                              >
-                                ×
-                              </button>
-                            )}
-                          </div>
-
-                          {/* Expanded editor */}
-                          {isExpanded && (
-                            <div style={{marginTop:12, display:"grid", gap:12}}>
-                              <TypeToggle
-                                value={st.type}
-                                onChange={(v)=>{
-                                  updateStep(st.id, {type:v});
-                                  if (campaignName.trim()) autoSave();
-                                }}
-                              />
-
-                              {/* Scheduling controls */}
-                              {idx===0 ? (
-                                <div style={{display:"grid", gap:10}}>
-                                  <div
-                                    style={{
-                                      display:"grid",
-                                      gridTemplateColumns:"1fr 1fr",
-                                      gap:10
-                                    }}
-                                  >
-                                    <Labeled label="Date" inline>
-                                      <input
-                                        type="date"
-                                        value={st.date}
-                                        onChange={e=>{
-                                          updateStep(st.id,{date:e.target.value});
-                                          if (campaignName.trim()) autoSave();
-                                        }}
-                                        style={inputStyle}
-                                      />
-                                    </Labeled>
-                                    <Labeled label="Time" inline>
-                                      <input
-                                        type="time"
-                                        value={st.time}
-                                        disabled={!!st.useRecoTime}
-                                        onChange={e=>{
-                                          updateStep(st.id,{time:e.target.value});
-                                          if (campaignName.trim()) autoSave();
-                                        }}
-                                        style={inputStyle}
-                                      />
-                                    </Labeled>
-                                  </div>
-                                  <div style={{marginTop:2, textAlign:"left"}}>
-                                    <label
-                                      style={{
-                                        display:"flex",
-                                        alignItems:"center",
-                                        gap:8,
-                                        fontSize:13
-                                      }}
-                                    >
-                                      <input
-                                        type="checkbox"
-                                        checked={!!st.useRecoTime}
-                                        onChange={(e)=>{
-                                          const checked = e.target.checked;
-                                          const t = recommendTimeFor({
-                                            type: st.type,
-                                            audienceSegments
-                                          });
-                                          updateStep(st.id, {
-                                            useRecoTime: checked,
-                                            time: checked ? t : (st.time||"")
-                                          });
-                                          if (campaignName.trim()) autoSave();
-                                        }}
-                                      />
-                                      <span>Send at recommended time</span>
-                                    </label>
-                                    <div
-                                      style={{
-                                        fontSize:11,
-                                        color:COLORS.subtext,
-                                        marginLeft:26,
-                                        textAlign:"left",
-                                        whiteSpace:"normal"
-                                      }}
-                                    >
-                                      Based on past opens and clicks{" "}
-                                      {st.useRecoTime && st.time ? `• ${st.time}` : ""}
-                                    </div>
-                                  </div>
+                          ) : (
+                            <div style={{display:"grid", gap:10}}>
+                              <Labeled label="Send this message in" inline>
+                                <div style={{display:"grid", gridTemplateColumns:"1fr auto", gap:8, alignItems:"center"}}>
+                                  <input type="number" min="0" value={st.daysOffset ?? 0} onChange={(e)=>{ updateStep(st.id,{daysOffset: Number(e.target.value)}); if (campaignName.trim()) autoSave(); }} style={inputStyle} />
+                                  <span style={{fontSize:13, color:COLORS.subtext, textAlign:"left"}}>days after Step 1</span>
                                 </div>
-                              ) : (
-                                <div style={{display:"grid", gap:10}}>
-                                  <Labeled label="Send this message in" inline>
-                                    <div
-                                      style={{
-                                        display:"grid",
-                                        gridTemplateColumns:"1fr auto",
-                                        gap:8,
-                                        alignItems:"center"
-                                      }}
-                                    >
-                                      <input
-                                        type="number"
-                                        min="0"
-                                        value={st.daysOffset ?? 0}
-                                        onChange={(e)=>{
-                                          updateStep(st.id,{daysOffset: Number(e.target.value)});
-                                          if (campaignName.trim()) autoSave();
-                                        }}
-                                        style={inputStyle}
-                                      />
-                                      <span
-                                        style={{
-                                          fontSize:13,
-                                          color:COLORS.subtext,
-                                          textAlign:"left"
-                                        }}
-                                      >
-                                        days after Step 1
-                                      </span>
-                                    </div>
-                                  </Labeled>
-                                  <div style={{marginTop:2, textAlign:"left"}}>
-                                    <label
-                                      style={{
-                                        display:"flex",
-                                        alignItems:"center",
-                                        gap:8,
-                                        fontSize:13
-                                      }}
-                                    >
-                                      <input
-                                        type="checkbox"
-                                        checked={!!st.useRecoTime}
-                                        onChange={(e)=>{
-                                          const checked = e.target.checked;
-                                          const t = recommendTimeFor({
-                                            type: st.type,
-                                            audienceSegments
-                                          });
-                                          updateStep(st.id, {
-                                            useRecoTime: checked,
-                                            time: checked ? t : ""
-                                          });
-                                          if (campaignName.trim()) autoSave();
-                                        }}
-                                      />
-                                      <span>Send at recommended time</span>
-                                    </label>
-                                    <div
-                                      style={{
-                                        fontSize:11,
-                                        color:COLORS.subtext,
-                                        marginLeft:26,
-                                        textAlign:"left",
-                                        whiteSpace:"normal"
-                                      }}
-                                    >
-                                      Based on past opens and clicks{" "}
-                                      {st.useRecoTime && st.time ? `• ${st.time}` : ""}
-                                    </div>
-                                  </div>
-
-                                  {/* Per-step auto-stop only if campaign-level auto-stop is OFF */}
-                                  {!autoStopOn && (
-                                    <Labeled label="Auto-stop rule">
-                                      <select
-                                        value={st.autoStopRule || "None"}
-                                        onChange={e=>{
-                                          updateStep(st.id, { autoStopRule: e.target.value });
-                                          if (campaignName.trim()) autoSave();
-                                        }}
-                                        style={{...inputStyle}}
-                                      >
-                                        <option value="None">None</option>
-                                        <option value="Stop If Opened">Stop if opened</option>
-                                        <option value="Stop If Clicked">Stop if clicked</option>
-                                      </select>
-                                    </Labeled>
-                                  )}
-                                </div>
+                              </Labeled>
+                              <div style={{marginTop:2, textAlign:"left"}}>
+                                <label style={{display:"flex", alignItems:"center", gap:8, fontSize:13}}>
+                                  <input type="checkbox" checked={!!st.useRecoTime} onChange={(e)=>{ const checked = e.target.checked; const t = recommendTimeFor({ type: st.type, audienceSegments }); updateStep(st.id, { useRecoTime: checked, time: checked ? t : "" }); if (campaignName.trim()) autoSave(); }} />
+                                  <span>Send at recommended time</span>
+                                </label>
+                                <div style={{fontSize:11, color:COLORS.subtext, marginLeft:26, textAlign:"left", whiteSpace:"normal"}}>Based on past opens and clicks {st.useRecoTime && st.time ? `• ${st.time}` : ""}</div>
+                              </div>
+                              {!autoStopOn && (
+                                <Labeled label="Auto-stop rule">
+                                  <select value={st.autoStopRule || "None"} onChange={e=>{ updateStep(st.id, { autoStopRule: e.target.value }); if (campaignName.trim()) autoSave(); }} style={{...inputStyle}}>
+                                    <option value="None">None</option>
+                                    <option value="Stop If Opened">Stop if opened</option>
+                                    <option value="Stop If Clicked">Stop if clicked</option>
+                                  </select>
+                                </Labeled>
                               )}
-
-                              <button
-                                style={{
-                                  ...btnGhost,
-                                  width:"fit-content",
-                                  padding:"4px 8px",
-                                  marginTop:2
-                                }}
-                                onClick={()=>{
-                                  addStep();
-                                  if (campaignName.trim()) autoSave();
-                                }}
-                              >
-                                + Add Step
-                              </button>
                             </div>
                           )}
+                          <button style={{...btnGhost, width:"fit-content", padding:"4px 8px", marginTop:2}} onClick={()=>{ addStep(); if (campaignName.trim()) autoSave(); }}>+ Add Step</button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{border:`1px solid ${COLORS.border}`, borderRadius:12, background:COLORS.panel, padding:10}}>
+                <div style={{display:"flex", justifyContent:"flex-end", alignItems:"center", marginBottom:8}}>
+                  <button style={btnGhost} onClick={()=>setPreviewOpen(true)}>Preview & Test</button>
+                </div>
+                {activeEditorStep.type==="Email" && (
+                  <Labeled label="Subject" required>
+                    <Input placeholder="Write a clear, compelling subject…" value={activeEditorStep.subject} onChange={(v)=>{ updateStep(activeEditorStep.id,{subject:v}); if (campaignName.trim()) autoSave(); }} />
+                  </Labeled>
+                )}
+                <Labeled label={activeEditorStep.type==="Email" ? "Email body" : "SMS body"} required>
+                  <Textarea placeholder="Write your message…" value={activeEditorStep.body} onChange={(v)=>{ updateStep(activeEditorStep.id,{body:v}); if (campaignName.trim()) autoSave(); }} />
+                  {activeEditorStep.type==="Email" && <FormattingToolbar />}
+                </Labeled>
+                <div style={{display:"flex", justifyContent:"space-between", marginTop:10}}>
+                  <button style={btnGhost} onClick={goBack}>Back</button>
+                  <div style={{display:"flex", gap:6}}>
+                    <button style={{...btnPrimary, textAlign:"center"}} onClick={()=>setActiveStep(3)}>Next</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {previewOpen && <PreviewOverlay step={activeEditorStep} subject={activeEditorStep.subject} onClose={()=>setPreviewOpen(false)} onSendTest={()=>{}} />}
+          </Panel>
+        )}
+        {activeStep===3 && (
+          <Panel title="Review & Analytics">
+            <AnalyticsRow steps={steps} audienceCount={audienceCount} selectedMetric={selectedMetric} onSelectMetric={setSelectedMetric} />
+            <div style={{marginTop:14}}>
+              <div style={{border:`1px solid ${COLORS.border}`, borderRadius:12, padding:10, background:COLORS.panelAlt, display:"grid", gap:8}}>
+                <Row label="Campaign name" value={campaignName||"—"} />
+                <Row label="From" value={fromSender} />
+                <Row label="Audience" value={audienceSegments.length ? `${audienceCount.toLocaleString()} · ${audienceSegments.join(", ")}` : "—"} />
+                {audienceSegments.length > 0 && (
+                  <div>
+                    <div style={{color:COLORS.subtext, fontSize:12, marginBottom:4, textAlign:"left"}}>Selected audiences</div>
+                    <div style={{display:"flex", gap:6, flexWrap:"wrap"}}>
+                      {audienceSegments.map(seg => (
+                        <span key={seg} style={badge("rgba(148,163,184,0.1)", COLORS.text)}>{seg}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <Row label="Auto-stop after key action" value={autoStopOn ? autoStopKeyAction : "Off (follow-up steps use their own rules)"} />
+                <div>
+                  <div style={{color:COLORS.subtext, fontSize:12, marginBottom:4, textAlign:"left"}}>Steps</div>
+                  <div style={{display:"grid", gap:6}}>
+                    {steps.map((st,i)=>{
+                      const arriveDate = (i===0) ? st.date : (steps?.date ? addDays(steps.date, st.daysOffset||0) : "");
+                      const timeText = st.useRecoTime ? `${st.time || recommendTimeFor({type: st.type})} (recommended)` : (i===0 ? normalizeTime(st.time) : (st.time || "09:00"));
+                      return (
+                        <div key={st.id} style={{border:`1px solid ${COLORS.border}`, borderRadius:10, padding:8, background:COLORS.panel}}>
+                          <div style={{display:"flex", alignItems:"center", gap:6, marginBottom:4}}>
+                            <span style={tagStatic("rgba(37,99,235,0.18)", COLORS.text)}>Step {i+1}</span>
+                            <span style={tagStatic("rgba(148,163,184,0.12)", COLORS.subtext)}>{st.type}</span>
+                          </div>
+                          <div style={{display:"grid", gap:3, fontSize:13, textAlign:"left"}}>
+                            <div style={{display:"flex", gap:12, alignItems:"center", flexWrap:"wrap"}}>
+                              <strong>Send on:</strong>
+                              <span>{arriveDate || "No date"}</span>
+                              <span>{timeText}</span>
+                            </div>
+                            {st.type==="Email" && <div><strong>Subject:</strong> {st.subject || "—"}</div>}
+                            <div><strong>Body:</strong> {st.body ? st.body : "—"}</div>
+                            {i>0 && !autoStopOn && <div><strong>Auto-stop:</strong> {st.autoStopRule || "None"}</div>}
+                          </div>
                         </div>
                       );
                     })}
                   </div>
-
-                  {/* Editor for active step */}
-                  <div
-                    style={{
-                      border:`1px solid ${COLORS.border}`,
-                      borderRadius:12,
-                      background:COLORS.panel,
-                      padding:10
-                    }}
-                  >
-                    <div
-                      style={{
-                        display:"flex",
-                        justifyContent:"flex-end",
-                        alignItems:"center",
-                        marginBottom:8
-                      }}
-                    >
-                      <button style={btnGhost} onClick={()=>setPreviewOpen(true)}>
-                        Preview & Test
-                      </button>
-                    </div>
-
-                    {activeEditorStep.type==="Email" && (
-                      <Labeled label="Subject" required>
-                        <Input
-                          placeholder="Write a clear, compelling subject…"
-                          value={activeEditorStep.subject}
-                          onChange={(v)=>{
-                            updateStep(activeEditorStep.id,{subject:v});
-                            if (campaignName.trim()) autoSave();
-                          }}
-                        />
-                      </Labeled>
-                    )}
-
-                    <Labeled
-                      label={
-                        activeEditorStep.type==="Email"
-                          ? "Email body"
-                          : "SMS body"
-                      }
-                      required
-                    >
-                      <Textarea
-                        placeholder="Write your message…"
-                        value={activeEditorStep.body}
-                        onChange={(v)=>{
-                          updateStep(activeEditorStep.id,{body:v});
-                          if (campaignName.trim()) autoSave();
-                        }}
-                      />
-                      {activeEditorStep.type==="Email" && <FormattingToolbar />}
-                    </Labeled>
-
-                    <div
-                      style={{
-                        display:"flex",
-                        justifyContent:"space-between",
-                        marginTop:10
-                      }}
-                    >
-                      <button style={btnGhost} onClick={goBack}>Back</button>
-                      <div style={{display:"flex", gap:6}}>
-                        <button
-                          style={{...btnPrimary, textAlign:"center"}}
-                          onClick={()=>setActiveStep(3)}
-                        >
-                          Next
-                        </button>
-                      </div>
-                    </div>
-                  </div>
                 </div>
-
-                {previewOpen && (
-                  <PreviewOverlay
-                    step={activeEditorStep}
-                    subject={activeEditorStep.subject}
-                    onClose={()=>setPreviewOpen(false)}
-                    onSendTest={()=>{}}
-                  />
-                )}
-              </Panel>
-            )}
-
-            {/* REVIEW & ANALYTICS STEP */}
-            {activeStep===3 && (
-              <Panel title="Review & Analytics">
-                <AnalyticsRow
-                  steps={steps}
-                  audienceCount={audienceCount}
-                  selectedMetric={selectedMetric}
-                  onSelectMetric={setSelectedMetric}
-                />
-
-                <div style={{marginTop:14}}>
-                  <div
-                    style={{
-                      border:`1px solid ${COLORS.border}`,
-                      borderRadius:12,
-                      padding:10,
-                      background:COLORS.panelAlt,
-                      display:"grid",
-                      gap:8
-                    }}
-                  >
-                    <Row label="Campaign name" value={campaignName||"—"} />
-                    <Row label="From" value={fromSender} />
-                    <Row
-                      label="Audience"
-                      value={
-                        audienceSegments.length
-                          ? `${audienceCount.toLocaleString()} · ${audienceSegments.join(", ")}`
-                          : "—"
-                      }
-                    />
-                    {audienceSegments.length > 0 && (
-                      <div>
-                        <div
-                          style={{
-                            color:COLORS.subtext,
-                            fontSize:12,
-                            marginBottom:4,
-                            textAlign:"left"
-                          }}
-                        >
-                          Selected audiences
-                        </div>
-                        <div style={{display:"flex", gap:6, flexWrap:"wrap"}}>
-                          {audienceSegments.map(seg => (
-                            <span
-                              key={seg}
-                              style={badge("rgba(148,163,184,0.1)", COLORS.text)}
-                            >
-                              {seg}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    <Row
-                      label="Auto-stop after key action"
-                      value={
-                        autoStopOn
-                          ? autoStopKeyAction
-                          : "Off (follow-up steps use their own rules)"
-                      }
-                    />
-
-                    <div>
-                      <div
-                        style={{
-                          color:COLORS.subtext,
-                          fontSize:12,
-                          marginBottom:4,
-                          textAlign:"left"
-                        }}
-                      >
-                        Steps
-                      </div>
-                      <div style={{display:"grid", gap:6}}>
-                        {steps.map((st,i)=>{
-                          const arriveDate = (i===0)
-                            ? st.date
-                            : (steps[0]?.date ? addDays(steps[0].date, st.daysOffset||0) : "");
-                          const timeText = st.useRecoTime
-                            ? `${st.time || recommendTimeFor({type: st.type})} (recommended)`
-                            : (i===0 ? normalizeTime(st.time) : (st.time || "09:00"));
-                          return (
-                            <div
-                              key={st.id}
-                              style={{
-                                border:`1px solid ${COLORS.border}`,
-                                borderRadius:10,
-                                padding:8,
-                                background:COLORS.panel
-                              }}
-                            >
-                              <div
-                                style={{
-                                  display:"flex",
-                                  alignItems:"center",
-                                  gap:6,
-                                  marginBottom:4
-                                }}
-                              >
-                                <span
-                                  style={tagStatic("rgba(37,99,235,0.18)", COLORS.text)}
-                                >
-                                  Step {i+1}
-                                </span>
-                                <span
-                                  style={tagStatic("rgba(148,163,184,0.12)", COLORS.subtext)}
-                                >
-                                  {st.type}
-                                </span>
-                              </div>
-                              <div
-                                style={{
-                                  display:"grid",
-                                  gap:3,
-                                  fontSize:13,
-                                  textAlign:"left"
-                                }}
-                              >
-                                <div
-                                  style={{
-                                    display:"flex",
-                                    gap:12,
-                                    alignItems:"center",
-                                    flexWrap:"wrap"
-                                  }}
-                                >
-                                  <strong>Send on:</strong>
-                                  <span>{arriveDate || "No date"}</span>
-                                  <span>{timeText}</span>
-                                </div>
-                                {st.type==="Email" && (
-                                  <div>
-                                    <strong>Subject:</strong> {st.subject || "—"}
-                                  </div>
-                                )}
-                                <div>
-                                  <strong>Body:</strong> {st.body ? st.body : "—"}
-                                </div>
-                                {i>0 && !autoStopOn && (
-                                  <div>
-                                    <strong>Auto-stop:</strong> {st.autoStopRule || "None"}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div
-                    style={{
-                      display:"flex",
-                      justifyContent:"space-between",
-                      marginTop:10
-                    }}
-                  >
-                    <button
-                      style={btnGhost}
-                      onClick={()=>setActiveStep(2)}
-                    >
-                      Back
-                    </button>
-                    <button
-                      style={{
-                        ...btnPrimary,
-                        opacity:canLaunch?1:.6,
-                        textAlign:"center"
-                      }}
-                      disabled={!canLaunch}
-                      onClick={()=>setShowLaunchConfirm(true)}
-                    >
-                      Launch
-                    </button>
-                  </div>
-                </div>
-
-                {showLaunchConfirm && (
-                  <ConfirmDialog
-                    title="Launch campaign?"
-                    body="This will send messages according to the schedule you set. You can undo from the banner after launch."
-                    confirmLabel="Launch Campaign"
-                    onConfirm={()=>{
-                      setShowLaunchConfirm(false);
-                      handleLaunch();
-                    }}
-                    onCancel={()=>setShowLaunchConfirm(false)}
-                  />
-                )}
-              </Panel>
-            )}
-          </div>
-        </section>
-      );
-    }
-
-    /* -------------------------- Review & Analytics UI ------------------------ */
-    function MetricCard({ label, value, sub, active, onClick, color }) {
-      return (
-        <button
-          type="button"
-          onClick={onClick}
-          style={{
-            flex:"1 1 160px",
-            border:`1px solid ${active ? color || COLORS.primary : COLORS.border}`,
-            borderRadius:10,
-            background: active ? "rgba(86,201,254,0.08)" : COLORS.panel,
-            padding:"10px 12px",
-            cursor:"pointer",
-            textAlign:"left"
-          }}
-        >
-          <div
-            style={{
-              height:3,
-              borderRadius:999,
-              background:color || COLORS.primary,
-              marginBottom:6,
-              opacity: active ? 1 : 0.6
-            }}
-          />
-          <div
-            style={{
-              fontSize:11,
-              color:COLORS.subtext,
-              textTransform:"uppercase",
-              letterSpacing:".03em",
-              marginBottom:6,
-              textAlign:"left"
-            }}
-          >
-            {label}
-          </div>
-          <div style={{fontSize:18, fontWeight:800, textAlign:"left"}}>{value}</div>
-          {sub && (
-            <div
-              style={{
-                fontSize:12,
-                color:COLORS.subtext,
-                marginTop:4,
-                textAlign:"left"
-              }}
-            >
-              {sub}
+              </div>
+              <div style={{display:"flex", justifyContent:"space-between", marginTop:10}}>
+                <button style={btnGhost} onClick={()=>setActiveStep(2)}>Back</button>
+                <button style={{...btnPrimary, opacity:canLaunch?1:.6, textAlign:"center"}} disabled={!canLaunch} onClick={()=>setShowLaunchConfirm(true)}>Launch</button>
+              </div>
             </div>
-          )}
-        </button>
-      );
+            {showLaunchConfirm && <ConfirmDialog title="Launch campaign?" body="This will send messages according to the schedule you set. You can undo from the banner after launch." confirmLabel="Launch Campaign" onConfirm={()=>{ setShowLaunchConfirm(false); handleLaunch(); }} onCancel={()=>setShowLaunchConfirm(false)} />}
+          </Panel>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/* -------------------------- Review & Analytics UI ------------------------ */
+function MetricCard({ label, value, sub, active, onClick, color }) {
+  return (
+    <button type="button" onClick={onClick} style={{flex:"1 1 160px", border:`1px solid ${active ? color || COLORS.primary : COLORS.border}`, borderRadius:10, background: active ? "rgba(86,201,254,0.08)" : COLORS.panel, padding:"10px 12px", cursor:"pointer", textAlign:"left"}}>
+      <div style={{height:3, borderRadius:999, background:color || COLORS.primary, marginBottom:6, opacity: active ? 1 : 0.6}} />
+      <div style={{fontSize:11, color:COLORS.subtext, textTransform:"uppercase", letterSpacing:".03em", marginBottom:6, textAlign:"left"}}>{label}</div>
+      <div style={{fontSize:18, fontWeight:800, textAlign:"left"}}>{value}</div>
+      {sub && <div style={{fontSize:12, color:COLORS.subtext, marginTop:4, textAlign:"left"}}>{sub}</div>}
+    </button>
+  );
+}
+function MetricDetail({ metric, delivered }) {
+  let body = "";
+  if (metric === "Delivered") body = `Estimated number of emails or SMS successfully delivered based on your selected audience of ${delivered.toLocaleString()} contacts.`;
+  else if (metric === "Open Rate") body = "Percentage of delivered messages that were opened at least once. Use this to see if your subject lines and timing are working.";
+  else if (metric === "Click Rate") body = "Percentage of delivered messages that received at least one click. This helps you understand if your content and calls-to-action are compelling.";
+  else if (metric === "Unsubscribe") body = "Percentage of recipients who unsubscribed from your messages. A spike here can indicate messaging fatigue or misaligned expectations.";
+  else if (metric === "Spam") body = "Percentage of recipients who marked your emails as spam. Keep this number low to protect deliverability and trust.";
+  return (
+    <div style={{marginTop:8, border:`1px dashed ${COLORS.border}`, borderRadius:10, padding:"8px 10px", background:COLORS.panelAlt, textAlign:"left"}}>
+      <div style={{fontSize:12, fontWeight:600, marginBottom:4, textAlign:"left"}}>{metric} details</div>
+      <div style={{fontSize:12, color:COLORS.subtext, textAlign:"left"}}>{body}</div>
+    </div>
+  );
+}
+function AnalyticsRow({ audienceCount, selectedMetric, onSelectMetric }) {
+  const delivered = audienceCount;
+  const openRate = 0.36;
+  const clickRate = 0.042;
+  const unsubRate = 0.002;
+  const spamRate = 0.0002;
+  return (
+    <>
+      <div style={{display:"flex", gap:10, flexWrap:"wrap"}}>
+        <MetricCard label="Delivered" value={delivered.toLocaleString()} active={selectedMetric==="Delivered"} color={BRAND.mint} onClick={()=>onSelectMetric("Delivered")} />
+        <MetricCard label="Open Rate" value={(openRate*100).toFixed(1) + "%"} sub="vs. last 30 days: +2.1%" active={selectedMetric==="Open Rate"} color={BRAND.blue} onClick={()=>onSelectMetric("Open Rate")} />
+        <MetricCard label="Click Rate" value={(clickRate*100).toFixed(1) + "%"} sub="vs. last 30 days: -0.3%" active={selectedMetric==="Click Rate"} color={BRAND.purple} onClick={()=>onSelectMetric("Click Rate")} />
+        <MetricCard label="Unsubscribe" value={(unsubRate*100).toFixed(2) + "%"} active={selectedMetric==="Unsubscribe"} color={BRAND.yellow} onClick={()=>onSelectMetric("Unsubscribe")} />
+        <MetricCard label="Spam" value={(spamRate*100).toFixed(2) + "%"} active={selectedMetric==="Spam"} color={BRAND.red} onClick={()=>onSelectMetric("Spam")} />
+      </div>
+      <MetricDetail metric={selectedMetric} delivered={delivered} />
+    </>
+  );
+}
+
+/* ------------------------------------------------------------------------- */
+/*       REVISED AUDIENCE SELECTOR (DATA TABLE + FILTERS) - CHRIS FEEDBACK   */
+/* ------------------------------------------------------------------------- */
+function AudienceSelectorInline({ onClose, onApply, initialSelected=[] }){
+  const [source, setSource] = useState("roster");
+  // State for the new Data Table
+  const [search, setSearch] = useState("");
+  const [filterType, setFilterType] = useState("All"); // e.g., Parent vs Guardian
+  const [selectedIds, setSelectedIds] = useState(initialSelected); // Tracking selections
+
+  // EXPANDED MOCK DATA (To make the table look realistic as Chris suggested)
+  const MOCK_DATA = [
+    { id: "c1", name:"Alex Rivera", relation:"Parent", email:"alex@example.com", class:"Class A" },
+    { id: "c2", name:"Jamie Chen", relation:"Parent", email:"jamie@example.com", class:"Class A" },
+    { id: "c3", name:"Taylor Singh", relation:"Guardian", email:"taylor@example.com", class:"Class B" },
+    { id: "c4", name:"Jordan Lee", relation:"Parent", email:"jordan@example.com", class:"Class C" },
+    { id: "c5", name:"Casey Smith", relation:"Parent", email:"casey@example.com", class:"Class A" },
+    { id: "c6", name:"Morgan Doe", relation:"Guardian", email:"morgan@example.com", class:"Class B" },
+  ];
+
+  // Logic: Toggle selection of a specific row
+  const toggleSelection = (email) => {
+    setSelectedIds(prev => 
+      prev.includes(email) ? prev.filter(e => e !== email) : [...prev, email]
+    );
+  };
+
+  // Logic: Select All visible rows
+  const toggleSelectAll = (visibleRows) => {
+    const allVisibleEmails = visibleRows.map(r => r.email);
+    const allSelected = allVisibleEmails.every(e => selectedIds.includes(e));
+
+    if (allSelected) {
+      // Uncheck all visible
+      setSelectedIds(prev => prev.filter(id => !allVisibleEmails.includes(id)));
+    } else {
+      // Check all visible (merge unique)
+      setSelectedIds(prev => Array.from(new Set([...prev, ...allVisibleEmails])));
     }
+  };
 
-    function MetricDetail({ metric, delivered }) {
-      let title = metric;
-      let body = "";
-      if (metric === "Delivered") {
-        body = `Estimated number of emails or SMS successfully delivered based on your selected audience of ${delivered.toLocaleString()} contacts.`;
-      } else if (metric === "Open Rate") {
-        body = "Percentage of delivered messages that were opened at least once. Use this to see if your subject lines and timing are working.";
-      } else if (metric === "Click Rate") {
-        body = "Percentage of delivered messages that received at least one click. This helps you understand if your content and calls-to-action are compelling.";
-      } else if (metric === "Unsubscribe") {
-        body = "Percentage of recipients who unsubscribed from your messages. A spike here can indicate messaging fatigue or misaligned expectations.";
-      } else if (metric === "Spam") {
-        body = "Percentage of recipients who marked your emails as spam. Keep this number low to protect deliverability and trust.";
-      }
+  // Logic: Filter the data based on Search + Dropdown
+  const filteredData = MOCK_DATA.filter(c => {
+    const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase()) || 
+                          c.email.toLowerCase().includes(search.toLowerCase());
+    const matchesType = filterType === "All" || c.relation === filterType;
+    return matchesSearch && matchesType;
+  });
 
-      return (
-        <div
-          style={{
-            marginTop:8,
-            border:`1px dashed ${COLORS.border}`,
-            borderRadius:10,
-            padding:"8px 10px",
-            background:COLORS.panelAlt,
-            textAlign:"left"
-          }}
-        >
-          <div
-            style={{
-              fontSize:12,
-              fontWeight:600,
-              marginBottom:4,
-              textAlign:"left"
-            }}
-          >
-            {title} details
-          </div>
-          <div
-            style={{
-              fontSize:12,
-              color:COLORS.subtext,
-              textAlign:"left"
-            }}
-          >
-            {body}
-          </div>
-        </div>
-      );
-    }
+  return (
+    <div style={{ marginTop:10, border:`1px solid ${COLORS.border}`, borderRadius:10, padding:10, background:COLORS.panelAlt, textAlign:"left" }}>
+      
+      {/* Header & Close */}
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+        <h3 style={{ margin:0, fontSize:14 }}>Select Audience</h3>
+        <button style={btnGhost} onClick={onClose}>✕</button>
+      </div>
 
-    function AnalyticsRow({ audienceCount, selectedMetric, onSelectMetric }) {
-      const delivered = audienceCount;
-      const openRate = 0.36;
-      const clickRate = 0.042;
-      const unsubRate = 0.002;
-      const spamRate = 0.0002;
+      {/* Source Selector (Kept from original) */}
+      <div style={{ marginBottom:10 }}>
+        <select value={source} onChange={e=>setSource(e.target.value)} style={inputStyle}>
+          <option value="roster">Use BeAKid Roster</option>
+          <option value="excel">Upload Excel</option>
+        </select>
+      </div>
 
-      return (
+      {source === "roster" && (
         <>
-          <div style={{display:"flex", gap:10, flexWrap:"wrap"}}>
-            <MetricCard
-              label="Delivered"
-              value={delivered.toLocaleString()}
-              active={selectedMetric==="Delivered"}
-              color={BRAND.mint}
-              onClick={()=>onSelectMetric("Delivered")}
+          {/* CHRIS'S SKETCH IMPLEMENTATION: Search & Filter Bar */}
+          <div style={{ display:"flex", gap:8, marginBottom:10 }}>
+            <input 
+              type="text" 
+              placeholder="Search name or email..." 
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              style={{ ...inputStyle, flex: 2 }}
             />
-            <MetricCard
-              label="Open Rate"
-              value={(openRate*100).toFixed(1) + "%"}
-              sub="vs. last 30 days: +2.1%"
-              active={selectedMetric==="Open Rate"}
-              color={BRAND.blue}
-              onClick={()=>onSelectMetric("Open Rate")}
-            />
-            <MetricCard
-              label="Click Rate"
-              value={(clickRate*100).toFixed(1) + "%"}
-              sub="vs. last 30 days: -0.3%"
-              active={selectedMetric==="Click Rate"}
-              color={BRAND.purple}
-              onClick={()=>onSelectMetric("Click Rate")}
-            />
-            <MetricCard
-              label="Unsubscribe"
-              value={(unsubRate*100).toFixed(2) + "%"}
-              active={selectedMetric==="Unsubscribe"}
-              color={BRAND.yellow}
-              onClick={()=>onSelectMetric("Unsubscribe")}
-            />
-            <MetricCard
-              label="Spam"
-              value={(spamRate*100).toFixed(2) + "%"}
-              active={selectedMetric==="Spam"}
-              color={BRAND.red}
-              onClick={()=>onSelectMetric("Spam")}
-            />
-          </div>
-          <MetricDetail
-            metric={selectedMetric}
-            delivered={delivered}
-          />
-        </>
-      );
-    }
-    function AudienceSelectorInline({ onClose, onApply, initialSelected=[] }){
-      const [source, setSource] = useState("roster");
-      const [selected, setSelected] = useState(initialSelected);
-      const [manual, setManual] = useState("");
-      const [rosterFilter, setRosterFilter] = useState("All Roster");
-      const [detailSegment, setDetailSegment] = useState(null);
-      const [detailSearch, setDetailSearch] = useState("");
-
-      const sourceOptions = [
-        { id:"roster", label:"Use BeAKid Roster" },
-        { id:"excel", label:"Upload From Excel" },
-        { id:"sheets", label:"Upload From Google Sheets" },
-        { id:"manual", label:"Upload Manually" },
-      ];
-
-      const addSegment = (seg)=> setSelected(p=> p.includes(seg)? p : [...p, seg]);
-      const removeSegment = (seg)=> setSelected(p=> p.filter(s=>s!==seg));
-
-      const parseManual = ()=>{
-        const raw = manual
-          .replace(/\s+/g," ")
-          .replace(/[\n;]/g,",")
-          .split(",")
-          .map(s=>s.trim())
-          .filter(Boolean);
-        const emails = Array.from(new Set(raw));
-        const valid = emails.filter(e=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
-        const invalid = emails.filter(e=>!valid.includes(e));
-        alert(`Parsed ${emails.length} entries.\nValid: ${valid.length}\nInvalid dropped: ${invalid.length}`);
-        if (valid.length) addSegment(`Manual List (${valid.length})`);
-      };
-
-      const segmentsDemo = [
-        "All Contacts",
-        "Class A",
-        "Class A / Session A1",
-        "Class A / Session A2",
-        "Class B",
-        "Class C / Session C1"
-      ];
-
-      // Simple mock data to illustrate “view details”
-      const MOCK_CONTACTS = [
-        { name:"Alex Rivera", relation:"Parent", email:"alex@example.com" },
-        { name:"Jamie Chen", relation:"Parent", email:"jamie@example.com" },
-        { name:"Taylor Singh", relation:"Guardian", email:"taylor@example.com" },
-        { name:"Jordan Lee", relation:"Parent", email:"jordan@example.com" },
-      ];
-
-      const filteredContacts = MOCK_CONTACTS.filter(c=>{
-        if (!detailSearch.trim()) return true;
-        const q = detailSearch.toLowerCase();
-        return (
-          c.name.toLowerCase().includes(q) ||
-          c.relation.toLowerCase().includes(q) ||
-          c.email.toLowerCase().includes(q)
-        );
-      });
-
-      return (
-        <div
-          id="audience-selector"
-          style={{
-            marginTop:10,
-            border:`1px solid ${COLORS.border}`,
-            borderRadius:10,
-            padding:10,
-            background:COLORS.panelAlt,
-            textAlign:"left"
-          }}
-        >
-          <div
-            style={{
-              display:"flex",
-              justifyContent:"space-between",
-              alignItems:"center",
-              marginBottom:8
-            }}
-          >
-            <h3 style={{margin:0, fontSize:14, textAlign:"left"}}>
-              Choose audience source
-            </h3>
-            <button style={btnGhost} onClick={onClose} aria-label="Close audience selection">
-              ✕
-            </button>
-          </div>
-
-          <div style={{marginBottom:8}}>
-            <label
-              style={{
-                display:"block",
-                fontSize:12,
-                color:COLORS.subtext,
-                marginBottom:4,
-                textAlign:"left"
-              }}
+            <select 
+              value={filterType} 
+              onChange={e => setFilterType(e.target.value)}
+              style={{ ...inputStyle, flex: 1 }}
             >
-              Source
-            </label>
-            <select
-              value={source}
-              onChange={e=>setSource(e.target.value)}
-              style={inputStyle}
-            >
-              {sourceOptions.map(opt=>(
-                <option key={opt.id} value={opt.id}>{opt.label}</option>
-              ))}
+              <option value="All">All Types</option>
+              <option value="Parent">Parent</option>
+              <option value="Guardian">Guardian</option>
             </select>
           </div>
 
-          {source==="roster" && (
-            <div style={{marginTop:8}}>
-              <div
-                style={{
-                  fontSize:12,
-                  color:COLORS.subtext,
-                  marginBottom:4,
-                  textAlign:"left"
-                }}
-              >
-                Filter roster and add segments:
-              </div>
-              <div style={{marginBottom:6}}>
-                <select
-                  value={rosterFilter}
-                  onChange={e=>setRosterFilter(e.target.value)}
-                  style={inputStyle}
-                >
-                  <option>All Roster</option>
-                  <option>Enrolled Families</option>
-                  <option>Waitlist</option>
-                  <option>Summer-Only</option>
-                </select>
-              </div>
-              <div style={{display:"grid", gap:6}}>
-                {segmentsDemo.map(s=>(
-                  <div
-                    key={s}
-                    style={{
-                      display:"flex",
-                      gap:6,
-                      alignItems:"center"
-                    }}
-                  >
-                    <button
-                      onClick={()=>addSegment(s)}
-                      style={{
-                        ...btnGhost,
-                        justifyContent:"space-between",
-                        flex:1,
-                        padding:"8px 9px",
-                        background:COLORS.panel,
-                        fontSize:13,
-                        cursor:"pointer"
-                      }}
-                      onMouseEnter={(e)=>{ e.currentTarget.style.backgroundColor = COLORS.optionHoverBg; }}
-                      onMouseLeave={(e)=>{ e.currentTarget.style.backgroundColor = COLORS.panel; }}
-                    >
-                      <span>{s}</span>
-                      <span style={{color:COLORS.subtext}}>Add</span>
-                    </button>
-                    <button
-                      type="button"
-                      style={{
-                        ...btnGhost,
-                        padding:"4px 6px",
-                        fontSize:11
-                      }}
-                      onClick={()=>setDetailSegment(s)}
-                    >
-                      View
-                    </button>
-                  </div>
-                ))}
-              </div>
-
-              {detailSegment && (
-                <div
-                  style={{
-                    marginTop:10,
-                    border:`1px solid ${COLORS.border}`,
-                    borderRadius:10,
-                    padding:8,
-                    background:COLORS.panel
-                  }}
-                >
-                  <div
-                    style={{
-                      display:"flex",
-                      justifyContent:"space-between",
-                      alignItems:"center",
-                      marginBottom:6
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontSize:12,
-                        fontWeight:600,
-                        textAlign:"left"
-                      }}
-                    >
-                      {detailSegment} — sample contacts
-                    </div>
-                    <button
-                      style={{...btnGhost, padding:"2px 6px", fontSize:11}}
-                      onClick={()=>{
-                        setDetailSegment(null);
-                        setDetailSearch("");
-                      }}
-                    >
-                      Close
-                    </button>
-                  </div>
-                  <div style={{marginBottom:6}}>
-                    <input
-                      type="text"
-                      placeholder="Search by name, relation, email…"
-                      value={detailSearch}
-                      onChange={e=>setDetailSearch(e.target.value)}
-                      style={{...inputStyle, fontSize:12}}
+          {/* CHRIS'S SKETCH IMPLEMENTATION: The Data Table */}
+          <div style={{ background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 8, overflow: "hidden" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead style={{ background: COLORS.panelAlt, borderBottom: `1px solid ${COLORS.border}` }}>
+                <tr>
+                  <th style={{ padding: "8px 10px", width: 40, textAlign:"center" }}>
+                    <input 
+                      type="checkbox" 
+                      onChange={() => toggleSelectAll(filteredData)}
+                      checked={filteredData.length > 0 && filteredData.every(c => selectedIds.includes(c.email))}
                     />
-                  </div>
-                  <div
-                    style={{
-                      maxHeight:160,
-                      overflow:"auto",
-                      borderRadius:8,
-                      border:`1px solid ${COLORS.border}`
-                    }}
-                  >
-                    <table
-                      style={{
-                        width:"100%",
-                        borderCollapse:"collapse",
-                        fontSize:12
-                      }}
-                    >
-                      <thead>
-                        <tr style={{background:COLORS.panelAlt}}>
-                          <th style={{padding:"6px 8px", textAlign:"left"}}>
-                            <input type="checkbox" aria-label="Select all (demo only)" />
-                          </th>
-                          <th style={{padding:"6px 8px", textAlign:"left"}}>Name</th>
-                          <th style={{padding:"6px 8px", textAlign:"left"}}>Relation</th>
-                          <th style={{padding:"6px 8px", textAlign:"left"}}>Email</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredContacts.map(c=>(
-                          <tr key={c.email}>
-                            <td style={{padding:"4px 8px"}}>
-                              <input type="checkbox" />
-                            </td>
-                            <td style={{padding:"4px 8px"}}>{c.name}</td>
-                            <td style={{padding:"4px 8px"}}>{c.relation}</td>
-                            <td style={{padding:"4px 8px"}}>{c.email}</td>
-                          </tr>
-                        ))}
-                        {filteredContacts.length===0 && (
-                          <tr>
-                            <td
-                              colSpan={4}
-                              style={{
-                                padding:"6px 8px",
-                                color:COLORS.subtext,
-                                fontStyle:"italic",
-                                textAlign:"left"
-                              }}
-                            >
-                              No matches for this search (demo data).
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div
-                    style={{
-                      marginTop:6,
-                      fontSize:11,
-                      color:COLORS.subtext,
-                      textAlign:"left"
-                    }}
-                  >
-                    Prototype note: checkboxes are for show only. In a live product you’d be able to fine-tune exactly who’s included.
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {source==="excel" && (
-            <div style={{marginTop:8}}>
-              <div
-                style={{
-                  fontSize:12,
-                  color:COLORS.subtext,
-                  marginBottom:4,
-                  textAlign:"left"
-                }}
-              >
-                Upload an Excel file with parent emails (prototype only — file upload not wired).
-              </div>
-              <button style={btnGhost}>Choose Excel File…</button>
-            </div>
-          )}
-
-          {source==="sheets" && (
-            <div style={{marginTop:8}}>
-              <div
-                style={{
-                  fontSize:12,
-                  color:COLORS.subtext,
-                  marginBottom:4,
-                  textAlign:"left"
-                }}
-              >
-                Connect a Google Sheet with your roster (prototype only).
-              </div>
-              <button style={btnGhost}>Connect Google Sheets…</button>
-            </div>
-          )}
-
-          {source==="manual" && (
-            <div style={{marginTop:8}}>
-              <div
-                style={{
-                  fontSize:12,
-                  color:COLORS.subtext,
-                  marginBottom:4,
-                  textAlign:"left"
-                }}
-              >
-                Paste emails. We’ll clean duplicates.
-              </div>
-              <Textarea
-                value={manual}
-                onChange={setManual}
-                placeholder="email1@example.com, email2@example.com …"
-              />
-              <button
-                style={{...btnGhost, marginTop:6}}
-                onClick={parseManual}
-              >
-                Validate & Add
-              </button>
-            </div>
-          )}
-
-          <div style={{marginTop:10}}>
-            <div
-              style={{
-                color:COLORS.subtext,
-                fontSize:12,
-                marginBottom:4,
-                textAlign:"left"
-              }}
-            >
-              Selected
-            </div>
-            {selected.length===0 ? (
-              <div
-                style={{
-                  border:`1px dashed ${COLORS.border}`,
-                  borderRadius:10,
-                  padding:10,
-                  color:COLORS.subtext,
-                  fontSize:12,
-                  textAlign:"left"
-                }}
-              >
-                Nothing selected yet.
-              </div>
-            ) : (
-              <div style={{display:"flex", gap:6, flexWrap:"wrap"}}>
-                {selected.map(s=>(
-                  <span
-                    key={s}
-                    style={badge("rgba(148,163,184,0.1)", COLORS.text)}
-                  >
-                    {s}
-                    <button
-                      onClick={()=>removeSegment(s)}
-                      aria-label={`Remove ${s}`}
-                      style={{
-                        background:"transparent",
-                        border:"none",
-                        color:COLORS.subtext,
-                        marginLeft:6,
-                        cursor:"pointer"
-                      }}
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
+                  </th>
+                  <th style={{ padding: "8px 10px", textAlign: "left", color: COLORS.subtext, fontSize: 12 }}>NAME</th>
+                  <th style={{ padding: "8px 10px", textAlign: "left", color: COLORS.subtext, fontSize: 12 }}>RELATION</th>
+                  <th style={{ padding: "8px 10px", textAlign: "left", color: COLORS.subtext, fontSize: 12 }}>EMAIL</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredData.map(row => {
+                  const isSelected = selectedIds.includes(row.email);
+                  return (
+                    <tr key={row.id} style={{ borderBottom: `1px solid ${COLORS.border}`, background: isSelected ? "rgba(37,99,235,0.05)" : "transparent" }}>
+                      <td style={{ padding: "8px 10px", textAlign:"center" }}>
+                        <input 
+                          type="checkbox" 
+                          checked={isSelected}
+                          onChange={() => toggleSelection(row.email)}
+                        />
+                      </td>
+                      <td style={{ padding: "8px 10px" }}>{row.name}</td>
+                      <td style={{ padding: "8px 10px" }}>
+                        <span style={{ 
+                          fontSize: 11, padding: "2px 6px", borderRadius: 4, 
+                          background: row.relation === "Parent" ? "rgba(37,99,235,0.1)" : "rgba(169,99,255,0.1)",
+                          color: row.relation === "Parent" ? "#1d4ed8" : "#6b21a8"
+                        }}>
+                          {row.relation}
+                        </span>
+                      </td>
+                      <td style={{ padding: "8px 10px", color: COLORS.subtext }}>{row.email}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            {filteredData.length === 0 && (
+              <div style={{ padding: 20, textAlign: "center", color: COLORS.subtext, fontSize: 13 }}>
+                No contacts found matching your filters.
               </div>
             )}
           </div>
 
-          <div
-            style={{
-              display:"flex",
-              justifyContent:"space-between",
-              marginTop:10
-            }}
-          >
-            <button style={btnGhost} onClick={onClose}>Cancel</button>
-            <button
-              style={{
-                ...btnPrimary,
-                opacity:selected.length?1:.6,
-                textAlign:"center"
-              }}
-              disabled={!selected.length}
-              onClick={()=>onApply(selected)}
-            >
-              Apply Audience
-            </button>
+          {/* Selection Summary (The "Bird's Eye View") */}
+          <div style={{ marginTop: 10, fontSize: 13, color: COLORS.subtext }}>
+            <strong>{selectedIds.length}</strong> contacts selected
           </div>
-        </div>
-      );
-    }
+        </>
+      )}
 
-    function PreviewOverlay({ step, subject, onClose, onSendTest }){
-      const ref = useRef(null);
-      const [showConfirm, setShowConfirm] = useState(false);
-      const [hasSent, setHasSent] = useState(false);
-      const [toastVisible, setToastVisible] = useState(false);
-
-      useEffect(()=>{ ref.current?.focus(); },[]);
-      const handleConfirmSend = () => {
-        onSendTest?.();
-        setHasSent(true);
-        setShowConfirm(false);
-        setToastVisible(true);
-      };
-      const handleUndo = () => {
-        setHasSent(false);
-        setToastVisible(false);
-      };
-
-      return (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Preview & Test"
-          tabIndex={-1}
-          ref={ref}
-          onKeyDown={(e)=>e.key==="Escape"&&onClose()}
-          style={{
-            position:"fixed",
-            inset:0,
-            background:"rgba(15,23,42,0.45)",
-            display:"grid",
-            placeItems:"center",
-            zIndex:200
-          }}
+      {/* Footer Actions */}
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 15 }}>
+        <button style={btnGhost} onClick={onClose}>Cancel</button>
+        <button 
+          style={{ ...btnPrimary, opacity: selectedIds.length ? 1 : 0.6 }} 
+          disabled={selectedIds.length === 0}
+          onClick={() => onApply(selectedIds)}
         >
-          <div
-            style={{
-              width:"min(650px, 90vw)",
-              maxHeight:"80vh",
-              overflow:"auto",
-              background:COLORS.panel,
-              border:`1px solid ${COLORS.border}`,
-              borderRadius:12,
-              padding:14,
-              textAlign:"left",
-              position:"relative"
-            }}
-          >
-            <div
-              style={{
-                display:"flex",
-                justifyContent:"space-between",
-                alignItems:"center"
-              }}
-            >
-              <h3 style={{margin:0, textAlign:"left"}}>Preview</h3>
-              <button style={btnGhost} onClick={onClose}>✕</button>
-            </div>
+          Add Selected Audience
+        </button>
+      </div>
+    </div>
+  );
+}
 
-            <div
-              style={{
-                borderTop:`1px solid ${COLORS.border}`,
-                marginTop:8,
-                paddingTop:8
-              }}
-            >
-              <div
-                style={{
-                  color:COLORS.subtext,
-                  marginBottom:6,
-                  fontSize:12,
-                  textAlign:"left"
-                }}
-              >
-                {step.type} Preview
-              </div>
-
-              {step.type==="Email" && (
-                <div
-                  style={{
-                    border:`1px solid ${COLORS.border}`,
-                    borderRadius:10,
-                    padding:10,
-                    background:COLORS.panelAlt,
-                    textAlign:"left"
-                  }}
-                >
-                  <div style={{marginBottom:6}}>
-                    <strong>Subject:</strong> {subject || "(no subject)"}
-                  </div>
-                  <div
-                    style={{
-                      background:"#ffffff",
-                      padding:10,
-                      borderRadius:8,
-                      border:`1px solid ${COLORS.border}`,
-                      whiteSpace:"pre-wrap",
-                      fontSize:13,
-                      textAlign:"left"
-                    }}
-                  >
-                    {step.body || "(empty)"}
-                  </div>
-                </div>
-              )}
-              {step.type==="SMS" && (
-                <div
-                  style={{
-                    border:`1px solid ${COLORS.border}`,
-                    borderRadius:10,
-                    padding:10,
-                    background:COLORS.panelAlt,
-                    textAlign:"left"
-                  }}
-                >
-                  <div style={{marginBottom:6}}>
-                    <strong>SMS Body</strong>
-                  </div>
-                  <div
-                    style={{
-                      whiteSpace:"pre-wrap",
-                      fontSize:13,
-                      textAlign:"left"
-                    }}
-                  >
-                    {step.body || "(empty)"}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {showConfirm && (
-              <div
-                style={{
-                  marginTop:10,
-                  border:`1px solid ${COLORS.border}`,
-                  borderRadius:10,
-                  padding:10,
-                  background:COLORS.panelAlt,
-                  textAlign:"left"
-                }}
-              >
-                <div style={{fontSize:13, marginBottom:6, textAlign:"left"}}>
-                  Send a test to your account email? (prototype only)
-                </div>
-                <div style={{display:"flex", justifyContent:"flex-end", gap:8}}>
-                  <button style={btnGhost} onClick={()=>setShowConfirm(false)}>Cancel</button>
-                  <button style={btnPrimary} onClick={handleConfirmSend}>Send Test</button>
-                </div>
-              </div>
-            )}
-
-            {toastVisible && (
-              <div
-                style={{
-                  position:"fixed",
-                  left:"50%",
-                  transform:"translateX(-50%)",
-                  bottom:16,
-                  background:COLORS.panel,
-                  borderRadius:999,
-                  border:`1px solid ${COLORS.border}`,
-                  boxShadow:"0 10px 35px rgba(15,23,42,0.18)",
-                  padding:"8px 16px",
-                  display:"flex",
-                  alignItems:"center",
-                  gap:10,
-                  fontSize:13,
-                  zIndex:210
-                }}
-              >
-                <span style={{textAlign:"left"}}>Test sent to your email (demo).</span>
-                <button
-                  style={{...btnGhost, padding:"4px 8px"}}
-                  onClick={handleUndo}
-                >
-                  Undo
-                </button>
-                <button
-                  style={{...btnGhost, padding:"4px 8px"}}
-                  onClick={()=>setToastVisible(false)}
-                >
-                  Dismiss
-                </button>
-              </div>
-            )}
-
-            <div
-              style={{
-                display:"flex",
-                justifyContent:"space-between",
-                marginTop:10
-              }}
-            >
-              <button style={btnGhost} onClick={onClose}>Back to edit</button>
-              {!hasSent && !showConfirm && (
-                <button style={btnPrimary} onClick={()=>setShowConfirm(true)}>Send Test</button>
-              )}
-            </div>
-          </div>
+function PreviewOverlay({ step, subject, onClose, onSendTest }){
+  const ref = useRef(null);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [hasSent, setHasSent] = useState(false);
+  const [toastVisible, setToastVisible] = useState(false);
+  useEffect(()=>{ ref.current?.focus(); },[]);
+  const handleConfirmSend = () => { onSendTest?.(); setHasSent(true); setShowConfirm(false); setToastVisible(true); };
+  const handleUndo = () => { setHasSent(false); setToastVisible(false); };
+  return (
+    <div role="dialog" aria-modal="true" aria-label="Preview & Test" tabIndex={-1} ref={ref} onKeyDown={(e)=>e.key==="Escape"&&onClose()} style={{position:"fixed", inset:0, background:"rgba(15,23,42,0.45)", display:"grid", placeItems:"center", zIndex:200}}>
+      <div style={{width:"min(650px, 90vw)", maxHeight:"80vh", overflow:"auto", background:COLORS.panel, border:`1px solid ${COLORS.border}`, borderRadius:12, padding:14, textAlign:"left", position:"relative"}}>
+        <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
+          <h3 style={{margin:0, textAlign:"left"}}>Preview</h3>
+          <button style={btnGhost} onClick={onClose}>✕</button>
         </div>
-      );
-    }
-
-    function FormattingToolbar(){
-      const btnStyle = {
-        ...btnGhost,
-        padding:"4px 6px",
-        fontSize:11,
-        borderRadius:6
-      };
-      return (
-        <div
-          style={{
-            marginTop:6,
-            borderTop:`1px solid ${COLORS.border}`,
-            paddingTop:6,
-            display:"flex",
-            gap:4,
-            flexWrap:"wrap",
-            textAlign:"left"
-          }}
-        >
-          <button type="button" style={btnStyle}><strong>B</strong></button>
-          <button type="button" style={btnStyle}><em>I</em></button>
-          <button type="button" style={btnStyle}>• List</button>
-          <button type="button" style={btnStyle}>Link</button>
-          <button type="button" style={btnStyle}>Personalize</button>
+        <div style={{borderTop:`1px solid ${COLORS.border}`, marginTop:8, paddingTop:8}}>
+          <div style={{color:COLORS.subtext, marginBottom:6, fontSize:12, textAlign:"left"}}>{step.type} Preview</div>
+          {step.type==="Email" && (
+            <div style={{border:`1px solid ${COLORS.border}`, borderRadius:10, padding:10, background:COLORS.panelAlt, textAlign:"left"}}>
+              <div style={{marginBottom:6}}><strong>Subject:</strong> {subject || "(no subject)"}</div>
+              <div style={{background:"#ffffff", padding:10, borderRadius:8, border:`1px solid ${COLORS.border}`, whiteSpace:"pre-wrap", fontSize:13, textAlign:"left"}}>{step.body || "(empty)"}</div>
+            </div>
+          )}
+          {step.type==="SMS" && (
+            <div style={{border:`1px solid ${COLORS.border}`, borderRadius:10, padding:10, background:COLORS.panelAlt, textAlign:"left"}}>
+              <div style={{marginBottom:6}}><strong>SMS Body</strong></div>
+              <div style={{whiteSpace:"pre-wrap", fontSize:13, textAlign:"left"}}>{step.body || "(empty)"}</div>
+            </div>
+          )}
         </div>
-      );
-    }
-
-    function ConfirmDialog({ title, body, confirmLabel, onConfirm, onCancel }) {
-      const ref = useRef(null);
-      useEffect(()=>{ ref.current?.focus(); },[]);
-      return (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={title}
-          tabIndex={-1}
-          ref={ref}
-          onKeyDown={(e)=>e.key==="Escape"&&onCancel()}
-          style={{
-            position:"fixed",
-            inset:0,
-            background:"rgba(15,23,42,0.45)",
-            display:"grid",
-            placeItems:"center",
-            zIndex:300
-          }}
-        >
-          <div
-            style={{
-              width:"min(420px, 90vw)",
-              background:COLORS.panel,
-              border:`1px solid ${COLORS.border}`,
-              borderRadius:12,
-              padding:14,
-              textAlign:"left",
-              boxShadow:"0 18px 45px rgba(15,23,42,0.25)"
-            }}
-          >
-            <h3 style={{marginTop:0, marginBottom:6, textAlign:"left"}}>{title}</h3>
-            <p style={{marginTop:0, marginBottom:12, fontSize:13, color:COLORS.subtext, textAlign:"left"}}>
-              {body}
-            </p>
+        {showConfirm && (
+          <div style={{marginTop:10, border:`1px solid ${COLORS.border}`, borderRadius:10, padding:10, background:COLORS.panelAlt, textAlign:"left"}}>
+            <div style={{fontSize:13, marginBottom:6, textAlign:"left"}}>Send a test to your account email? (prototype only)</div>
             <div style={{display:"flex", justifyContent:"flex-end", gap:8}}>
-              <button style={btnGhost} onClick={onCancel}>Cancel</button>
-              <button style={btnPrimary} onClick={onConfirm}>{confirmLabel}</button>
+              <button style={btnGhost} onClick={()=>setShowConfirm(false)}>Cancel</button>
+              <button style={btnPrimary} onClick={handleConfirmSend}>Send Test</button>
             </div>
           </div>
+        )}
+        {toastVisible && (
+          <div style={{position:"fixed", left:"50%", transform:"translateX(-50%)", bottom:16, background:COLORS.panel, borderRadius:999, border:`1px solid ${COLORS.border}`, boxShadow:"0 10px 35px rgba(15,23,42,0.18)", padding:"8px 16px", display:"flex", alignItems:"center", gap:10, fontSize:13, zIndex:210}}>
+            <span style={{textAlign:"left"}}>Test sent to your email (demo).</span>
+            <button style={{...btnGhost, padding:"4px 8px"}} onClick={handleUndo}>Undo</button>
+            <button style={{...btnGhost, padding:"4px 8px"}} onClick={()=>setToastVisible(false)}>Dismiss</button>
+          </div>
+        )}
+        <div style={{display:"flex", justifyContent:"space-between", marginTop:10}}>
+          <button style={btnGhost} onClick={onClose}>Back to edit</button>
+          {!hasSent && !showConfirm && <button style={btnPrimary} onClick={()=>setShowConfirm(true)}>Send Test</button>}
         </div>
-      );
-    }
+      </div>
+    </div>
+  );
+}
+function FormattingToolbar(){
+  const btnStyle = { ...btnGhost, padding:"4px 6px", fontSize:11, borderRadius:6 };
+  return (
+    <div style={{marginTop:6, borderTop:`1px solid ${COLORS.border}`, paddingTop:6, display:"flex", gap:4, flexWrap:"wrap", textAlign:"left"}}>
+      <button type="button" style={btnStyle}><strong>B</strong></button>
+      <button type="button" style={btnStyle}><em>I</em></button>
+      <button type="button" style={btnStyle}>• List</button>
+      <button type="button" style={btnStyle}>Link</button>
+      <button type="button" style={btnStyle}>Personalize</button>
+    </div>
+  );
+}
+function ConfirmDialog({ title, body, confirmLabel, onConfirm, onCancel }) {
+  const ref = useRef(null);
+  useEffect(()=>{ ref.current?.focus(); },[]);
+  return (
+    <div role="dialog" aria-modal="true" aria-label={title} tabIndex={-1} ref={ref} onKeyDown={(e)=>e.key==="Escape"&&onCancel()} style={{position:"fixed", inset:0, background:"rgba(15,23,42,0.45)", display:"grid", placeItems:"center", zIndex:300}}>
+      <div style={{width:"min(420px, 90vw)", background:COLORS.panel, border:`1px solid ${COLORS.border}`, borderRadius:12, padding:14, textAlign:"left", boxShadow:"0 18px 45px rgba(15,23,42,0.25)"}}>
+        <h3 style={{marginTop:0, marginBottom:6, textAlign:"left"}}>{title}</h3>
+        <p style={{marginTop:0, marginBottom:12, fontSize:13, color:COLORS.subtext, textAlign:"left"}}>{body}</p>
+        <div style={{display:"flex", justifyContent:"flex-end", gap:8}}>
+          <button style={btnGhost} onClick={onCancel}>Cancel</button>
+          <button style={btnPrimary} onClick={onConfirm}>{confirmLabel}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
-    /* ------------------------------- Mount App ------------------------------- */
-    const root = ReactDOM.createRoot(document.getElementById("root"));
-    root.render(<SendIQdotioApp />);
-  </script>
+/* ------------------------------- Mount App ------------------------------- */
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<SendIQdotioApp />);
+</script>
 </body>
 </html>
